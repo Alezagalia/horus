@@ -1,0 +1,73 @@
+{
+  "name": "horus",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Horus - Personal Productivity App (Habits, Tasks, Events, Finances)",
+  "scripts": {
+    "dev:backend": "pnpm --filter @horus/backend dev",
+    "dev:mobile": "pnpm --filter @horus/mobile dev",
+    "dev:web": "pnpm --filter @horus/web dev",
+    "build:backend": "pnpm --filter @horus/backend build",
+    "build:web": "pnpm --filter @horus/web build",
+    "build:shared": "pnpm --filter @horus/shared build",
+    "build": "pnpm build:shared && pnpm build:backend && pnpm build:web",
+    "test:backend": "pnpm --filter @horus/backend test",
+    "test:mobile": "pnpm --filter @horus/mobile test",
+    "test:web": "pnpm --filter @horus/web test",
+    "test:shared": "pnpm --filter @horus/shared test",
+    "test": "pnpm test:shared && pnpm test:backend && pnpm test:mobile && pnpm test:web",
+    "type-check": "pnpm -r type-check",
+    "type-check:backend": "pnpm --filter @horus/backend type-check",
+    "type-check:mobile": "pnpm --filter @horus/mobile type-check",
+    "type-check:web": "pnpm --filter @horus/web type-check",
+    "type-check:shared": "pnpm --filter @horus/shared type-check",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "clean": "rm -rf node_modules apps/*/node_modules packages/*/node_modules",
+    "prepare": "husky"
+  },
+  "keywords": [
+    "habits",
+    "tasks",
+    "productivity",
+    "finances",
+    "calendar"
+  ],
+  "author": "Horus Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@10.18.3",
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^20.1.0",
+    "@commitlint/config-conventional": "^20.0.0",
+    "@eslint/js": "^9.39.1",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "globals": "^16.5.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.47.0"
+  }
+}

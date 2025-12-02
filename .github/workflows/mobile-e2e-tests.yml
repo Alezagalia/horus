@@ -1,0 +1,138 @@
+name: Mobile E2E Tests (Detox)
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'apps/mobile/**'
+      - 'packages/shared/**'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'apps/mobile/**'
+      - 'packages/shared/**'
+
+jobs:
+  e2e-android:
+    name: E2E Tests (Android)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android Emulator
+        run: |
+          sdkmanager "platform-tools" "platforms;android-34" "emulator"
+          sdkmanager "system-images;android-34;google_apis;x86_64"
+
+      - name: Create AVD
+        run: |
+          echo no | avdmanager create avd -n Pixel_7_API_34 -k "system-images;android-34;google_apis;x86_64" --force
+          echo "AVD created"
+
+      - name: Start Android Emulator
+        run: |
+          nohup $ANDROID_HOME/emulator/emulator -avd Pixel_7_API_34 -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim &
+          $ANDROID_HOME/platform-tools/adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed | tr -d '\r') ]]; do sleep 1; done; input keyevent 82'
+          echo "Emulator started"
+
+      - name: Build app for E2E
+        run: |
+          cd apps/mobile
+          pnpm build:e2e:android
+
+      - name: Run Detox E2E Tests
+        run: |
+          cd apps/mobile
+          pnpm test:e2e:android
+
+      - name: Upload test artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: detox-android-artifacts
+          path: |
+            apps/mobile/e2e/artifacts/
+            apps/mobile/e2e/*.log
+
+  e2e-ios:
+    name: E2E Tests (iOS)
+    runs-on: macos-13
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '15.0'
+
+      - name: Install iOS dependencies
+        run: |
+          cd apps/mobile/ios
+          pod install
+
+      - name: Boot iOS Simulator
+        run: |
+          xcrun simctl boot "iPhone 15" || true
+          xcrun simctl list devices | grep "iPhone 15"
+
+      - name: Build app for E2E
+        run: |
+          cd apps/mobile
+          pnpm build:e2e:ios
+
+      - name: Run Detox E2E Tests
+        run: |
+          cd apps/mobile
+          pnpm test:e2e:ios
+
+      - name: Upload test artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: detox-ios-artifacts
+          path: |
+            apps/mobile/e2e/artifacts/
+            apps/mobile/e2e/*.log

@@ -1,0 +1,982 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Scope {
+  habitos
+  tareas
+  eventos
+  gastos
+}
+
+enum HabitType {
+  CHECK
+  NUMERIC
+}
+
+enum Periodicity {
+  DAILY
+  WEEKLY
+  MONTHLY
+  CUSTOM
+}
+
+enum TimeOfDay {
+  AYUNO
+  MANANA
+  MEDIA_MANANA
+  TARDE
+  MEDIA_TARDE
+  NOCHE
+  ANTES_DORMIR
+  ANYTIME
+}
+
+enum ChangeType {
+  CREATED
+  UPDATED
+  DELETED
+  REACTIVATED
+}
+
+enum Priority {
+  alta
+  media
+  baja
+}
+
+enum TaskStatus {
+  pendiente
+  en_progreso
+  completada
+  cancelada
+}
+
+enum EventStatus {
+  pendiente
+  completado
+  cancelado
+}
+
+enum AccountType {
+  efectivo
+  banco
+  billetera_digital
+  tarjeta
+}
+
+enum TransactionType {
+  ingreso
+  egreso
+}
+
+enum ExpenseStatus {
+  pendiente
+  pagado
+}
+
+enum DevicePlatform {
+  IOS
+  ANDROID
+  WEB
+}
+
+enum WeightUnit {
+  kg
+  lbs
+}
+
+enum MuscleGroup {
+  pecho
+  espalda
+  piernas
+  hombros
+  brazos
+  core
+  cardio
+  otro
+}
+
+model User {
+  id                   String                   @id @default(uuid())
+  email                String                   @unique
+  name                 String
+  password             String
+  refreshToken         String?
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+  categories           Category[]
+  habits               Habit[]
+  habitRecords         HabitRecord[]
+  habitAudits          HabitAudit[]
+  notificationSettings NotificationSetting[]
+  tasks                Task[]
+  events               Event[]
+  syncSetting          SyncSetting?
+  accounts             Account[]
+  transactions         Transaction[]
+  recurringExpenses    RecurringExpense[]
+  monthlyExpenses      MonthlyExpenseInstance[]
+  pushTokens           PushToken[]
+  notifications        Notification[]
+  exercises            Exercise[]
+  routines             Routine[]
+  workouts             Workout[]
+
+  @@index([email])
+  @@map("users")
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  scope     Scope
+  icon      String?
+  color     String?
+  isDefault Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user                    User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  habits                  Habit[]
+  tasks                   Task[]
+  events                  Event[]
+  transactions            Transaction[]
+  monthlyExpenseInstances MonthlyExpenseInstance[]
+
+  @@unique([userId, name, scope])
+  @@index([userId, scope])
+  @@map("categories")
+}
+
+model Habit {
+  id                String      @id @default(uuid())
+  userId            String
+  categoryId        String
+  name              String
+  description       String?
+  type              HabitType
+  targetValue       Int?
+  unit              String?
+  periodicity       Periodicity @default(DAILY)
+  weekDays          Int[]       @default([])
+  timeOfDay         TimeOfDay   @default(ANYTIME)
+  reminderTime      String?
+  color             String?
+  order             Int         @default(0)
+  isActive          Boolean     @default(true)
+  currentStreak     Int         @default(0)
+  longestStreak     Int         @default(0)
+  lastCompletedDate DateTime?   @db.Date
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category            Category             @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  records             HabitRecord[]
+  audits              HabitAudit[]
+  notificationSetting NotificationSetting?
+
+  @@index([userId, isActive])
+  @@index([categoryId])
+  @@index([userId, lastCompletedDate])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("habits")
+}
+
+/// HabitRecord: Registro histórico de completitudes de hábitos
+/// Sprint 4 - US-028
+///
+/// Este modelo registra cada completitud diaria de un hábito por un usuario.
+/// Permite calcular rachas, estadísticas y mantener historial completo.
+///
+/// Restricciones:
+/// - Un hábito solo puede tener un registro por día (unique index)
+/// - El campo `value` es para hábitos NUMERIC (ej: 74.5 kg, 5 km)
+/// - El campo `completed` indica si se cumplió el objetivo del día
+/// - El campo `notes` es opcional para observaciones del usuario
+model HabitRecord {
+  id        String   @id @default(uuid())
+  habitId   String
+  userId    String
+  date      DateTime @db.Date
+  completed Boolean  @default(false)
+  value     Float?
+  notes     String?  @db.VarChar(500)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([habitId, userId, date])
+  @@index([userId, date])
+  @@index([habitId, date(sort: Desc)])
+  @@map("habit_records")
+}
+
+/// HabitAudit: Registro de auditoría para trazabilidad de cambios en hábitos
+/// Sprint 6 - US-046
+///
+/// Este modelo registra todos los cambios realizados a un hábito para mantener
+/// un historial completo de modificaciones (creación, actualización, eliminación, reactivación).
+///
+/// Campos:
+/// - changeType: Tipo de cambio (CREATED, UPDATED, DELETED, REACTIVATED)
+/// - fieldChanged: Nombre del campo modificado (null para CREATED/DELETED completos)
+/// - oldValue: Valor anterior del campo (JSON string, null para CREATED)
+/// - newValue: Valor nuevo del campo (JSON string, null para DELETED)
+/// - reason: Razón del cambio (opcional, útil para eliminaciones/reactivaciones)
+///
+/// Índices:
+/// - (habitId, createdAt DESC): Para consultar historial de un hábito ordenado
+/// - userId: Para auditorías por usuario
+model HabitAudit {
+  id           String     @id @default(uuid())
+  habitId      String
+  userId       String
+  changeType   ChangeType
+  fieldChanged String?    @db.VarChar(100)
+  oldValue     String?    @db.Text
+  newValue     String?    @db.Text
+  reason       String?    @db.VarChar(500)
+  createdAt    DateTime   @default(now())
+
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([habitId, createdAt(sort: Desc)])
+  @@index([userId])
+  @@map("habit_audits")
+}
+
+/// NotificationSetting: Configuración de notificaciones por hábito
+/// Sprint 6 - US-050
+///
+/// Este modelo almacena la configuración de recordatorios para cada hábito.
+/// Permite al sistema enviar notificaciones push en el momento adecuado.
+///
+/// Campos:
+/// - habitId: Relación 1:1 con Habit (UNIQUE constraint)
+/// - userId: Usuario propietario (para queries rápidas en cron jobs)
+/// - enabled: Si las notificaciones están habilitadas para este hábito
+/// - time: Hora del recordatorio en formato "HH:mm" (ej: "08:00", "20:30")
+///
+/// Restricciones:
+/// - UNIQUE en habitId: Un hábito solo puede tener una configuración de notificación
+/// - ON DELETE CASCADE: Si se elimina el hábito, se elimina su configuración
+///
+/// Índices:
+/// - (userId, enabled): Para cron job que busca notificaciones habilitadas por usuario
+model NotificationSetting {
+  id        String   @id @default(uuid())
+  habitId   String   @unique
+  userId    String
+  enabled   Boolean  @default(true)
+  time      String   @db.VarChar(5)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, enabled])
+  @@map("notification_settings")
+}
+
+/// Task: Modelo de tareas con soporte para checklists
+/// Sprint 7 - US-056
+///
+/// Este modelo representa una tarea con todas sus propiedades, incluyendo
+/// prioridad, estado, fechas de vencimiento y completitud, y categorización.
+///
+/// Campos principales:
+/// - title: Título de la tarea (max 200 caracteres)
+/// - description: Descripción detallada (texto, opcional)
+/// - priority: Prioridad (alta, media, baja) - default: media
+/// - status: Estado actual (pendiente, en_progreso, completada, cancelada) - default: pendiente
+/// - dueDate: Fecha de vencimiento (opcional)
+/// - completedAt: Fecha y hora de completitud (se setea automáticamente al completar)
+/// - canceledAt: Fecha y hora de cancelación (se setea automáticamente al cancelar)
+/// - archivedAt: Fecha y hora de archivado (para auto-archivado de tareas antiguas)
+/// - cancelReason: Razón de cancelación (opcional, max 200 caracteres)
+/// - orderPosition: Posición para ordenamiento custom por usuario
+/// - isActive: Flag para soft delete
+///
+/// Relaciones:
+/// - category: Relación con Category de scope 'tareas' (ON DELETE RESTRICT)
+/// - user: Relación con User (ON DELETE CASCADE)
+/// - checklistItems: Lista de items del checklist (ON DELETE CASCADE)
+///
+/// Índices:
+/// - (userId, isActive, status): Para queries de listado de tareas activas
+/// - (userId, dueDate): Para filtros y ordenamiento por fecha de vencimiento
+model Task {
+  id            String     @id @default(uuid())
+  userId        String
+  categoryId    String
+  title         String     @db.VarChar(200)
+  description   String?    @db.Text
+  priority      Priority   @default(media)
+  status        TaskStatus @default(pendiente)
+  dueDate       DateTime?
+  completedAt   DateTime?
+  canceledAt    DateTime?
+  archivedAt    DateTime?
+  cancelReason  String?    @db.VarChar(200)
+  isActive      Boolean    @default(true)
+  orderPosition Int        @default(0)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category       Category            @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  checklistItems TaskChecklistItem[]
+
+  @@index([userId, isActive, status])
+  @@index([userId, dueDate])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([categoryId])
+  @@map("tasks")
+}
+
+/// TaskChecklistItem: Items de checklist para tareas
+/// Sprint 7 - US-056
+///
+/// Este modelo representa los items individuales de un checklist asociado a una tarea.
+/// Permite crear sub-tareas o pasos que deben completarse como parte de una tarea mayor.
+///
+/// Campos:
+/// - taskId: Relación con Task padre (ON DELETE CASCADE)
+/// - title: Título del item (max 200 caracteres)
+/// - completed: Estado de completitud del item (default: false)
+/// - position: Posición para ordenamiento dentro del checklist
+///
+/// Relaciones:
+/// - task: Relación con Task padre (ON DELETE CASCADE - si se elimina la tarea, se eliminan sus items)
+///
+/// Índices:
+/// - (taskId, position): Para queries ordenadas del checklist de una tarea
+model TaskChecklistItem {
+  id        String   @id @default(uuid())
+  taskId    String
+  title     String   @db.VarChar(200)
+  completed Boolean  @default(false)
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, position])
+  @@map("task_checklist_items")
+}
+
+/// Event: Modelo de eventos de calendario con sincronización Google
+/// Sprint 8 - US-065
+///
+/// Este modelo representa eventos de calendario con soporte para eventos recurrentes,
+/// sincronización con Google Calendar y notificaciones.
+///
+/// Campos principales:
+/// - title: Título del evento (max 200 caracteres)
+/// - description: Descripción detallada (texto, opcional)
+/// - location: Ubicación del evento (max 200 caracteres, opcional)
+/// - startDateTime: Fecha y hora de inicio
+/// - endDateTime: Fecha y hora de fin
+/// - isAllDay: Flag para eventos de día completo (default: false)
+/// - isRecurring: Flag para eventos recurrentes (default: false)
+/// - rrule: Regla de recurrencia en formato RFC 5545 (opcional, para eventos recurrentes)
+/// - recurringEventId: ID del evento padre si es instancia de evento recurrente (self-relation)
+/// - status: Estado del evento (pendiente, completado, cancelado) - default: pendiente
+/// - completedAt: Fecha y hora de completitud
+/// - canceledAt: Fecha y hora de cancelación
+/// - archivedAt: Fecha y hora de archivado
+/// - syncWithGoogle: Flag para sincronizar con Google Calendar (default: true)
+/// - googleEventId: ID del evento en Google Calendar (unique)
+/// - reminderMinutes: Minutos antes del evento para enviar recordatorio (opcional)
+/// - notificationSent: Flag que indica si la notificación ya fue enviada (default: false)
+///
+/// Relaciones:
+/// - category: Relación con Category de scope 'eventos' (ON DELETE RESTRICT)
+/// - user: Relación con User (ON DELETE CASCADE)
+/// - recurringEvent: Self-relation para eventos recurrentes (ON DELETE CASCADE)
+/// - instances: Instancias de eventos recurrentes (ON DELETE CASCADE)
+///
+/// Índices:
+/// - (userId, startDateTime, endDateTime): Para queries de rango de fechas
+/// - (googleEventId): Único para sincronización
+/// - (userId, status, archivedAt): Para filtros de eventos activos
+/// - (userId, syncWithGoogle): Para job de sincronización con Google
+model Event {
+  id               String      @id @default(uuid())
+  userId           String
+  categoryId       String
+  title            String      @db.VarChar(200)
+  description      String?     @db.Text
+  location         String?     @db.VarChar(200)
+  startDateTime    DateTime
+  endDateTime      DateTime
+  isAllDay         Boolean     @default(false)
+  isRecurring      Boolean     @default(false)
+  rrule            String?     @db.Text
+  recurringEventId String?
+  status           EventStatus @default(pendiente)
+  completedAt      DateTime?
+  canceledAt       DateTime?
+  archivedAt       DateTime?
+  syncWithGoogle   Boolean     @default(true)
+  googleEventId    String?     @unique @db.VarChar(255)
+  syncRetryCount   Int         @default(0)
+  syncNextRetryAt  DateTime?
+  syncLastError    String?     @db.Text
+  reminderMinutes  Int?
+  notificationSent Boolean     @default(false)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category       Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  recurringEvent Event?   @relation("RecurringEvents", fields: [recurringEventId], references: [id], onDelete: Cascade)
+  instances      Event[]  @relation("RecurringEvents")
+
+  @@index([userId, startDateTime, endDateTime])
+  @@index([userId, status, archivedAt])
+  @@index([userId, syncWithGoogle])
+  @@index([startDateTime, notificationSent])
+  @@index([categoryId])
+  @@map("events")
+}
+
+/// SyncSetting: Configuración de sincronización con Google Calendar por usuario
+/// Sprint 8 - US-065
+///
+/// Este modelo almacena la configuración de sincronización con Google Calendar
+/// para cada usuario, incluyendo tokens de autenticación OAuth2.
+///
+/// Campos:
+/// - userId: Relación 1:1 con User (UNIQUE constraint)
+/// - googleCalendarEnabled: Si la sincronización está habilitada (default: false)
+/// - googleAccessToken: Token de acceso OAuth2 de Google (encrypted, nullable)
+/// - googleRefreshToken: Token de refresh OAuth2 de Google (encrypted, nullable)
+/// - googleTokenExpiresAt: Fecha y hora de expiración del access token
+/// - lastSyncAt: Fecha y hora de la última sincronización exitosa
+///
+/// Restricciones:
+/// - UNIQUE en userId: Un usuario solo puede tener una configuración de sincronización
+/// - ON DELETE CASCADE: Si se elimina el usuario, se elimina su configuración
+///
+/// Seguridad:
+/// - Los tokens de Google deben ser encriptados en la capa de aplicación antes de guardar
+/// - Usar prisma-field-encryption o similar para encriptación transparente
+///
+/// Índices:
+/// - userId (unique): Para lookup rápido de configuración por usuario
+model SyncSetting {
+  id                    String    @id @default(uuid())
+  userId                String    @unique
+  googleCalendarEnabled Boolean   @default(false)
+  googleAccessToken     String?   @db.Text
+  googleRefreshToken    String?   @db.Text
+  googleTokenExpiresAt  DateTime?
+  lastSyncAt            DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sync_settings")
+}
+
+/// Account: Modelo de cuentas financieras
+/// Sprint 9 - US-073
+///
+/// Este modelo representa cuentas bancarias, efectivo, billeteras digitales y tarjetas
+/// donde el usuario gestiona su dinero. Cada cuenta tiene un balance inicial y actual
+/// que se actualiza con cada transacción.
+///
+/// Campos principales:
+/// - name: Nombre de la cuenta (ej: "Banco Galicia", "Efectivo", "Mercado Pago")
+/// - type: Tipo de cuenta (efectivo, banco, billetera_digital, tarjeta)
+/// - currency: Código de moneda ISO 4217 (ARS, USD, EUR, etc.)
+/// - initialBalance: Balance inicial de la cuenta al momento de crearla
+/// - currentBalance: Balance actual (se actualiza automáticamente con transacciones)
+/// - color: Color hexadecimal para identificación visual en UI (ej: "#3B82F6")
+/// - icon: Emoji para identificación visual (ej: "💵", "🏦", "💳")
+/// - isActive: Flag para soft delete (default: true)
+///
+/// Relaciones:
+/// - user: Relación con User (ON DELETE CASCADE)
+/// - transactions: Lista de transacciones de esta cuenta (ON DELETE RESTRICT)
+/// - targetTransactions: Transacciones donde esta cuenta es destino de transferencia
+///
+/// Índices:
+/// - (userId, isActive): Para queries de cuentas activas por usuario
+///
+/// Restricciones:
+/// - No se puede eliminar una cuenta si tiene transacciones (ON DELETE RESTRICT)
+/// - Se debe usar soft delete (isActive = false) en su lugar
+model Account {
+  id             String      @id @default(uuid())
+  userId         String
+  name           String      @db.VarChar(100)
+  type           AccountType
+  currency       String      @db.VarChar(3)
+  initialBalance Decimal     @db.Decimal(15, 2)
+  currentBalance Decimal     @db.Decimal(15, 2)
+  color          String      @db.VarChar(7)
+  icon           String      @db.VarChar(10)
+  isActive       Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  user                    User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions            Transaction[]            @relation("AccountTransactions")
+  targetTransactions      Transaction[]            @relation("TargetAccountTransactions")
+  monthlyExpenseInstances MonthlyExpenseInstance[]
+
+  @@index([userId, isActive])
+  @@map("accounts")
+}
+
+/// Transaction: Modelo de transacciones financieras
+/// Sprint 9 - US-073
+///
+/// Este modelo representa ingresos, egresos y transferencias entre cuentas.
+/// Cada transacción afecta el balance de una cuenta (y opcionalmente otra en transferencias).
+///
+/// Campos principales:
+/// - accountId: Cuenta desde donde se realiza la transacción
+/// - categoryId: Categoría del gasto/ingreso (scope 'gastos')
+/// - userId: Usuario propietario (denormalizado para queries rápidas)
+/// - type: Tipo de transacción (ingreso o egreso)
+/// - amount: Monto de la transacción (siempre positivo, > 0)
+/// - concept: Descripción breve de la transacción (max 200 caracteres)
+/// - date: Fecha y hora de la transacción
+/// - notes: Notas adicionales opcionales
+/// - isTransfer: Flag que indica si es una transferencia entre cuentas
+/// - targetAccountId: ID de cuenta destino (solo si isTransfer = true)
+/// - transferPairId: ID de la transacción vinculada (para transferencias bidireccionales)
+///
+/// Relaciones:
+/// - account: Cuenta de origen (ON DELETE RESTRICT)
+/// - targetAccount: Cuenta destino si es transferencia (ON DELETE RESTRICT)
+/// - category: Categoría del gasto/ingreso (ON DELETE RESTRICT)
+/// - user: Usuario propietario (ON DELETE CASCADE)
+///
+/// Índices:
+/// - (accountId, date): Para listar transacciones de una cuenta ordenadas por fecha
+/// - (userId, date): Para listar todas las transacciones del usuario ordenadas
+/// - (transferPairId): Para buscar la transacción vinculada en transferencias
+///
+/// Restricciones:
+/// - amount > 0: El monto debe ser positivo (constraint a nivel de base de datos)
+/// - No se puede eliminar una cuenta si tiene transacciones (RESTRICT)
+///
+/// Transferencias:
+/// Las transferencias crean DOS transacciones:
+/// 1. Egreso en cuenta origen (type=egreso, targetAccountId=destino)
+/// 2. Ingreso en cuenta destino (type=ingreso, accountId=destino)
+/// Ambas comparten el mismo transferPairId para poder vincularlas
+model Transaction {
+  id              String          @id @default(uuid())
+  accountId       String
+  categoryId      String
+  userId          String
+  type            TransactionType
+  amount          Decimal         @db.Decimal(15, 2)
+  concept         String          @db.VarChar(200)
+  date            DateTime
+  notes           String?         @db.Text
+  isTransfer      Boolean         @default(false)
+  targetAccountId String?
+  transferPairId  String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  account       Account  @relation("AccountTransactions", fields: [accountId], references: [id], onDelete: Restrict)
+  targetAccount Account? @relation("TargetAccountTransactions", fields: [targetAccountId], references: [id], onDelete: Restrict)
+  category      Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, date])
+  @@index([userId, date])
+  @@index([userId, type, date])
+  @@index([transferPairId])
+  @@index([categoryId])
+  @@map("transactions")
+}
+
+/// RecurringExpense: Plantilla de gasto recurrente mensual
+/// Sprint 10 - US-083
+///
+/// Este modelo representa una plantilla de gasto recurrente (ej: alquiler, servicios).
+/// No almacena el monto real, solo el concepto y categoría.
+/// Se usa para generar MonthlyExpenseInstance cada mes.
+model RecurringExpense {
+  id         String   @id @default(uuid())
+  userId     String
+  concept    String   @db.VarChar(200)
+  categoryId String
+  currency   String   @db.VarChar(3)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user                    User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  monthlyExpenseInstances MonthlyExpenseInstance[]
+
+  @@index([userId, isActive])
+  @@map("recurring_expenses")
+}
+
+/// MonthlyExpenseInstance: Instancia mensual de gasto recurrente
+/// Sprint 10 - US-083
+///
+/// Este modelo representa una instancia específica de un gasto recurrente para un mes determinado.
+/// Almacena el monto real del mes, estado de pago, cuenta utilizada, etc.
+/// Se genera automáticamente cada mes a partir de RecurringExpense.
+model MonthlyExpenseInstance {
+  id                 String        @id @default(uuid())
+  recurringExpenseId String
+  userId             String
+  month              Int
+  year               Int
+  concept            String        @db.VarChar(200)
+  categoryId         String
+  amount             Decimal       @db.Decimal(15, 2)
+  previousAmount     Decimal?      @db.Decimal(15, 2)
+  accountId          String?
+  paidDate           DateTime?
+  status             ExpenseStatus @default(pendiente)
+  notes              String?       @db.Text
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  recurringExpense RecurringExpense @relation(fields: [recurringExpenseId], references: [id], onDelete: Cascade)
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category         Category         @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  account          Account?         @relation(fields: [accountId], references: [id], onDelete: SetNull)
+
+  @@unique([recurringExpenseId, month, year])
+  @@index([userId, month, year, status])
+  @@index([recurringExpenseId])
+  @@map("monthly_expense_instances")
+}
+
+/// PushToken: Tokens de dispositivos para notificaciones push
+/// Sprint 12 - US-105
+///
+/// Este modelo almacena los tokens FCM/APNs de los dispositivos de los usuarios
+/// para enviar notificaciones push. Un usuario puede tener múltiples dispositivos.
+///
+/// Campos:
+/// - userId: Usuario propietario del dispositivo
+/// - token: Token FCM/APNs (UNIQUE - un token solo puede pertenecer a un usuario)
+/// - platform: Plataforma del dispositivo (IOS, ANDROID, WEB)
+/// - deviceName: Nombre del dispositivo (ej: "iPhone 12", "Samsung Galaxy S21")
+/// - deviceId: Identificador único del dispositivo (opcional)
+/// - appVersion: Versión de la app instalada (ej: "1.0.0")
+/// - active: Si el token está activo (se desactiva si FCM reporta token inválido)
+/// - lastUsedAt: Última vez que se usó el token para enviar notificación
+///
+/// Restricciones:
+/// - UNIQUE en token: Un token solo puede pertenecer a un dispositivo
+/// - ON DELETE CASCADE: Si se elimina el usuario, se eliminan sus tokens
+///
+/// Índices:
+/// - (userId, active): Para queries de tokens activos por usuario
+/// - token (unique): Para validación rápida de tokens
+model PushToken {
+  id         String         @id @default(uuid())
+  userId     String
+  token      String         @unique @db.VarChar(500)
+  platform   DevicePlatform
+  deviceName String?        @db.VarChar(100)
+  deviceId   String?        @db.VarChar(100)
+  appVersion String?        @db.VarChar(20)
+  active     Boolean        @default(true)
+  lastUsedAt DateTime?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, active])
+  @@map("push_tokens")
+}
+
+/// Notification: Registro de notificaciones enviadas
+/// Sprint 12 - US-105
+///
+/// Este modelo almacena todas las notificaciones enviadas a usuarios,
+/// tanto para historial como para tracking de notificaciones push.
+///
+/// Campos:
+/// - userId: Usuario destinatario
+/// - type: Tipo de notificación (ej: "habit_reminder", "task_due", etc.)
+/// - title: Título de la notificación
+/// - body: Cuerpo del mensaje
+/// - data: Datos adicionales en formato JSON (ej: habitId, taskId)
+/// - read: Si la notificación fue leída
+/// - readAt: Fecha y hora en que se leyó
+/// - pushSent: Si se envió notificación push
+/// - pushSentAt: Fecha y hora de envío de push
+/// - pushError: Mensaje de error si falló el envío de push
+///
+/// Índices:
+/// - (userId, read): Para listar notificaciones no leídas
+/// - (userId, createdAt DESC): Para listar todas las notificaciones ordenadas
+model Notification {
+  id         String    @id @default(uuid())
+  userId     String
+  type       String    @db.VarChar(50)
+  title      String    @db.VarChar(200)
+  body       String    @db.Text
+  data       String?   @db.Text
+  read       Boolean   @default(false)
+  readAt     DateTime?
+  pushSent   Boolean   @default(false)
+  pushSentAt DateTime?
+  pushError  String?   @db.Text
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("notifications")
+}
+
+/// Exercise: Ejercicios personalizados por usuario
+/// Sprint 14 - US-125
+///
+/// Este modelo representa ejercicios creados por cada usuario para su entrenamiento.
+/// Los ejercicios pueden ser de diferentes grupos musculares y se utilizan en rutinas.
+///
+/// Campos:
+/// - name: Nombre del ejercicio (ej: "Press Banca", "Sentadilla")
+/// - muscleGroup: Grupo muscular trabajado (enum MuscleGroup)
+/// - notes: Notas adicionales sobre el ejercicio (técnica, forma, etc.)
+///
+/// Restricciones:
+/// - Un usuario no puede tener dos ejercicios con el mismo nombre
+/// - ON DELETE CASCADE: Si se elimina el usuario, se eliminan sus ejercicios
+///
+/// Índices:
+/// - userId: Para queries rápidas de ejercicios por usuario
+model Exercise {
+  id          String       @id @default(uuid())
+  userId      String
+  name        String       @db.VarChar(100)
+  muscleGroup MuscleGroup?
+  notes       String?      @db.Text
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  routineExercises RoutineExercise[]
+  workoutExercises WorkoutExercise[]
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("exercises")
+}
+
+/// Routine: Rutinas de entrenamiento
+/// Sprint 14 - US-125
+///
+/// Este modelo representa rutinas de entrenamiento creadas por usuarios.
+/// Una rutina contiene múltiples ejercicios con configuración específica.
+///
+/// Campos:
+/// - name: Nombre de la rutina (ej: "Push Day", "Pull Day", "Piernas")
+/// - description: Descripción detallada de la rutina (opcional)
+///
+/// Relaciones:
+/// - routineExercises: Ejercicios que componen la rutina (con orden y configuración)
+/// - workouts: Sesiones de entrenamiento que usaron esta rutina
+///
+/// Índices:
+/// - userId: Para listar rutinas por usuario
+model Routine {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String   @db.VarChar(100)
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  routineExercises RoutineExercise[]
+  workouts         Workout[]
+
+  @@index([userId])
+  @@map("routines")
+}
+
+/// RoutineExercise: Configuración de ejercicios en rutina
+/// Sprint 14 - US-125
+///
+/// Este modelo representa la relación N:N entre Routine y Exercise,
+/// con configuración específica de series, reps, peso y descanso.
+///
+/// Campos:
+/// - order: Orden de ejecución del ejercicio en la rutina (1, 2, 3...)
+/// - targetSets: Series sugeridas (opcional)
+/// - targetReps: Repeticiones sugeridas (opcional)
+/// - targetWeight: Peso sugerido en kg (opcional)
+/// - restTime: Tiempo de descanso en segundos (opcional)
+/// - notes: Notas específicas para este ejercicio en esta rutina
+///
+/// Restricciones:
+/// - Un ejercicio solo puede aparecer una vez en una rutina (unique constraint)
+/// - ON DELETE CASCADE: Si se elimina la rutina, se elimina su configuración
+/// - ON DELETE RESTRICT: No se puede eliminar un ejercicio si está en rutinas
+///
+/// Índices:
+/// - routineId: Para listar ejercicios de una rutina
+model RoutineExercise {
+  id           String   @id @default(uuid())
+  routineId    String
+  exerciseId   String
+  order        Int
+  targetSets   Int?
+  targetReps   Int?
+  targetWeight Decimal? @db.Decimal(10, 2)
+  restTime     Int?
+  notes        String?  @db.Text
+
+  routine  Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+
+  @@unique([routineId, exerciseId])
+  @@index([routineId])
+  @@map("routine_exercises")
+}
+
+/// Workout: Sesión de entrenamiento
+/// Sprint 14 - US-125
+///
+/// Este modelo representa una sesión individual de entrenamiento.
+/// Puede estar basada en una rutina o ser libre (sin rutina).
+///
+/// Campos:
+/// - routineId: Rutina utilizada (nullable si es entrenamiento libre)
+/// - startTime: Fecha y hora de inicio del entrenamiento
+/// - endTime: Fecha y hora de finalización (null si está en progreso)
+/// - notes: Notas generales del entrenamiento (cómo te sentiste, etc.)
+///
+/// Estados:
+/// - En progreso: endTime = null
+/// - Finalizado: endTime != null
+///
+/// Restricciones:
+/// - ON DELETE CASCADE: Si se elimina el usuario, se eliminan sus workouts
+/// - ON DELETE SET NULL: Si se elimina la rutina, el workout queda como "libre"
+///
+/// Índices:
+/// - (userId, startTime): Para listar entrenamientos por usuario ordenados por fecha
+model Workout {
+  id        String    @id @default(uuid())
+  userId    String
+  routineId String?
+  startTime DateTime  @default(now())
+  endTime   DateTime?
+  notes     String?   @db.Text
+  createdAt DateTime  @default(now())
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  routine          Routine?          @relation(fields: [routineId], references: [id], onDelete: SetNull)
+  workoutExercises WorkoutExercise[]
+
+  @@index([userId, startTime])
+  @@map("workouts")
+}
+
+/// WorkoutExercise: Ejercicios ejecutados en sesión
+/// Sprint 14 - US-125
+///
+/// Este modelo representa los ejercicios realizados en una sesión de entrenamiento.
+/// Contiene información específica de ese ejercicio en esa sesión.
+///
+/// Campos:
+/// - order: Orden de ejecución en el workout (1, 2, 3...)
+/// - notes: Notas específicas del ejercicio en esta sesión
+/// - rpe: Rate of Perceived Exertion (1-10, opcional)
+///
+/// Relaciones:
+/// - workoutSets: Series individuales realizadas en este ejercicio
+///
+/// Restricciones:
+/// - ON DELETE CASCADE: Si se elimina el workout, se eliminan sus ejercicios
+/// - ON DELETE RESTRICT: No se puede eliminar un ejercicio si está en workouts
+///
+/// Índices:
+/// - workoutId: Para listar ejercicios de un workout
+model WorkoutExercise {
+  id         String   @id @default(uuid())
+  workoutId  String
+  exerciseId String
+  order      Int
+  notes      String?  @db.Text
+  rpe        Int?
+  createdAt  DateTime @default(now())
+
+  workout     Workout      @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  exercise    Exercise     @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+  workoutSets WorkoutSet[]
+
+  @@index([workoutId])
+  @@map("workout_exercises")
+}
+
+/// WorkoutSet: Series individuales de ejercicio
+/// Sprint 14 - US-125
+///
+/// Este modelo representa cada serie individual realizada en un ejercicio.
+/// Almacena el peso, repeticiones y tiempo de descanso de cada serie.
+///
+/// Campos:
+/// - setNumber: Número de serie (1, 2, 3... secuencial por ejercicio)
+/// - reps: Repeticiones realizadas en esta serie
+/// - weight: Peso utilizado en esta serie
+/// - weightUnit: Unidad del peso (kg o lbs)
+/// - completed: Si la serie se completó exitosamente
+/// - restTime: Tiempo de descanso después de esta serie (segundos)
+/// - notes: Notas específicas de esta serie (ej: "casi fallo", "muy fácil")
+/// - timestamp: Momento exacto en que se completó la serie
+///
+/// Restricciones:
+/// - ON DELETE CASCADE: Si se elimina el workoutExercise, se eliminan sus series
+///
+/// Índices:
+/// - workoutExerciseId: Para listar series de un ejercicio en un workout
+model WorkoutSet {
+  id                String     @id @default(uuid())
+  workoutExerciseId String
+  setNumber         Int
+  reps              Int
+  weight            Decimal    @db.Decimal(10, 2)
+  weightUnit        WeightUnit @default(kg)
+  completed         Boolean    @default(true)
+  restTime          Int?
+  notes             String?    @db.Text
+  timestamp         DateTime   @default(now())
+
+  workoutExercise WorkoutExercise @relation(fields: [workoutExerciseId], references: [id], onDelete: Cascade)
+
+  @@index([workoutExerciseId])
+  @@map("workout_sets")
+}

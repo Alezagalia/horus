@@ -1,0 +1,10 @@
+# Configuración de build tools - CommonJS, no TypeScript
+babel.config.js
+metro.config.js
+
+# Build outputs
+dist/
+.expo/
+
+# Dependencies
+node_modules/

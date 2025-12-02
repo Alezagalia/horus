@@ -1,0 +1,26 @@
+{
+  "name": "@horus/shared",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Horus Shared - Types, Schemas and Utilities",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "echo 'Shared tests - configure in US-002'",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "format": "prettier --write \"src/**/*.{ts,js,json}\""
+  },
+  "dependencies": {
+    "zod": "^4.1.12"
+  }
+}

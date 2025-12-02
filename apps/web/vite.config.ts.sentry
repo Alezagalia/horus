@@ -1,0 +1,40 @@
+/**
+ * Sentry Vite Plugin Configuration Example
+ * Sprint 12 - US-115: Monitoring y Logging en Producción
+ *
+ * To enable source maps upload to Sentry:
+ * 1. Install: pnpm add -D @sentry/vite-plugin
+ * 2. Rename this file to vite.config.ts (backup current one)
+ * 3. Set SENTRY_AUTH_TOKEN in .env
+ */
+
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { sentryVitePlugin } from '@sentry/vite-plugin';
+
+export default defineConfig({
+  plugins: [
+    react(),
+
+    // Upload source maps to Sentry (only in production builds)
+    sentryVitePlugin({
+      org: process.env.SENTRY_ORG || 'horus',
+      project: process.env.SENTRY_PROJECT || 'horus-web',
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+
+      // Only upload source maps for production builds
+      disable: process.env.NODE_ENV !== 'production',
+
+      // Additional options
+      sourcemaps: {
+        assets: './dist/**',
+        ignore: ['node_modules'],
+      },
+    }),
+  ],
+
+  build: {
+    // Generate source maps for error tracking
+    sourcemap: true,
+  },
+});
