@@ -14,6 +14,7 @@ export interface RecurringExpense {
   concept: string;
   categoryId: string;
   currency: string;
+  dueDay: number | null; // Día del mes en que vence (1-31), null si no tiene vencimiento fijo
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -28,6 +29,7 @@ export interface CreateRecurringExpenseDTO {
   concept: string;
   categoryId: string;
   currency: string;
+  dueDay?: number | null; // Día del mes en que vence (1-31)
 }
 
 /**
@@ -37,6 +39,7 @@ export interface UpdateRecurringExpenseDTO {
   concept?: string;
   categoryId?: string;
   currency?: string;
+  dueDay?: number | null; // Día del mes en que vence (1-31)
   isActive?: boolean;
 }
 

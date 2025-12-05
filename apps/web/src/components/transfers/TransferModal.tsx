@@ -55,7 +55,9 @@ export function TransferModal({ isOpen, onClose, defaultFromAccountId }: Transfe
   const selectedToAccountId = watch('toAccountId');
   const amount = watch('amount');
 
-  const activeAccounts = accounts.filter((acc) => acc.isActive);
+  // Ensure accounts is an array before filtering
+  const accountsList = Array.isArray(accounts) ? accounts : [];
+  const activeAccounts = accountsList.filter((acc) => acc.isActive);
 
   // Get selected accounts
   const fromAccount = activeAccounts.find((acc) => acc.id === selectedFromAccountId);

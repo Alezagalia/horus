@@ -1,6 +1,7 @@
 /**
  * Metro Configuration
  * Sprint 12 - US-108: Performance Optimization
+ * Fixed for pnpm monorepo compatibility
  */
 
 const { getDefaultConfig } = require('expo/metro-config');
@@ -20,8 +21,25 @@ config.resolver.nodeModulesPaths = [
   path.resolve(workspaceRoot, 'node_modules'),
 ];
 
-// Disable require.context warning
-config.resolver.disableHierarchicalLookup = true;
+// Fix for pnpm monorepo: redirect ../../App to the correct location
+const originalResolveRequest = config.resolver.resolveRequest;
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  // When expo/AppEntry.js tries to import ../../App, redirect to our App.tsx
+  if (moduleName === '../../App' || moduleName === '../../App.js' || moduleName === '../../App.tsx') {
+    return {
+      filePath: path.resolve(projectRoot, 'App.tsx'),
+      type: 'sourceFile',
+    };
+  }
+
+  // Use the original resolver for everything else
+  if (originalResolveRequest) {
+    return originalResolveRequest(context, moduleName, platform);
+  }
+
+  // Fall back to default resolution
+  return context.resolveRequest(context, moduleName, platform);
+};
 
 // Performance optimizations for production (US-108)
 const isProduction = process.env.NODE_ENV === 'production';
@@ -50,13 +68,6 @@ if (isProduction) {
         webkit: true,
       },
     },
-  };
-
-  // Optimize resolver
-  config.resolver = {
-    ...config.resolver,
-    // Disable symlinks for faster resolution
-    resolveRequest: null,
   };
 }
 

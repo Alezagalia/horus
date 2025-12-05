@@ -5,9 +5,13 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { Calendar, momentLocalizer, View, SlotInfo } from 'react-big-calendar';
+import withDragAndDrop, {
+  EventInteractionArgs,
+} from 'react-big-calendar/lib/addons/dragAndDrop';
 import moment from 'moment';
 import 'moment/locale/es';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
+import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import { Toaster } from 'react-hot-toast';
 import type { CalendarEvent, CreateCalendarEventDTO } from '@horus/shared';
 import { EventModal } from '@/components/calendar/EventModal';
@@ -26,6 +30,9 @@ import { startOfMonth, endOfMonth } from 'date-fns';
 // Configure moment and localizer
 moment.locale('es');
 const localizer = momentLocalizer(moment);
+
+// Create drag and drop calendar
+const DnDCalendar = withDragAndDrop(Calendar);
 
 // Messages in Spanish
 const messages = {
@@ -213,6 +220,52 @@ export function CalendarPage() {
     setView('day');
   }, []);
 
+  // Handle drag and drop of events
+  const handleEventDrop = useCallback(
+    ({ event, start, end }: EventInteractionArgs<any>) => {
+      // Only allow dragging calendar events, not tasks
+      if (event.type === 'task') {
+        return;
+      }
+
+      // Update the event with new dates
+      updateEventMutation.mutate({
+        id: event.id,
+        data: {
+          startDateTime: (start as Date).toISOString(),
+          endDateTime: (end as Date).toISOString(),
+        },
+      });
+    },
+    [updateEventMutation]
+  );
+
+  // Handle resize of events
+  const handleEventResize = useCallback(
+    ({ event, start, end }: EventInteractionArgs<any>) => {
+      // Only allow resizing calendar events, not tasks
+      if (event.type === 'task') {
+        return;
+      }
+
+      // Update the event with new dates
+      updateEventMutation.mutate({
+        id: event.id,
+        data: {
+          startDateTime: (start as Date).toISOString(),
+          endDateTime: (end as Date).toISOString(),
+        },
+      });
+    },
+    [updateEventMutation]
+  );
+
+  // Determine if an event can be dragged
+  const draggableAccessor = useCallback((event: any) => {
+    // Only calendar events can be dragged, not tasks
+    return event.type !== 'task';
+  }, []);
+
   // Event style getter - distinguish Google events and tasks
   const eventStyleGetter = (event: any) => {
     const isGoogleEvent = event.source === 'google_calendar';
@@ -348,7 +401,7 @@ export function CalendarPage() {
       <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
         <div style={{ height: '700px' }}>
           {/* @ts-expect-error - react-big-calendar has type compatibility issues with React 18 */}
-          <Calendar
+          <DnDCalendar
             localizer={localizer}
             events={calendarEvents}
             startAccessor="start"
@@ -359,6 +412,10 @@ export function CalendarPage() {
             onNavigate={handleNavigate}
             onSelectEvent={handleSelectEvent}
             onSelectSlot={handleSelectSlot}
+            onEventDrop={handleEventDrop}
+            onEventResize={handleEventResize}
+            draggableAccessor={draggableAccessor}
+            resizable
             selectable
             eventPropGetter={eventStyleGetter}
             messages={messages}

@@ -14,6 +14,7 @@ const formSchema = z.object({
   concept: z.string().min(1, 'Concepto requerido').max(100, 'Máximo 100 caracteres'),
   categoryId: z.string().min(1, 'Categoría requerida'),
   currency: z.enum(['ARS', 'USD', 'EUR', 'BRL'], { required_error: 'Moneda requerida' }),
+  dueDay: z.number().int().min(1).max(31).nullable().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -44,6 +45,8 @@ export function RecurringExpenseFormModal({
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -51,8 +54,11 @@ export function RecurringExpenseFormModal({
       concept: '',
       categoryId: '',
       currency: 'ARS',
+      dueDay: null,
     },
   });
+
+  const dueDayValue = watch('dueDay');
 
   // Reset form when modal opens/closes or editing changes
   useEffect(() => {
@@ -61,12 +67,14 @@ export function RecurringExpenseFormModal({
         concept: editingExpense.concept,
         categoryId: editingExpense.categoryId,
         currency: editingExpense.currency as 'ARS' | 'USD' | 'EUR' | 'BRL',
+        dueDay: editingExpense.dueDay,
       });
     } else {
       reset({
         concept: '',
         categoryId: '',
         currency: 'ARS',
+        dueDay: null,
       });
     }
   }, [editingExpense, reset, isOpen]);
@@ -187,6 +195,37 @@ export function RecurringExpenseFormModal({
               </select>
               {errors.currency && (
                 <p className="mt-1 text-sm text-red-600">{errors.currency.message}</p>
+              )}
+            </div>
+
+            {/* Due Day */}
+            <div>
+              <label htmlFor="dueDay" className="block text-sm font-medium text-gray-700 mb-1">
+                Día de vencimiento
+              </label>
+              <div className="flex items-center gap-3">
+                <select
+                  id="dueDay"
+                  value={dueDayValue ?? ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setValue('dueDay', val === '' ? null : parseInt(val, 10));
+                  }}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">Sin vencimiento fijo</option>
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+                    <option key={day} value={day}>
+                      Día {day}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p className="mt-1 text-xs text-gray-500">
+                Opcional: El día del mes en que vence este gasto
+              </p>
+              {errors.dueDay && (
+                <p className="mt-1 text-sm text-red-600">{errors.dueDay.message}</p>
               )}
             </div>
 

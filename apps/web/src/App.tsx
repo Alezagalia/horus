@@ -52,6 +52,9 @@ const RecurringExpensesPage = lazy(() =>
 const MonthlyExpensesPage = lazy(() =>
   import('@/pages/MonthlyExpensesPage').then((m) => ({ default: m.MonthlyExpensesPage }))
 );
+const TransactionsPage = lazy(() =>
+  import('@/pages/TransactionsPage').then((m) => ({ default: m.TransactionsPage }))
+);
 const ExercisesPage = lazy(() =>
   import('@/pages/ExercisesPage').then((m) => ({ default: m.ExercisesPage }))
 );
@@ -207,6 +210,16 @@ export function App() {
               }
             />
             <Route
+              path="/transactions"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <TransactionsPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/exercises"
               element={
                 <ProtectedRoute>
@@ -222,6 +235,16 @@ export function App() {
                 <ProtectedRoute>
                   <MainLayout>
                     <RoutinesPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/routines/new"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <RoutineFormPage />
                   </MainLayout>
                 </ProtectedRoute>
               }

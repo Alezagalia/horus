@@ -22,6 +22,13 @@ export const createRecurringExpenseSchema = z.object({
     .length(3, 'La moneda debe tener exactamente 3 caracteres')
     .toUpperCase()
     .regex(/^[A-Z]{3}$/, 'La moneda debe contener solo letras mayúsculas'),
+  dueDay: z
+    .number()
+    .int('El día de vencimiento debe ser un número entero')
+    .min(1, 'El día de vencimiento debe ser al menos 1')
+    .max(31, 'El día de vencimiento no puede ser mayor a 31')
+    .nullable()
+    .optional(),
 });
 
 export type CreateRecurringExpenseInput = z.infer<typeof createRecurringExpenseSchema>;
@@ -42,6 +49,13 @@ export const updateRecurringExpenseSchema = z.object({
     .length(3, 'La moneda debe tener exactamente 3 caracteres')
     .toUpperCase()
     .regex(/^[A-Z]{3}$/, 'La moneda debe contener solo letras mayúsculas')
+    .optional(),
+  dueDay: z
+    .number()
+    .int('El día de vencimiento debe ser un número entero')
+    .min(1, 'El día de vencimiento debe ser al menos 1')
+    .max(31, 'El día de vencimiento no puede ser mayor a 31')
+    .nullable()
     .optional(),
 });
 

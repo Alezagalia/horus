@@ -629,6 +629,7 @@ model RecurringExpense {
   concept    String   @db.VarChar(200)
   categoryId String
   currency   String   @db.VarChar(3)
+  dueDay     Int?     /// Día del mes en que vence (1-31), null si no tiene vencimiento fijo
   isActive   Boolean  @default(true)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt

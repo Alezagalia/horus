@@ -39,6 +39,7 @@ export const createRecurringExpense = async (userId: string, data: CreateRecurri
       concept: data.concept,
       categoryId: data.categoryId,
       currency: data.currency,
+      dueDay: data.dueDay,
     },
     include: {
       user: {
@@ -173,6 +174,7 @@ export const updateRecurringExpense = async (
       ...(data.concept && { concept: data.concept }),
       ...(data.categoryId && { categoryId: data.categoryId }),
       ...(data.currency && { currency: data.currency }),
+      ...(data.dueDay !== undefined && { dueDay: data.dueDay }),
     },
     include: {
       user: {

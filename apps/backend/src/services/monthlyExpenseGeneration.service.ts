@@ -117,3 +117,91 @@ export async function generateMonthlyExpenses(
 
   return result;
 }
+
+/**
+ * Generate monthly expense instances for a specific user
+ * Called on-demand when user accesses monthly expenses page
+ *
+ * @param userId - User ID
+ * @param month - Month (1-12)
+ * @param year - Year (e.g. 2024)
+ * @returns Result with counts of created, skipped and errors
+ */
+export async function generateMonthlyExpensesForUser(
+  userId: string,
+  month: number,
+  year: number
+): Promise<GenerationResult> {
+  // 1. Get active recurring expenses for this user only
+  const recurringExpenses = await prisma.recurringExpense.findMany({
+    where: {
+      userId,
+      isActive: true
+    },
+  });
+
+  let created = 0;
+  let skipped = 0;
+  let errors = 0;
+
+  for (const expense of recurringExpenses) {
+    try {
+      // 2. Check if instance already exists for this month
+      const existing = await prisma.monthlyExpenseInstance.findFirst({
+        where: {
+          recurringExpenseId: expense.id,
+          month,
+          year,
+        },
+      });
+
+      if (existing) {
+        skipped++;
+        continue; // Already exists, skip
+      }
+
+      // 3. Find previous month's instance for previousAmount
+      const previousMonth = month === 1 ? 12 : month - 1;
+      const previousYear = month === 1 ? year - 1 : year;
+
+      const previousInstance = await prisma.monthlyExpenseInstance.findFirst({
+        where: {
+          recurringExpenseId: expense.id,
+          month: previousMonth,
+          year: previousYear,
+          status: 'pagado',
+        },
+      });
+
+      const previousAmount = previousInstance?.amount || 0;
+
+      // 4. Create new instance
+      await prisma.monthlyExpenseInstance.create({
+        data: {
+          recurringExpenseId: expense.id,
+          userId: expense.userId,
+          month,
+          year,
+          concept: expense.concept,
+          categoryId: expense.categoryId,
+          amount: 0,
+          previousAmount,
+          status: 'pendiente',
+        },
+      });
+
+      created++;
+    } catch (error) {
+      console.error(`Error generating monthly expense for ${expense.id}:`, error);
+      errors++;
+    }
+  }
+
+  return {
+    created,
+    skipped,
+    errors,
+    month,
+    year,
+  };
+}

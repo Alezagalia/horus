@@ -30,6 +30,7 @@ export const getMonthlyExpenses = async (
           id: true,
           concept: true,
           currency: true,
+          dueDay: true,
           isActive: true,
         },
       },

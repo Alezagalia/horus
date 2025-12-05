@@ -52,11 +52,19 @@ export function RecurringExpenseCard({
         </span>
       </div>
 
-      {/* Currency */}
-      <div className="flex items-center gap-2">
+      {/* Currency and Due Day */}
+      <div className="flex items-center gap-2 flex-wrap">
         <span className="px-2 py-1 text-xs font-medium bg-indigo-100 text-indigo-700 rounded">
           {expense.currency}
         </span>
+        {expense.dueDay && (
+          <span className="px-2 py-1 text-xs font-medium bg-amber-100 text-amber-700 rounded flex items-center gap-1">
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            Vence día {expense.dueDay}
+          </span>
+        )}
       </div>
 
       {/* Hover Actions */}

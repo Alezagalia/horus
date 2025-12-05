@@ -40,16 +40,18 @@ export async function getTransactions(
  * Get transaction by ID
  */
 export async function getTransactionById(id: string): Promise<Transaction> {
-  const response = await axiosInstance.get<Transaction>(`/transactions/${id}`);
-  return response.data;
+  const response = await axiosInstance.get<{ transaction: Transaction }>(`/transactions/${id}`);
+  // Backend returns { transaction: {...} }
+  return response.data.transaction;
 }
 
 /**
  * Create a new transaction
  */
 export async function createTransaction(data: CreateTransactionDTO): Promise<Transaction> {
-  const response = await axiosInstance.post<Transaction>('/transactions', data);
-  return response.data;
+  const response = await axiosInstance.post<{ transaction: Transaction; account: unknown }>('/transactions', data);
+  // Backend returns { transaction: {...}, account: {...} }
+  return response.data.transaction;
 }
 
 /**
@@ -59,8 +61,9 @@ export async function updateTransaction(
   id: string,
   data: UpdateTransactionDTO
 ): Promise<Transaction> {
-  const response = await axiosInstance.put<Transaction>(`/transactions/${id}`, data);
-  return response.data;
+  const response = await axiosInstance.put<{ transaction: Transaction; account: unknown }>(`/transactions/${id}`, data);
+  // Backend returns { transaction: {...}, account: {...} }
+  return response.data.transaction;
 }
 
 /**

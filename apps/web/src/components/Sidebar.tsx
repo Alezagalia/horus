@@ -35,29 +35,32 @@ const menuSections: MenuSection[] = [
   {
     title: 'Productividad',
     items: [
-      { name: 'Hábitos del Día', path: '/habits/today', icon: '✅', gradient: 'from-green-500 to-emerald-500' },
-      { name: 'Mis Hábitos', path: '/habits', icon: '📋', gradient: 'from-blue-500 to-cyan-500' },
-      { name: 'Tareas', path: '/tasks', icon: '📝', gradient: 'from-amber-500 to-orange-500' },
+      { name: 'Tareas', path: '/tasks', icon: '✅', gradient: 'from-amber-500 to-orange-500' },
+      { name: 'Hábitos', path: '/habits', icon: '🎯', gradient: 'from-blue-500 to-cyan-500' },
       { name: 'Calendario', path: '/calendar', icon: '📅', gradient: 'from-pink-500 to-rose-500' },
-      { name: 'Categorías', path: '/categories', icon: '🗂️', gradient: 'from-violet-500 to-purple-500' },
     ],
   },
   {
-    title: 'Finanzas',
+    title: 'Dinero',
     items: [
-      { name: 'Cuentas', path: '/accounts', icon: '💰', gradient: 'from-emerald-500 to-teal-500' },
-      { name: 'Gastos Recurrentes', path: '/recurring-expenses', icon: '🔄', gradient: 'from-cyan-500 to-blue-500' },
-      { name: 'Gastos del Mes', path: '/monthly-expenses', icon: '📊', gradient: 'from-indigo-500 to-violet-500' },
+      { name: 'Cuentas', path: '/accounts', icon: '💳', gradient: 'from-emerald-500 to-teal-500' },
+      { name: 'Movimientos', path: '/transactions', icon: '💸', gradient: 'from-green-500 to-emerald-500' },
+      { name: 'Gastos Mensuales', path: '/monthly-expenses', icon: '📆', gradient: 'from-indigo-500 to-violet-500' },
     ],
     collapsible: true,
   },
   {
     title: 'Fitness',
     items: [
-      { name: 'Ejercicios', path: '/exercises', icon: '💪', gradient: 'from-red-500 to-orange-500' },
-      { name: 'Rutinas', path: '/routines', icon: '📋', gradient: 'from-fuchsia-500 to-pink-500' },
-      { name: 'Historial', path: '/workouts', icon: '📊', gradient: 'from-purple-500 to-indigo-500' },
-      { name: 'Estadísticas', path: '/stats', icon: '📈', gradient: 'from-blue-500 to-indigo-500' },
+      { name: 'Rutinas', path: '/routines', icon: '🏋️', gradient: 'from-fuchsia-500 to-pink-500' },
+      { name: 'Mi Progreso', path: '/workouts', icon: '📈', gradient: 'from-purple-500 to-indigo-500' },
+    ],
+    collapsible: true,
+  },
+  {
+    title: 'Configuración',
+    items: [
+      { name: 'Categorías', path: '/categories', icon: '🏷️', gradient: 'from-gray-500 to-slate-500' },
     ],
     collapsible: true,
   },

@@ -4,6 +4,7 @@
  */
 
 import { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import type { RecurringExpense } from '@horus/shared';
 import {
@@ -80,6 +81,7 @@ export function RecurringExpensesPage() {
             concept: data.concept,
             categoryId: data.categoryId,
             currency: data.currency,
+            dueDay: data.dueDay,
           },
         },
         {
@@ -116,9 +118,20 @@ export function RecurringExpensesPage() {
 
       {/* Header */}
       <div className="mb-6">
+        {/* Back link */}
+        <Link
+          to="/monthly-expenses"
+          className="inline-flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-800 mb-4"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Volver a Gastos Mensuales
+        </Link>
+
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Gastos Recurrentes Mensuales</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Plantillas de Gastos Fijos</h1>
             <p className="text-gray-600 mt-1">
               Configura tus gastos fijos mensuales. Se generarán automáticamente cada mes.
             </p>

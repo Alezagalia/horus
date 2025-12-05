@@ -23,6 +23,11 @@ const envSchema = z.object({
   // Web Push VAPID Keys (Sprint 12 - US-107)
   VAPID_PUBLIC_KEY: z.string().optional(),
   VAPID_PRIVATE_KEY: z.string().optional(),
+  // Security Configuration
+  CORS_ORIGINS: z.string().optional(), // Comma-separated list of allowed origins
+  RATE_LIMIT_WINDOW_MS: z.string().default('900000'), // 15 minutes
+  RATE_LIMIT_MAX_REQUESTS: z.string().default('100'), // Max requests per window
+  RATE_LIMIT_AUTH_MAX: z.string().default('5'), // Max auth attempts per window
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

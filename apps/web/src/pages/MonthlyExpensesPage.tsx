@@ -4,6 +4,7 @@
  */
 
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -84,6 +85,42 @@ export function MonthlyExpensesPage() {
 
   const totalPending = pendingExpenses.reduce((sum, e) => sum + (e.previousAmount || 0), 0);
   const totalPaid = paidExpenses.reduce((sum, e) => sum + e.amount, 0);
+
+  // Helper to get due day status for the selected month
+  const getDueDayStatus = (dueDay: number | null | undefined) => {
+    if (!dueDay) return null;
+
+    // Only show urgency for current month
+    if (selectedMonth !== today.getMonth() + 1 || selectedYear !== today.getFullYear()) {
+      return { text: `Vence día ${dueDay}`, class: 'bg-gray-100 text-gray-600', urgent: false };
+    }
+
+    const currentDay = today.getDate();
+    const daysUntilDue = dueDay - currentDay;
+
+    if (daysUntilDue < 0) {
+      return { text: 'Vencido', class: 'bg-red-100 text-red-700', urgent: true };
+    } else if (daysUntilDue === 0) {
+      return { text: 'Vence hoy', class: 'bg-amber-100 text-amber-700', urgent: true };
+    } else if (daysUntilDue <= 3) {
+      return { text: `Vence en ${daysUntilDue}d`, class: 'bg-amber-100 text-amber-700', urgent: false };
+    } else {
+      return { text: `Vence día ${dueDay}`, class: 'bg-gray-100 text-gray-600', urgent: false };
+    }
+  };
+
+  // Sort pending expenses: no due day first, then by due day ascending
+  const sortedPendingExpenses = [...pendingExpenses].sort((a, b) => {
+    const dueDayA = a.recurringExpense?.dueDay;
+    const dueDayB = b.recurringExpense?.dueDay;
+
+    // No due day comes first
+    if (!dueDayA && dueDayB) return -1;
+    if (dueDayA && !dueDayB) return 1;
+    // Both have due day: sort ascending (closest first)
+    if (dueDayA && dueDayB) return dueDayA - dueDayB;
+    return 0;
+  });
 
   const goToPreviousMonth = () => {
     if (selectedMonth === 1) {
@@ -204,14 +241,36 @@ export function MonthlyExpensesPage() {
 
       {/* Header */}
       <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
-              Gastos del Mes - {MONTHS[selectedMonth - 1]} {selectedYear}
+              Gastos Mensuales - {MONTHS[selectedMonth - 1]} {selectedYear}
             </h1>
-            <p className="text-gray-600 mt-1">Controla tus gastos recurrentes mensuales</p>
+            <p className="text-gray-600 mt-1">Controla tus gastos fijos del mes</p>
           </div>
           <div className="flex items-center gap-2">
+            <Link
+              to="/recurring-expenses"
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors"
+              title="Configurar gastos recurrentes"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+              </svg>
+              Configurar Plantillas
+            </Link>
+            <div className="h-8 w-px bg-gray-300 hidden sm:block" />
             <button
               onClick={goToPreviousMonth}
               className="p-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
@@ -231,7 +290,7 @@ export function MonthlyExpensesPage() {
               disabled={isCurrentMonth}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
             >
-              Mes Actual
+              Hoy
             </button>
             <button
               onClick={goToNextMonth}
@@ -256,7 +315,7 @@ export function MonthlyExpensesPage() {
         <h2 className="text-xl font-semibold text-gray-900 mb-4">
           Pendientes ({pendingExpenses.length})
         </h2>
-        {pendingExpenses.length === 0 ? (
+        {sortedPendingExpenses.length === 0 ? (
           <div className="bg-green-50 border border-green-200 rounded-lg p-12 text-center">
             <div className="text-6xl mb-4">🎉</div>
             <h3 className="text-lg font-semibold text-green-900 mb-2">No hay gastos pendientes</h3>
@@ -264,43 +323,57 @@ export function MonthlyExpensesPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {pendingExpenses.map((expense) => (
-              <div
-                key={expense.id}
-                className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4 flex-1">
-                    <span className="text-3xl">{expense.category?.icon || '📄'}</span>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">{expense.concept}</h3>
-                      <p className="text-sm text-gray-600">{expense.category?.name}</p>
-                      {expense.previousAmount && (
-                        <p className="text-xs text-gray-500 mt-1">
-                          Mes anterior:{' '}
-                          {formatCurrency(
-                            expense.previousAmount,
-                            (expense.recurringExpense?.currency || 'ARS') as Currency
+            {sortedPendingExpenses.map((expense) => {
+              const dueStatus = getDueDayStatus(expense.recurringExpense?.dueDay);
+              return (
+                <div
+                  key={expense.id}
+                  className={`border rounded-lg p-4 hover:shadow-md transition-shadow ${
+                    dueStatus?.urgent
+                      ? 'bg-red-50 border-red-200'
+                      : 'bg-white border-gray-200'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4 flex-1">
+                      <span className="text-3xl">{expense.category?.icon || '📄'}</span>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-semibold text-gray-900">{expense.concept}</h3>
+                          {dueStatus && (
+                            <span className={`px-2 py-0.5 text-xs font-medium rounded ${dueStatus.class}`}>
+                              {dueStatus.text}
+                            </span>
                           )}
-                        </p>
-                      )}
+                        </div>
+                        <p className="text-sm text-gray-600">{expense.category?.name}</p>
+                        {expense.previousAmount && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            Mes anterior:{' '}
+                            {formatCurrency(
+                              expense.previousAmount,
+                              (expense.recurringExpense?.currency || 'ARS') as Currency
+                            )}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-gray-400">$0</p>
+                        <span className="inline-block px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-700 rounded mt-1">
+                          Pendiente
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-gray-400">$0</p>
-                      <span className="inline-block px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-700 rounded mt-1">
-                        Pendiente
-                      </span>
-                    </div>
+                    <button
+                      onClick={() => handlePayClick(expense)}
+                      className="ml-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
+                    >
+                      Marcar como Pagado
+                    </button>
                   </div>
-                  <button
-                    onClick={() => handlePayClick(expense)}
-                    className="ml-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
-                  >
-                    Marcar como Pagado
-                  </button>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

@@ -13,6 +13,7 @@ import {
   updateMonthlyExpenseSchema,
 } from '../validations/monthlyExpense.validation.js';
 import * as monthlyExpenseService from '../services/monthlyExpense.service.js';
+import { generateMonthlyExpensesForUser } from '../services/monthlyExpenseGeneration.service.js';
 
 /**
  * GET /api/monthly-expenses/:month/:year
@@ -28,6 +29,9 @@ export const getMonthlyExpenses = async (req: Request, res: Response): Promise<v
 
     // Get user ID from auth middleware
     const userId = req.user!.id;
+
+    // Auto-generate monthly expense instances from recurring expenses (if not already created)
+    await generateMonthlyExpensesForUser(userId, month, year);
 
     // Get monthly expenses
     const monthlyExpenses = await monthlyExpenseService.getMonthlyExpenses(
@@ -75,6 +79,9 @@ export const getCurrentMonthlyExpenses = async (req: Request, res: Response): Pr
     const now = new Date();
     const month = now.getMonth() + 1;
     const year = now.getFullYear();
+
+    // Auto-generate monthly expense instances from recurring expenses (if not already created)
+    await generateMonthlyExpensesForUser(userId, month, year);
 
     // Get monthly expenses
     const monthlyExpenses = await monthlyExpenseService.getCurrentMonthlyExpenses(userId, status);

@@ -80,13 +80,26 @@ export const updateTransactionSchema = z.object({
 
 /**
  * Schema para query params de listado
+ * Acepta fechas en formato YYYY-MM-DD o ISO 8601 completo
  */
 export const getTransactionsQuerySchema = z.object({
   accountId: z.string().uuid().optional(),
   categoryId: z.string().uuid().optional(),
   type: transactionTypeEnum.optional(),
-  from: z.string().datetime().optional(),
-  to: z.string().datetime().optional(),
+  from: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || !isNaN(Date.parse(val)),
+      { message: 'from must be a valid date (YYYY-MM-DD or ISO 8601)' }
+    ),
+  to: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || !isNaN(Date.parse(val)),
+      { message: 'to must be a valid date (YYYY-MM-DD or ISO 8601)' }
+    ),
   limit: z
     .string()
     .optional()

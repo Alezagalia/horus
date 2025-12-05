@@ -7,8 +7,10 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { Transaction } from '@horus/shared';
+import type { Transaction, Account, Category, TransactionType } from '@horus/shared';
 import { useCategories } from '@/hooks/useCategories';
+import { useAccounts } from '@/hooks/useAccounts';
+import { formatCurrency } from '@/utils/currency';
 
 const formSchema = z.object({
   type: z.enum(['ingreso', 'egreso'] as const),
@@ -20,14 +22,16 @@ const formSchema = z.object({
   notes: z.string().max(1000, 'Máximo 1000 caracteres').optional(),
 });
 
-type FormData = z.infer<typeof formSchema>;
+export type TransactionFormData = z.infer<typeof formSchema>;
 
 interface TransactionFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: FormData) => void;
+  onSubmit: (data: TransactionFormData) => void;
   editingTransaction?: Transaction | null;
   defaultAccountId?: string;
+  defaultType?: TransactionType;
+  isSubmitting?: boolean;
 }
 
 export function TransactionFormModal({
@@ -36,18 +40,26 @@ export function TransactionFormModal({
   onSubmit,
   editingTransaction,
   defaultAccountId,
+  defaultType = 'egreso',
+  isSubmitting = false,
 }: TransactionFormModalProps) {
   const { data: categories = [] } = useCategories();
+  const { data: accounts = [] } = useAccounts();
+
+  // Ensure accounts is array and filter active ones
+  const accountsList = Array.isArray(accounts) ? accounts : [];
+  const activeAccounts = accountsList.filter((acc) => acc.isActive);
+
   const {
     register,
     handleSubmit,
     reset,
     watch,
     formState: { errors },
-  } = useForm<FormData>({
+  } = useForm<TransactionFormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      type: 'egreso',
+      type: defaultType,
       accountId: defaultAccountId || '',
       categoryId: '',
       amount: 0,
@@ -59,6 +71,10 @@ export function TransactionFormModal({
 
   // Filter categories by scope (gastos for transactions)
   const expenseCategories = categories.filter((cat) => cat.scope === 'gastos');
+
+  // Get selected account to show balance
+  const selectedAccountId = watch('accountId');
+  const selectedAccount = activeAccounts.find((acc) => acc.id === selectedAccountId);
 
   useEffect(() => {
     if (editingTransaction) {
@@ -73,7 +89,7 @@ export function TransactionFormModal({
       });
     } else {
       reset({
-        type: 'egreso',
+        type: defaultType,
         accountId: defaultAccountId || '',
         categoryId: '',
         amount: 0,
@@ -82,7 +98,7 @@ export function TransactionFormModal({
         notes: '',
       });
     }
-  }, [editingTransaction, defaultAccountId, reset]);
+  }, [editingTransaction, defaultAccountId, defaultType, reset, isOpen]);
 
   if (!isOpen) return null;
 
@@ -156,29 +172,38 @@ export function TransactionFormModal({
               )}
             </div>
 
-            {/* Account (hidden if defaultAccountId, shown as disabled if editing) */}
-            {!defaultAccountId && (
-              <div>
-                <label htmlFor="accountId" className="block text-sm font-medium text-gray-700 mb-1">
-                  Cuenta *
-                </label>
-                <input
-                  id="accountId"
-                  {...register('accountId')}
-                  disabled={isEditing}
-                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                    isEditing ? 'bg-gray-50 cursor-not-allowed' : ''
-                  }`}
-                  placeholder="ID de cuenta"
-                />
-                {errors.accountId && (
-                  <p className="mt-1 text-sm text-red-600">{errors.accountId.message}</p>
-                )}
-                {isEditing && (
-                  <p className="mt-1 text-xs text-gray-500">La cuenta no puede modificarse</p>
-                )}
-              </div>
-            )}
+            {/* Account selection */}
+            <div>
+              <label htmlFor="accountId" className="block text-sm font-medium text-gray-700 mb-1">
+                Cuenta *
+              </label>
+              <select
+                id="accountId"
+                {...register('accountId')}
+                disabled={isEditing || !!defaultAccountId}
+                className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                  isEditing || defaultAccountId ? 'bg-gray-50 cursor-not-allowed' : ''
+                }`}
+              >
+                <option value="">Seleccionar cuenta</option>
+                {activeAccounts.map((acc) => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.icon} {acc.name} ({acc.currency})
+                  </option>
+                ))}
+              </select>
+              {errors.accountId && (
+                <p className="mt-1 text-sm text-red-600">{errors.accountId.message}</p>
+              )}
+              {selectedAccount && (
+                <p className="mt-1 text-xs text-gray-500">
+                  Saldo: {formatCurrency(selectedAccount.currentBalance, selectedAccount.currency)}
+                </p>
+              )}
+              {isEditing && (
+                <p className="mt-1 text-xs text-gray-500">La cuenta no puede modificarse</p>
+              )}
+            </div>
 
             {/* Category */}
             <div>
@@ -272,14 +297,19 @@ export function TransactionFormModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                disabled={isSubmitting}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700"
+                disabled={isSubmitting}
+                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
               >
+                {isSubmitting && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                )}
                 {isEditing ? 'Guardar Cambios' : 'Crear Transacción'}
               </button>
             </div>

@@ -90,8 +90,6 @@ export function AccountsPage() {
     }
   };
 
-  const activeAccounts = accounts.filter((acc) => acc.isActive);
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[600px]">
@@ -102,6 +100,10 @@ export function AccountsPage() {
       </div>
     );
   }
+
+  // Ensure accounts is an array before filtering
+  const accountsList = Array.isArray(accounts) ? accounts : [];
+  const activeAccounts = accountsList.filter((acc) => acc.isActive);
 
   return (
     <div>

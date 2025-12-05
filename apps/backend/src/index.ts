@@ -1,5 +1,6 @@
 import express, { Application } from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import { env } from './config/env.js';
 import routes from './routes/index.js';
 import { errorMiddleware } from './middlewares/error.middleware.js';
@@ -10,17 +11,38 @@ import { initializeFirebaseAdmin } from './lib/firebase-admin.js';
 import { initSentry } from './lib/sentry.js';
 import { logInfo, logError } from './lib/logger.js';
 import { requestLoggerMiddleware } from './middlewares/request-logger.middleware.js';
+import { generalLimiter } from './middlewares/rate-limit.middleware.js';
+import { getCorsOptions, apiHelmetOptions } from './config/security.js';
 
 // Initialize Sentry first (US-115)
 initSentry();
 
 const app: Application = express();
 
-// Middlewares
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(requestLoggerMiddleware); // US-115: Log all HTTP requests
+// ===========================================
+// Security Middlewares
+// ===========================================
+
+// Helmet: Security headers (XSS, clickjacking, MIME sniffing, etc.)
+app.use(helmet(apiHelmetOptions));
+
+// CORS: Restrict origins in production
+app.use(cors(getCorsOptions()));
+
+// Rate limiting: Prevent DoS and brute force (general)
+app.use(generalLimiter);
+
+// Trust proxy for rate limiting behind reverse proxy (Railway, Render, etc.)
+app.set('trust proxy', 1);
+
+// ===========================================
+// Body Parsing Middlewares
+// ===========================================
+app.use(express.json({ limit: '10mb' })); // Limit body size
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Request logging (US-115)
+app.use(requestLoggerMiddleware);
 
 // Routes
 app.use('/api', routes);
