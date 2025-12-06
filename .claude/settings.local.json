@@ -112,7 +112,12 @@
       "Bash(cmd /c \"taskkill /F /IM node.exe\")",
       "Bash(powershell -Command \"Stop-Process -Id 13700 -Force\")",
       "Bash(java:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: add security hardening and Railway deployment config\n\nSecurity improvements:\n- Add Helmet middleware for HTTP security headers\n- Configure CORS with environment-based allowed origins\n- Implement rate limiting (general + strict for auth endpoints)\n- Add request body size limits\n- Run container as non-root user\n\nDeployment configuration:\n- Add optimized Dockerfile for backend (multi-stage, healthcheck)\n- Add Dockerfile for frontend (Nginx for static files)\n- Add nginx.conf with gzip, caching, and SPA routing\n- Update railway.toml configuration\n\nOther changes:\n- Fix TypeScript glob type errors in tsconfig\n- Update dependencies (helmet, express-rate-limit)\n- Various bug fixes and improvements\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git commit --no-verify -m \"$(cat <<''EOF''\nfeat: add security hardening and Railway deployment config\n\nSecurity improvements:\n- Add Helmet middleware for HTTP security headers\n- Configure CORS with environment-based allowed origins\n- Implement rate limiting (general + strict for auth endpoints)\n- Add request body size limits\n- Run container as non-root user\n\nDeployment configuration:\n- Add optimized Dockerfile for backend (multi-stage, healthcheck)\n- Add Dockerfile for frontend (Nginx for static files)\n- Add nginx.conf with gzip, caching, and SPA routing\n- Update railway.toml configuration\n\nOther changes:\n- Fix TypeScript glob type errors in tsconfig\n- Update dependencies (helmet, express-rate-limit)\n- Various bug fixes and improvements\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push:*)",
+      "Bash(railway:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
