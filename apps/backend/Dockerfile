@@ -30,6 +30,8 @@ RUN pnpm build
 
 # Generate Prisma Client and build backend
 WORKDIR /app/apps/backend
+# Dummy DATABASE_URL for prisma generate (only needed at build time, not runtime)
+ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
 RUN npx prisma generate
 RUN pnpm build
 
