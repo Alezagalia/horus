@@ -49,25 +49,26 @@ RUN adduser --system --uid 1001 horus
 
 WORKDIR /app
 
-# Copy workspace structure for pnpm
+# Copy entire built workspace from builder
+# This preserves the pnpm symlink structure and node_modules
 COPY --from=builder /app/pnpm-workspace.yaml ./
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/pnpm-lock.yaml ./
 
-# Copy package files
+# Copy package.json files (needed for pnpm structure)
 COPY --from=builder /app/apps/backend/package.json ./apps/backend/
 COPY --from=builder /app/packages/shared/package.json ./packages/shared/
 
-# Install production dependencies only
-RUN pnpm install --frozen-lockfile --prod
+# Install production dependencies with pnpm
+# Use --ignore-scripts to skip postinstall scripts that might fail
+RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 
-# Copy built files
+# Copy built dist files (includes compiled Prisma client at dist/generated/)
 COPY --from=builder /app/apps/backend/dist ./apps/backend/dist
-COPY --from=builder /app/apps/backend/prisma ./apps/backend/prisma
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 
-# Copy prisma.config.ts for Prisma 7 runtime (needed for migrations in prod)
-COPY --from=builder /app/apps/backend/prisma.config.ts ./apps/backend/prisma.config.ts
+# Copy Prisma schema (needed for migrations)
+COPY --from=builder /app/apps/backend/prisma ./apps/backend/prisma
 
 # Set ownership to non-root user
 RUN chown -R horus:nodejs /app
