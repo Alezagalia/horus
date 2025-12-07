@@ -1,18 +1,17 @@
 # ===========================================
 # Horus Backend - Railway Configuration
 # ===========================================
-# This file configures the backend service.
-# For the frontend, create a separate service in Railway
-# pointing to apps/web/Dockerfile
+# Using Nixpacks for simpler builds
 
 [build]
-builder = "dockerfile"
-dockerfilePath = "apps/backend/Dockerfile"
+builder = "nixpacks"
+buildCommand = "pnpm --filter @horus/shared build && cd apps/backend && npx prisma generate && pnpm build"
+watchPatterns = ["apps/backend/**", "packages/shared/**"]
 
 [deploy]
 numReplicas = 1
 healthcheckPath = "/api/health"
 healthcheckTimeout = 300
-# Remove startCommand to use Dockerfile's CMD which has correct WORKDIR
+startCommand = "cd apps/backend && node dist/index.js"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
