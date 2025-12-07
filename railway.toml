@@ -1,7 +1,22 @@
 # ===========================================
-# Horus Backend - Railway Configuration
+# Horus - Railway Configuration
 # ===========================================
-# Using Dockerfile for builds
+# NOTE: This is a monorepo. Each service needs its own config.
+# Configure services in Railway UI with:
+#
+# BACKEND SERVICE:
+#   - Root Directory: / (monorepo root)
+#   - Dockerfile Path: apps/backend/Dockerfile
+#   - Variables: DATABASE_URL, JWT_SECRET, JWT_REFRESH_SECRET, etc.
+#
+# FRONTEND SERVICE:
+#   - Root Directory: / (monorepo root)
+#   - Dockerfile Path: apps/web/Dockerfile
+#   - Build Args: VITE_API_URL=https://your-backend-url
+#
+# ===========================================
+# This file is for the BACKEND service only
+# ===========================================
 
 [build]
 builder = "dockerfile"
@@ -12,6 +27,5 @@ watchPatterns = ["apps/backend/**", "packages/shared/**"]
 numReplicas = 1
 healthcheckPath = "/api/health"
 healthcheckTimeout = 300
-# No startCommand - Dockerfile CMD handles this with correct WORKDIR
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
