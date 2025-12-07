@@ -40,30 +40,43 @@ RUN pnpm build
 # ===========================================
 FROM node:20-alpine AS runner
 
+# Install pnpm for production
+RUN corepack enable && corepack prepare pnpm@10.18.3 --activate
+
 # Add non-root user for security
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 horus
 
 WORKDIR /app
 
+# Copy workspace structure for pnpm
+COPY --from=builder /app/pnpm-workspace.yaml ./
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/pnpm-lock.yaml ./
+
 # Copy package files
-COPY --from=builder /app/apps/backend/package.json ./
-COPY --from=builder /app/packages/shared/package.json ../packages/shared/
+COPY --from=builder /app/apps/backend/package.json ./apps/backend/
+COPY --from=builder /app/packages/shared/package.json ./packages/shared/
+
+# Install production dependencies only
+RUN pnpm install --frozen-lockfile --prod
 
 # Copy built files
-COPY --from=builder /app/apps/backend/dist ./dist
-COPY --from=builder /app/apps/backend/prisma ./prisma
-COPY --from=builder /app/apps/backend/node_modules ./node_modules
-COPY --from=builder /app/packages/shared/dist ../packages/shared/dist
+COPY --from=builder /app/apps/backend/dist ./apps/backend/dist
+COPY --from=builder /app/apps/backend/prisma ./apps/backend/prisma
+COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 
 # Copy prisma.config.ts for Prisma 7 runtime (needed for migrations in prod)
-COPY --from=builder /app/apps/backend/prisma.config.ts ./prisma.config.ts
+COPY --from=builder /app/apps/backend/prisma.config.ts ./apps/backend/prisma.config.ts
 
 # Set ownership to non-root user
 RUN chown -R horus:nodejs /app
 
 # Switch to non-root user
 USER horus
+
+# Set working directory for the app
+WORKDIR /app/apps/backend
 
 # Railway sets PORT automatically
 ENV PORT=3000
