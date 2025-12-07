@@ -1,6 +1,7 @@
 # ===========================================
 # Horus Backend - Production Dockerfile
 # Optimized for Railway deployment
+# Version: 2 - Force rebuild
 # ===========================================
 
 # Build stage
@@ -20,9 +21,13 @@ COPY packages/shared/package.json ./packages/shared/
 RUN pnpm install --frozen-lockfile
 
 # Copy source code
+# Note: Railway caches COPY layers, so shared package source must be fresh
 COPY packages/shared ./packages/shared
 COPY apps/backend ./apps/backend
 COPY tsconfig.base.json ./
+
+# Force cache invalidation for shared build
+ARG CACHEBUST=1
 
 # Build shared package first (clean build to ensure fresh output)
 WORKDIR /app/packages/shared

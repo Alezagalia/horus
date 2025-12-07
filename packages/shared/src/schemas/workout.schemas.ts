@@ -1,6 +1,7 @@
 /**
  * Workout Zod Schemas
  * Sprint 14 - US-128, US-129, US-130
+ * Updated: 2025-12-07 - Ensure Railway cache invalidation
  */
 
 import { z } from 'zod';
