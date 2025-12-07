@@ -4,8 +4,8 @@
  */
 
 import { Router } from 'express';
-import * as pushController from '@/controllers/push.controller.js';
-import { authMiddleware } from '@/middlewares/auth.middleware.js';
+import * as pushController from '../controllers/push.controller.js';
+import { authMiddleware } from '../middlewares/auth.middleware.js';
 
 const router = Router();
 

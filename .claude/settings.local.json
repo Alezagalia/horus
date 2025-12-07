@@ -125,7 +125,13 @@
       "Bash(git -C /c/Desarrollo/Horus2 log --oneline -3)",
       "Bash(grep:*)",
       "Bash(git -C /c/Desarrollo/Horus2 add -A)",
-      "Bash(git -C /c/Desarrollo/Horus2 commit -m \"fix: shared package tsconfig - disable composite for proper emit\n\nThe composite option was preventing TypeScript from emitting JS files\nfor the shared package, causing the build to fail in Railway.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\")"
+      "Bash(git -C /c/Desarrollo/Horus2 commit -m \"fix: shared package tsconfig - disable composite for proper emit\n\nThe composite option was preventing TypeScript from emitting JS files\nfor the shared package, causing the build to fail in Railway.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\")",
+      "Bash(git -C /c/Desarrollo/Horus2 commit -m \"fix: force clean build of shared package in Docker\n\nAdd rm -rf dist before pnpm build to ensure the shared package\nis always rebuilt fresh, avoiding Docker cache issues.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\")",
+      "Bash(git -C /c/Desarrollo/Horus2 commit -m \"fix: use pnpm workspace structure in production Dockerfile\n\nThe previous approach of copying node_modules directly didn''t work\nbecause pnpm uses symlinks and hoisting. Now we:\n1. Copy the full workspace structure (pnpm-workspace.yaml, package.json, pnpm-lock.yaml)\n2. Install production dependencies with pnpm install --prod\n3. Copy built files to their proper workspace locations\n4. Set WORKDIR to apps/backend for the CMD\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\")",
+      "Bash(docker build:*)",
+      "Bash(for i in 1 2 3 4 5)",
+      "Bash(do echo \"=== Attempt $i ===\")",
+      "Bash(done)"
     ],
     "deny": [],
     "ask": []

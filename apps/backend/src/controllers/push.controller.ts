@@ -4,13 +4,13 @@
  */
 
 import { Request, Response } from 'express';
-import * as pushService from '@/services/push/push-notification.service.js';
+import * as pushService from '../services/push/push-notification.service.js';
 import {
   registerTokenSchema,
   unregisterTokenSchema,
   sendTestPushSchema,
-} from '@/validations/push.validation.js';
-import { env } from '@/config/env.js';
+} from '../validations/push.validation.js';
+import { env } from '../config/env.js';
 
 /**
  * POST /api/push/register

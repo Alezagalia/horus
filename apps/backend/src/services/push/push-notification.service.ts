@@ -6,7 +6,7 @@
  */
 
 import { DevicePlatform } from '../../generated/prisma/client.js';
-import { getMessaging, isFirebaseConfigured } from '@/lib/firebase-admin.js';
+import { getMessaging, isFirebaseConfigured } from '../../lib/firebase-admin.js';
 import type { Message, MulticastMessage } from 'firebase-admin/messaging';
 import { prisma } from '../../lib/prisma.js';
 
