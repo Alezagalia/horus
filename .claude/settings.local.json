@@ -117,7 +117,15 @@
       "Bash(git commit --no-verify -m \"$(cat <<''EOF''\nfeat: add security hardening and Railway deployment config\n\nSecurity improvements:\n- Add Helmet middleware for HTTP security headers\n- Configure CORS with environment-based allowed origins\n- Implement rate limiting (general + strict for auth endpoints)\n- Add request body size limits\n- Run container as non-root user\n\nDeployment configuration:\n- Add optimized Dockerfile for backend (multi-stage, healthcheck)\n- Add Dockerfile for frontend (Nginx for static files)\n- Add nginx.conf with gzip, caching, and SPA routing\n- Update railway.toml configuration\n\nOther changes:\n- Fix TypeScript glob type errors in tsconfig\n- Update dependencies (helmet, express-rate-limit)\n- Various bug fixes and improvements\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
       "Bash(git push:*)",
       "Bash(railway:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git -C /c/Desarrollo/Horus2 add apps/backend/Dockerfile)",
+      "Bash(git -C /c/Desarrollo/Horus2 commit -m \"fix: copy Prisma generated client in Dockerfile\n\nThe Prisma client is generated in src/generated/prisma/ but was not being\ncopied to the production container, causing the app to fail on startup.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\")",
+      "Bash(git -C /c/Desarrollo/Horus2 status packages/shared/src/schemas/workout.schemas.ts)",
+      "Bash(git -C /c/Desarrollo/Horus2 show HEAD:packages/shared/src/schemas/workout.schemas.ts)",
+      "Bash(git -C /c/Desarrollo/Horus2 log --oneline -3)",
+      "Bash(grep:*)",
+      "Bash(git -C /c/Desarrollo/Horus2 add -A)",
+      "Bash(git -C /c/Desarrollo/Horus2 commit -m \"fix: shared package tsconfig - disable composite for proper emit\n\nThe composite option was preventing TypeScript from emitting JS files\nfor the shared package, causing the build to fail in Railway.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\")"
     ],
     "deny": [],
     "ask": []

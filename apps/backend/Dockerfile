@@ -56,8 +56,8 @@ COPY --from=builder /app/apps/backend/prisma ./prisma
 COPY --from=builder /app/apps/backend/node_modules ./node_modules
 COPY --from=builder /app/packages/shared/dist ../packages/shared/dist
 
-# Copy Prisma generated client (generated in src/generated/prisma)
-COPY --from=builder /app/apps/backend/src/generated ./src/generated
+# Copy prisma.config.ts for Prisma 7 runtime (needed for migrations in prod)
+COPY --from=builder /app/apps/backend/prisma.config.ts ./prisma.config.ts
 
 # Set ownership to non-root user
 RUN chown -R horus:nodejs /app
