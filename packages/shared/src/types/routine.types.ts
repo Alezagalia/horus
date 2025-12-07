@@ -3,7 +3,7 @@
  * Sprint 14 - US-127
  */
 
-import type { MuscleGroup } from './exercise.types';
+import type { MuscleGroup } from './exercise.types.js';
 
 export interface Routine {
   id: string;

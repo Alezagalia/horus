@@ -3,7 +3,7 @@
  * Sprint 10/13 - Shared types for recurring expense templates
  */
 
-import type { Category } from './category.types';
+import type { Category } from './category.types.js';
 
 /**
  * Recurring Expense Template

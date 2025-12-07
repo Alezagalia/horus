@@ -3,9 +3,9 @@
  * Sprint 10/13 - Shared types for monthly expense instances
  */
 
-import type { Category } from './category.types';
-import type { Account } from './account.types';
-import type { RecurringExpense } from './recurringExpense.types';
+import type { Category } from './category.types.js';
+import type { Account } from './account.types.js';
+import type { RecurringExpense } from './recurringExpense.types.js';
 
 export type ExpenseStatus = 'pendiente' | 'pagado';
 

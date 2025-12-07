@@ -6,7 +6,7 @@
  * Función compartida entre backend y frontend para consistencia
  */
 
-import { TaskStatus, TaskColorResult } from '../types/task.types';
+import { TaskStatus, TaskColorResult } from '../types/task.types.js';
 
 /**
  * Calcula el color de una tarea basándose en su estado y fecha de vencimiento

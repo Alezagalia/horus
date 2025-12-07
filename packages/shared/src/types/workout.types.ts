@@ -3,7 +3,7 @@
  * Sprint 14 - US-128, US-129, US-130
  */
 
-import type { MuscleGroup } from './exercise.types';
+import type { MuscleGroup } from './exercise.types.js';
 
 export interface Workout {
   id: string;

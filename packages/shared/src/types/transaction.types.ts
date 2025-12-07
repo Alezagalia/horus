@@ -3,8 +3,8 @@
  * Sprint 13 - US-120
  */
 
-import type { Account } from './account.types';
-import type { Category } from './category.types';
+import type { Account } from './account.types.js';
+import type { Category } from './category.types.js';
 
 export type TransactionType = 'ingreso' | 'egreso';
 

@@ -6,7 +6,7 @@
  * Used in backend HabitService and mobile HabitFormScreen
  */
 
-import { HabitType, Periodicity } from '../types/habit.types';
+import { HabitType, Periodicity } from '../types/habit.types.js';
 
 /**
  * Validation Result
