@@ -56,6 +56,9 @@ COPY --from=builder /app/apps/backend/prisma ./prisma
 COPY --from=builder /app/apps/backend/node_modules ./node_modules
 COPY --from=builder /app/packages/shared/dist ../packages/shared/dist
 
+# Copy Prisma generated client (generated in src/generated/prisma)
+COPY --from=builder /app/apps/backend/src/generated ./src/generated
+
 # Set ownership to non-root user
 RUN chown -R horus:nodejs /app
 
