@@ -3,5 +3,5 @@
  * Export all utility functions for consumption by apps
  */
 
-export * from './habit-validators';
-export * from './task-colors';
+export * from './habit-validators.js';
+export * from './task-colors.js';

@@ -3,8 +3,8 @@
  * Export all validation schemas for consumption by apps
  */
 
-export * from './category.schemas';
-export * from './habit.schemas';
-export * from './exercise.schemas';
-export * from './routine.schemas';
-export * from './workout.schemas';
+export * from './category.schemas.js';
+export * from './habit.schemas.js';
+export * from './exercise.schemas.js';
+export * from './routine.schemas.js';
+export * from './workout.schemas.js';
