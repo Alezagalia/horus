@@ -33,12 +33,18 @@ WORKDIR /app
 # Copy built files and server
 COPY --from=builder /app/apps/web/dist ./dist
 COPY --from=builder /app/apps/web/server.js ./
-COPY --from=builder /app/apps/web/package.json ./
 
-# Install only express
-RUN npm install express@4.21.0
+# Create a minimal package.json with ESM support
+RUN echo '{"type":"module","dependencies":{"express":"^4.21.0"}}' > package.json
+
+# Install express
+RUN npm install
 
 EXPOSE 80
 ENV PORT=80
+ENV NODE_ENV=production
+
+# Debug: Show contents
+RUN ls -la && cat package.json
 
 CMD ["node", "server.js"]
