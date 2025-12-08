@@ -36,12 +36,10 @@ RUN npm install -g serve@14
 # Copy built files
 COPY --from=builder /app/apps/web/dist ./dist
 
-EXPOSE 80
-ENV PORT=80
 ENV NODE_ENV=production
 
-# Debug: Show contents
-RUN ls -la dist/
+# Debug: Show contents and verify serve is installed
+RUN ls -la dist/ && ls -la dist/assets/ && which serve
 
-# Use serve with SPA mode
-CMD ["serve", "-s", "dist", "-l", "80"]
+# Use serve with SPA mode - listen on PORT env var (Railway sets this)
+CMD serve -s dist -l tcp://0.0.0.0:${PORT:-80}
