@@ -23,23 +23,26 @@ WORKDIR /app/apps/web
 ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
 
-RUN pnpm build
+RUN pnpm build && ls -la dist/ && ls -la dist/assets/
 
-# Production stage - use serve for proper MIME types
-FROM node:20-alpine
+# Production stage - nginx for reliable static serving
+FROM nginx:alpine
 
-WORKDIR /app
+# Copy built files to nginx
+COPY --from=builder /app/apps/web/dist /usr/share/nginx/html
 
-# Install serve globally
-RUN npm install -g serve@14
+# Create nginx config template that uses PORT env var
+RUN echo 'server { \
+    listen ${PORT:-80}; \
+    root /usr/share/nginx/html; \
+    index index.html; \
+    location / { \
+        try_files $uri $uri/ /index.html; \
+    } \
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ { \
+        expires 1y; \
+        add_header Cache-Control "public, immutable"; \
+    } \
+}' > /etc/nginx/templates/default.conf.template
 
-# Copy built files
-COPY --from=builder /app/apps/web/dist ./dist
-
-ENV NODE_ENV=production
-
-# Debug: Show contents and verify serve is installed
-RUN ls -la dist/ && ls -la dist/assets/ && which serve
-
-# Use serve with SPA mode - listen on PORT env var (Railway sets this)
-CMD serve -s dist -l tcp://0.0.0.0:${PORT:-80}
+CMD ["nginx", "-g", "daemon off;"]
