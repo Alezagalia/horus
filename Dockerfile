@@ -37,25 +37,62 @@ RUN pnpm build
 # Frontend production stage
 FROM nginx:alpine AS frontend
 
+# Remove default config
+RUN rm -f /etc/nginx/conf.d/default.conf
+
+# Create proper nginx config with explicit MIME types
+RUN cat > /etc/nginx/conf.d/horus.conf << 'NGINXEOF'
+types {
+    text/html                             html htm shtml;
+    text/css                              css;
+    text/xml                              xml;
+    application/javascript                js mjs;
+    application/json                      json;
+    image/png                             png;
+    image/jpeg                            jpeg jpg;
+    image/gif                             gif;
+    image/svg+xml                         svg svgz;
+    image/webp                            webp;
+    image/x-icon                          ico;
+    font/woff                             woff;
+    font/woff2                            woff2;
+    application/octet-stream              bin exe dll;
+}
+
+server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    gzip on;
+    gzip_vary on;
+    gzip_types text/plain text/css text/xml application/javascript application/json image/svg+xml;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /health {
+        access_log off;
+        return 200 "OK";
+        add_header Content-Type text/plain;
+    }
+
+    location ~* \.(js|mjs)$ {
+        add_header Content-Type application/javascript;
+        try_files $uri =404;
+    }
+
+    location ~* \.(css)$ {
+        add_header Content-Type text/css;
+        try_files $uri =404;
+    }
+}
+NGINXEOF
+
 # Copy built static files
 COPY --from=frontend-builder /app/apps/web/dist /usr/share/nginx/html
-
-# Create nginx config (mime.types already included globally by nginx)
-RUN echo 'server { \
-    listen 80; \
-    server_name _; \
-    root /usr/share/nginx/html; \
-    index index.html; \
-    gzip on; \
-    gzip_types text/plain text/css application/javascript application/json image/svg+xml; \
-    location / { \
-        try_files $uri $uri/ /index.html; \
-    } \
-    location /health { \
-        return 200 "OK"; \
-        add_header Content-Type text/plain; \
-    } \
-}' > /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
