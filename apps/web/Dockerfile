@@ -45,14 +45,14 @@ FROM nginx:alpine AS runner
 # Remove default nginx config
 RUN rm /etc/nginx/conf.d/default.conf
 
-# Copy custom nginx config
+# Copy custom nginx config to conf.d
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
-
-# Ensure proper MIME types for JS modules
-RUN echo "types { application/javascript js mjs; }" > /etc/nginx/conf.d/mimetypes.conf
 
 # Copy built static files
 COPY --from=builder /app/apps/web/dist /usr/share/nginx/html
+
+# Verify files are copied correctly
+RUN ls -la /usr/share/nginx/html/assets/ || true
 
 # Railway uses PORT env variable
 EXPOSE 80
