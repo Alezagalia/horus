@@ -75,6 +75,10 @@ COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 # Copy Prisma schema (needed for migrations)
 COPY --from=builder /app/apps/backend/prisma ./apps/backend/prisma
 
+# Copy start script
+COPY apps/backend/start.sh ./apps/backend/start.sh
+RUN chmod +x ./apps/backend/start.sh
+
 # Set ownership to non-root user
 RUN chown -R horus:nodejs /app
 
@@ -95,5 +99,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT}/api/health || exit 1
 
-# Start the server
-CMD ["node", "dist/index.js"]
+# Start the server with env check
+CMD ["./start.sh"]
