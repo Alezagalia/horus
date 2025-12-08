@@ -25,26 +25,23 @@ ENV VITE_API_URL=$VITE_API_URL
 
 RUN pnpm build
 
-# Production stage - simple Node.js server
+# Production stage - use serve for proper MIME types
 FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy built files and server
+# Install serve globally
+RUN npm install -g serve@14
+
+# Copy built files
 COPY --from=builder /app/apps/web/dist ./dist
-COPY --from=builder /app/apps/web/server.js ./
-
-# Create a minimal package.json with ESM support
-RUN echo '{"type":"module","dependencies":{"express":"^4.21.0"}}' > package.json
-
-# Install express
-RUN npm install
 
 EXPOSE 80
 ENV PORT=80
 ENV NODE_ENV=production
 
 # Debug: Show contents
-RUN ls -la && cat package.json
+RUN ls -la dist/
 
-CMD ["node", "server.js"]
+# Use serve with SPA mode
+CMD ["serve", "-s", "dist", "-l", "80"]
