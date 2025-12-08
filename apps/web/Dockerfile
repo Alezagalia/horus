@@ -1,4 +1,6 @@
-# Build stage
+# Horus Web Frontend - Production Build
+# Version: 3.0.0 - Using http-server with MIME fix
+
 FROM node:20-alpine AS builder
 
 RUN corepack enable && corepack prepare pnpm@10.18.3 --activate
@@ -25,16 +27,27 @@ ENV VITE_API_URL=$VITE_API_URL
 
 RUN pnpm build
 
-# Production stage - Node.js with http-server (simpler than express)
-FROM node:20-alpine
+# ============================================
+# Production Stage
+# ============================================
+FROM node:20-alpine AS production
 
 WORKDIR /app
 
-RUN npm install -g http-server@14
+# Install http-server globally
+RUN npm install -g http-server@14.1.1
 
+# Copy built assets
 COPY --from=builder /app/apps/web/dist ./dist
+
+# Verify files exist
+RUN echo "=== Build contents ===" && ls -la dist/ && ls -la dist/assets/ | head -20
 
 ENV NODE_ENV=production
 
-# http-server with proper MIME types, SPA mode, and dynamic port
-CMD sh -c "http-server dist -p \${PORT:-80} --proxy http://localhost:\${PORT:-80}? -c-1 --mime-types '{\"js\":\"application/javascript\",\"mjs\":\"application/javascript\"}'"
+# Start http-server with:
+# -p: port from env
+# --proxy: fallback for SPA routing
+# -c-1: disable caching
+# --mimetypes: force correct JS MIME type
+CMD ["sh", "-c", "http-server dist -p ${PORT:-80} --proxy http://localhost:${PORT:-80}? -c-1 --mimetypes '{\"application/javascript\":[\"js\",\"mjs\"]}'"]
