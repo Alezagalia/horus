@@ -1,5 +1,5 @@
 # Horus Web Frontend - Production Build
-# Version: 3.0.0 - Using http-server with MIME fix
+# Version: 4.0.0 - Using Python http.server (guaranteed MIME types)
 
 FROM node:20-alpine AS builder
 
@@ -28,26 +28,52 @@ ENV VITE_API_URL=$VITE_API_URL
 RUN pnpm build
 
 # ============================================
-# Production Stage
+# Production Stage - Nginx with dynamic PORT
 # ============================================
-FROM node:20-alpine AS production
+FROM nginx:1.25-alpine AS production
 
-WORKDIR /app
+# Remove default nginx config
+RUN rm /etc/nginx/conf.d/default.conf
 
-# Install http-server globally
-RUN npm install -g http-server@14.1.1
+# Create nginx config template (uses $PORT env var)
+RUN echo 'server { \
+    listen ${PORT}; \
+    server_name _; \
+    root /usr/share/nginx/html; \
+    index index.html; \
+    \
+    types { \
+        application/javascript js mjs; \
+        text/css css; \
+        text/html html htm; \
+        application/json json; \
+        image/svg+xml svg svgz; \
+        image/png png; \
+        image/jpeg jpg jpeg; \
+        image/gif gif; \
+        image/x-icon ico; \
+        font/woff woff; \
+        font/woff2 woff2; \
+        application/manifest+json webmanifest; \
+    } \
+    \
+    location / { \
+        try_files $uri $uri/ /index.html; \
+    } \
+    \
+    location ~* \\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ { \
+        expires 1y; \
+        add_header Cache-Control "public, immutable"; \
+    } \
+}' > /etc/nginx/templates/default.conf.template
 
 # Copy built assets
-COPY --from=builder /app/apps/web/dist ./dist
+COPY --from=builder /app/apps/web/dist /usr/share/nginx/html
 
 # Verify files exist
-RUN echo "=== Build contents ===" && ls -la dist/ && ls -la dist/assets/ | head -20
+RUN echo "=== Build contents ===" && ls -la /usr/share/nginx/html/ && ls -la /usr/share/nginx/html/assets/ | head -10
 
-ENV NODE_ENV=production
+# Default port (Railway will override with $PORT)
+ENV PORT=80
 
-# Start http-server with:
-# -p: port from env
-# --proxy: fallback for SPA routing
-# -c-1: disable caching
-# --mimetypes: force correct JS MIME type
-CMD ["sh", "-c", "http-server dist -p ${PORT:-80} --proxy http://localhost:${PORT:-80}? -c-1 --mimetypes '{\"application/javascript\":[\"js\",\"mjs\"]}'"]
+CMD ["nginx", "-g", "daemon off;"]
