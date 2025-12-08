@@ -37,62 +37,57 @@ RUN pnpm build
 # Frontend production stage
 FROM nginx:alpine AS frontend
 
-# Remove default config
-RUN rm -f /etc/nginx/conf.d/default.conf
+# Copy built static files
+COPY --from=frontend-builder /app/apps/web/dist /usr/share/nginx/html
 
-# Create proper nginx config with explicit MIME types
-RUN cat > /etc/nginx/conf.d/horus.conf << 'NGINXEOF'
-types {
-    text/html                             html htm shtml;
-    text/css                              css;
-    text/xml                              xml;
-    application/javascript                js mjs;
-    application/json                      json;
-    image/png                             png;
-    image/jpeg                            jpeg jpg;
-    image/gif                             gif;
-    image/svg+xml                         svg svgz;
-    image/webp                            webp;
-    image/x-icon                          ico;
-    font/woff                             woff;
-    font/woff2                            woff2;
-    application/octet-stream              bin exe dll;
+# Replace default nginx config completely (not conf.d, the main config)
+RUN cat > /etc/nginx/nginx.conf << 'NGINXEOF'
+worker_processes auto;
+error_log /var/log/nginx/error.log warn;
+pid /var/run/nginx.pid;
+
+events {
+    worker_connections 1024;
 }
 
-server {
-    listen 80;
-    server_name _;
-    root /usr/share/nginx/html;
-    index index.html;
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                    '$status $body_bytes_sent "$http_referer" '
+                    '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log /var/log/nginx/access.log main;
+
+    sendfile on;
+    keepalive_timeout 65;
 
     gzip on;
     gzip_vary on;
     gzip_types text/plain text/css text/xml application/javascript application/json image/svg+xml;
 
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
+    server {
+        listen 80;
+        server_name _;
+        root /usr/share/nginx/html;
+        index index.html;
 
-    location /health {
-        access_log off;
-        return 200 "OK";
-        add_header Content-Type text/plain;
-    }
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
 
-    location ~* \.(js|mjs)$ {
-        add_header Content-Type application/javascript;
-        try_files $uri =404;
-    }
-
-    location ~* \.(css)$ {
-        add_header Content-Type text/css;
-        try_files $uri =404;
+        location /health {
+            access_log off;
+            return 200 "OK";
+            add_header Content-Type text/plain;
+        }
     }
 }
 NGINXEOF
 
-# Copy built static files
-COPY --from=frontend-builder /app/apps/web/dist /usr/share/nginx/html
+# Remove conf.d configs to avoid conflicts
+RUN rm -rf /etc/nginx/conf.d/*
 
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
