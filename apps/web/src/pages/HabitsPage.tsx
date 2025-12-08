@@ -117,7 +117,7 @@ export function HabitsPage() {
       });
     } else {
       // Reactivar
-      toast.info('Para reactivar un hábito, usa la opción de edición');
+      toast('Para reactivar un hábito, usa la opción de edición', { icon: 'ℹ️' });
     }
   };
 

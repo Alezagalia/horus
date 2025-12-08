@@ -211,7 +211,6 @@ export function TransactionsPage() {
 
   return (
     <div>
-      {/* @ts-expect-error - react-hot-toast types */}
       <Toaster position="top-right" />
 
       {/* Header */}

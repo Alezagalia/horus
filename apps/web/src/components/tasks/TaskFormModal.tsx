@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type FieldValues } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { Task, TaskFormData } from '@/types/tasks';
 import type { Category } from '@horus/shared';
@@ -32,8 +32,9 @@ export function TaskFormModal({
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm<TaskFormSchema>({
-    resolver: zodResolver(taskSchema),
+  } = useForm<TaskFormSchema & FieldValues>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(taskSchema) as any,
     defaultValues: {
       title: '',
       description: '',
@@ -134,7 +135,8 @@ export function TaskFormModal({
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit(handleFormSubmit)} className="p-6 space-y-4">
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          <form onSubmit={handleSubmit(handleFormSubmit as any)} className="p-6 space-y-4">
             {/* Title */}
             <div>
               <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">

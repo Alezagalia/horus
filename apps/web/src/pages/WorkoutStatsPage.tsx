@@ -184,12 +184,12 @@ export function WorkoutStatsPage() {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={(entry) => `${entry.muscleGroup} (${entry.percentage}%)`}
+                    label={({ name, percent }) => `${name} (${Math.round((percent ?? 0) * 100)}%)`}
                     outerRadius={100}
                     fill="#8884d8"
                     dataKey="count"
                   >
-                    {overviewStats.muscleGroupDistribution.map((entry, index) => (
+                    {overviewStats.muscleGroupDistribution.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>

@@ -17,10 +17,10 @@ import { useCalendarEvents } from '@/hooks/useCalendarEvents';
 import { useCurrentMonthlyExpenses, usePayMonthlyExpense } from '@/hooks/useMonthlyExpenses';
 import { useAccounts } from '@/hooks/useAccounts';
 import { formatCurrency } from '@/utils/currency';
-import type { CalendarEvent, MonthlyExpense, Currency } from '@horus/shared';
+import type { MonthlyExpense, Currency } from '@horus/shared';
 
-// Animated Counter Hook
-function useAnimatedCounter(end: number, duration: number = 1000) {
+// Animated Counter Hook (Reserved for future stat cards)
+function _useAnimatedCounter(end: number, duration: number = 1000) {
   const [count, setCount] = useState(0);
 
   useEffect(() => {
@@ -36,6 +36,7 @@ function useAnimatedCounter(end: number, duration: number = 1000) {
 
   return count;
 }
+void _useAnimatedCounter; // Reserved for future use
 
 // Progress Ring Component
 function ProgressRing({
@@ -88,40 +89,6 @@ function ProgressRing({
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-4xl font-bold text-gradient">{Math.round(percentage)}%</span>
         <span className="text-sm text-gray-500">completado</span>
-      </div>
-    </div>
-  );
-}
-
-// Stat Card Component
-function StatCard({
-  icon,
-  label,
-  value,
-  gradient,
-  delay = 0
-}: {
-  icon: string;
-  label: string;
-  value: number;
-  gradient: string;
-  delay?: number;
-}) {
-  const animatedValue = useAnimatedCounter(value, 1000);
-
-  return (
-    <div
-      className="glass-card p-5 animate-slide-up opacity-0"
-      style={{ animationDelay: `${delay}ms`, animationFillMode: 'forwards' }}
-    >
-      <div className="flex items-center gap-4">
-        <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center text-2xl shadow-lg`}>
-          {icon}
-        </div>
-        <div>
-          <p className="text-3xl font-bold text-gray-900">{animatedValue}</p>
-          <p className="text-sm text-gray-500">{label}</p>
-        </div>
       </div>
     </div>
   );
@@ -388,7 +355,7 @@ export function DashboardPage() {
     return 'Buenas noches';
   };
 
-  const getRelativeDate = (dueDate: string) => {
+  const _getRelativeDate = (dueDate: string) => {
     const date = new Date(dueDate);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -401,6 +368,7 @@ export function DashboardPage() {
     if (diffDays === 1) return { text: 'Manana', urgent: false };
     return { text: `En ${diffDays}d`, urgent: false };
   };
+  void _getRelativeDate; // Reserved for future use
 
   const getPriorityStyles = (priority: 'alta' | 'media' | 'baja') => {
     const styles = {
@@ -507,7 +475,6 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      {/* @ts-expect-error - react-hot-toast has type compatibility issues with React 18/19 */}
       <Toaster position="top-right" />
 
       {/* Hero Section */}
@@ -665,7 +632,7 @@ export function DashboardPage() {
                 </div>
               </div>
             ) : (
-              groupedAgenda.map((group, groupIndex) => (
+              groupedAgenda.map((group, _groupIndex) => (
                 <div key={group.label}>
                   {/* Day Header */}
                   <div className="flex items-center gap-2 mb-2">
@@ -679,7 +646,7 @@ export function DashboardPage() {
 
                   {/* Items for this day */}
                   <div className="space-y-2">
-                    {group.items.map((item, itemIndex) => (
+                    {group.items.map((item) => (
                       <div
                         key={`${item.type}-${item.id}`}
                         onClick={() => navigate(item.type === 'task' ? '/tasks' : '/calendar')}

@@ -14,7 +14,9 @@
       "@components/*": ["src/components/*"],
       "@lib/*": ["src/lib/*"],
       "@hooks/*": ["src/hooks/*"]
-    }
+    },
+    "types": ["vite/client"],
+    "skipLibCheck": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "tests"]

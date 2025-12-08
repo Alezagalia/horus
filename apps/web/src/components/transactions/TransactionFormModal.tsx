@@ -7,7 +7,7 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { Transaction, Account, Category, TransactionType } from '@horus/shared';
+import type { Transaction, TransactionType } from '@horus/shared';
 import { useCategories } from '@/hooks/useCategories';
 import { useAccounts } from '@/hooks/useAccounts';
 import { formatCurrency } from '@/utils/currency';

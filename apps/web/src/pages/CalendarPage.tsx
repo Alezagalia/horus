@@ -317,7 +317,6 @@ export function CalendarPage() {
 
   return (
     <div>
-      {/* @ts-expect-error - react-hot-toast has type compatibility issues with React 18/19 */}
       <Toaster position="top-right" />
 
       {/* Header */}

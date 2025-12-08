@@ -4,9 +4,8 @@
  */
 
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type FieldValues } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import toast from 'react-hot-toast';
 import type { Habit, Category, HabitFormData } from '@/types/habits';
 import { habitSchema, type HabitFormSchema } from '@/schemas/habitSchema';
 
@@ -44,8 +43,9 @@ export function HabitFormModal({
     setValue,
     reset,
     formState: { errors },
-  } = useForm<HabitFormSchema>({
-    resolver: zodResolver(habitSchema),
+  } = useForm<HabitFormSchema & FieldValues>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(habitSchema) as any,
     defaultValues: {
       name: '',
       description: '',
@@ -138,7 +138,8 @@ export function HabitFormModal({
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit(handleFormSubmit)} className="p-6 space-y-6">
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          <form onSubmit={handleSubmit(handleFormSubmit as any)} className="p-6 space-y-6">
             {/* Name */}
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">

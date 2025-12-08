@@ -22,7 +22,7 @@ export const taskSchema = z.object({
       text: z.string(), // Permitir vacíos, se filtrarán en el submit
       completed: z.boolean(),
     })
-  ).optional().default([]),
+  ).default([]),
 });
 
 export type TaskFormSchema = z.infer<typeof taskSchema>;

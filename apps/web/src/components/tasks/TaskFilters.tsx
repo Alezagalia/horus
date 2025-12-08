@@ -82,7 +82,8 @@ export function TaskFilters({
     onCategoryChange(null);
   };
 
-  const selectedCategory = categories.find((c) => c.id === categoryFilter);
+  const _selectedCategory = categories.find((c) => c.id === categoryFilter);
+  void _selectedCategory; // Reserved for future use
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 px-4 py-3">

@@ -6,14 +6,13 @@
 
 import { useState, useMemo } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
-import { format, subDays, addDays } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { format } from 'date-fns';
 
 import { DateSelector } from '@/components/habits/DateSelector';
 import { ProgressBar } from '@/components/habits/ProgressBar';
 import { HabitCard } from '@/components/habits/HabitCard';
 import { useHabits, useToggleHabitComplete, useUpdateHabitProgress } from '@/hooks/useHabits';
-import type { HabitOfDay, HabitsGrouped, DayProgress, TimeOfDay } from '@/types/habits';
+import type { HabitOfDay, HabitsGrouped, DayProgress } from '@/types/habits';
 
 /**
  * Extracts the YYYY-MM-DD portion from an ISO date string.
@@ -215,15 +214,13 @@ export function HabitsTodayPage() {
     }
   };
 
-  const handleUpdateNotes = async (habitId: string, notes: string) => {
+  const handleUpdateNotes = async (_habitId: string, _notes: string) => {
     // For now, notes are updated along with the toggle
     // We could add a separate mutation if needed
     toast.success('Nota guardada');
   };
 
-  // Navigation helpers
-  const goToPreviousDay = () => setSelectedDate((d) => subDays(d, 1));
-  const goToNextDay = () => setSelectedDate((d) => addDays(d, 1));
+  // Navigation helper
   const goToToday = () => setSelectedDate(new Date());
 
   const isToday = format(selectedDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
@@ -272,8 +269,6 @@ export function HabitsTodayPage() {
         <DateSelector
           selectedDate={selectedDate}
           onDateChange={setSelectedDate}
-          onPreviousDay={goToPreviousDay}
-          onNextDay={goToNextDay}
         />
       </div>
 
