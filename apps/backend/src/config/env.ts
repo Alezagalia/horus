@@ -1,7 +1,16 @@
 import dotenv from 'dotenv';
 import { z } from 'zod';
 
-dotenv.config();
+// Only load .env file in development (Railway injects env vars directly)
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config();
+}
+
+// Debug: log available env vars (without values for security)
+console.log(
+  'Available env vars:',
+  Object.keys(process.env).filter((k) => !k.startsWith('npm_'))
+);
 
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
