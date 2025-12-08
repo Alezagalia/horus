@@ -40,13 +40,12 @@ FROM nginx:alpine AS frontend
 # Copy built static files
 COPY --from=frontend-builder /app/apps/web/dist /usr/share/nginx/html
 
-# Create nginx config with proper MIME types
+# Create nginx config (mime.types already included globally by nginx)
 RUN echo 'server { \
     listen 80; \
     server_name _; \
     root /usr/share/nginx/html; \
     index index.html; \
-    include /etc/nginx/mime.types; \
     gzip on; \
     gzip_types text/plain text/css application/javascript application/json image/svg+xml; \
     location / { \
