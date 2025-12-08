@@ -1,5 +1,6 @@
 # ===========================================
 # Horus Web Frontend - Production Dockerfile
+# Using Node.js serve instead of nginx to avoid MIME type issues
 # ===========================================
 
 FROM node:20-alpine AS builder
@@ -34,61 +35,28 @@ ENV VITE_API_URL=$VITE_API_URL
 RUN pnpm build
 
 # ===========================================
-# Production stage - Nginx
+# Production stage - Node.js serve
 # ===========================================
-FROM nginx:alpine AS runner
+FROM node:20-alpine AS runner
+
+# Install serve globally
+RUN npm install -g serve@14
+
+# Create non-root user
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 horus
+
+WORKDIR /app
 
 # Copy built static files
-COPY --from=builder /app/apps/web/dist /usr/share/nginx/html
+COPY --from=builder /app/apps/web/dist ./dist
 
-# Replace nginx.conf completely
-RUN cat > /etc/nginx/nginx.conf << 'NGINXEOF'
-worker_processes auto;
-error_log /var/log/nginx/error.log warn;
-pid /var/run/nginx.pid;
+# Change ownership
+RUN chown -R horus:nodejs /app
 
-events {
-    worker_connections 1024;
-}
-
-http {
-    include /etc/nginx/mime.types;
-    default_type application/octet-stream;
-
-    log_format main '$remote_addr - $remote_user [$time_local] "$request" '
-                    '$status $body_bytes_sent "$http_referer" '
-                    '"$http_user_agent"';
-
-    access_log /var/log/nginx/access.log main;
-
-    sendfile on;
-    keepalive_timeout 65;
-
-    gzip on;
-    gzip_vary on;
-    gzip_types text/plain text/css text/xml application/javascript application/json image/svg+xml;
-
-    server {
-        listen 80;
-        server_name _;
-        root /usr/share/nginx/html;
-        index index.html;
-
-        location / {
-            try_files $uri $uri/ /index.html;
-        }
-
-        location /health {
-            access_log off;
-            return 200 "OK";
-            add_header Content-Type text/plain;
-        }
-    }
-}
-NGINXEOF
-
-# Remove conf.d to avoid conflicts
-RUN rm -rf /etc/nginx/conf.d/*
+USER horus
 
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+
+# Serve static files with SPA fallback on port 80
+CMD ["serve", "-s", "dist", "-l", "80"]
