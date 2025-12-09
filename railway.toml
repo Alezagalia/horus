@@ -1,27 +1,15 @@
 # ===========================================
-# Railway Multi-Service Configuration
+# Railway Unified Service Configuration
 # ===========================================
-# Note: This file applies to the root service.
-# Each Railway service needs to be configured individually
-# in the Railway Dashboard with the correct Dockerfile path.
-#
-# For 'horus' (frontend) service:
-#   Dockerfile Path: apps/web/Dockerfile
-#
-# For 'backend' service:
-#   Dockerfile Path: apps/backend/Dockerfile
+# Single container with Backend + Frontend
 # ===========================================
 
 [build]
-# Default to frontend Dockerfile when deploying from root
-dockerfilePath = "apps/web/Dockerfile"
-watchPatterns = ["apps/web/**", "packages/shared/**"]
-
-[build.args]
-VITE_API_URL = "${{VITE_API_URL}}"
+dockerfilePath = "Dockerfile"
+watchPatterns = ["apps/**", "packages/**"]
 
 [deploy]
-healthcheckPath = "/"
+healthcheckPath = "/api/health"
 healthcheckTimeout = 30
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3

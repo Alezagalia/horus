@@ -1,0 +1,47 @@
+# Docker Compose for local testing
+# Usage: docker-compose up --build
+
+services:
+  # PostgreSQL database
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: horus
+      POSTGRES_PASSWORD: horus_local_password
+      POSTGRES_DB: horus
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U horus -d horus"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Horus App (Backend + Frontend unified)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=postgresql://horus:horus_local_password@db:5432/horus
+      - JWT_SECRET=local-testing-secret-change-in-production
+      - JWT_EXPIRES_IN=7d
+      # Add other required env vars here
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:

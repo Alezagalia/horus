@@ -1,6 +1,8 @@
-import express, { Application } from 'express';
+import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { env } from './config/env.js';
 import routes from './routes/index.js';
 import { errorMiddleware } from './middlewares/error.middleware.js';
@@ -14,6 +16,10 @@ import { requestLoggerMiddleware } from './middlewares/request-logger.middleware
 import { generalLimiter } from './middlewares/rate-limit.middleware.js';
 import { getCorsOptions, apiHelmetOptions } from './config/security.js';
 
+// ESM __dirname equivalent
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 // Initialize Sentry first (US-115)
 initSentry();
 
@@ -24,7 +30,13 @@ const app: Application = express();
 // ===========================================
 
 // Helmet: Security headers (XSS, clickjacking, MIME sniffing, etc.)
-app.use(helmet(apiHelmetOptions));
+// Modified to allow inline scripts for SPA
+app.use(
+  helmet({
+    ...apiHelmetOptions,
+    contentSecurityPolicy: false, // Disable CSP for SPA compatibility
+  })
+);
 
 // CORS: Restrict origins in production
 app.use(cors(getCorsOptions()));
@@ -44,10 +56,40 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Request logging (US-115)
 app.use(requestLoggerMiddleware);
 
-// Routes
+// ===========================================
+// API Routes
+// ===========================================
 app.use('/api', routes);
 
-// Error handling
+// ===========================================
+// Static Frontend Files (Production)
+// ===========================================
+const frontendPath = path.join(__dirname, '../../public');
+
+// Serve static files with correct MIME types
+app.use(
+  express.static(frontendPath, {
+    setHeaders: (res, filePath) => {
+      // Ensure correct MIME types for JS modules
+      if (filePath.endsWith('.js') || filePath.endsWith('.mjs')) {
+        res.setHeader('Content-Type', 'application/javascript');
+      } else if (filePath.endsWith('.css')) {
+        res.setHeader('Content-Type', 'text/css');
+      }
+    },
+  })
+);
+
+// SPA fallback - serve index.html for all non-API routes
+app.get('*', (req: Request, res: Response) => {
+  // Don't serve index.html for API routes
+  if (req.path.startsWith('/api')) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  res.sendFile(path.join(frontendPath, 'index.html'));
+});
+
+// Error handling (must be after SPA fallback)
 app.use(errorMiddleware);
 
 // Start server
