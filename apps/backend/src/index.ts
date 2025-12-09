@@ -25,8 +25,32 @@ initSentry();
 
 const app: Application = express();
 
+// Trust proxy for rate limiting behind reverse proxy (Railway, Render, etc.)
+app.set('trust proxy', 1);
+
 // ===========================================
-// Security Middlewares
+// Static Frontend Files (Production) - BEFORE rate limiting
+// ===========================================
+// In production (Docker), frontend is copied to dist/public
+// __dirname points to /app/apps/backend/dist, so ./public is correct
+const frontendPath = path.join(__dirname, 'public');
+
+// Serve static files with correct MIME types (no rate limiting for static assets)
+app.use(
+  express.static(frontendPath, {
+    setHeaders: (res, filePath) => {
+      // Ensure correct MIME types for JS modules
+      if (filePath.endsWith('.js') || filePath.endsWith('.mjs')) {
+        res.setHeader('Content-Type', 'application/javascript');
+      } else if (filePath.endsWith('.css')) {
+        res.setHeader('Content-Type', 'text/css');
+      }
+    },
+  })
+);
+
+// ===========================================
+// Security Middlewares (for API routes)
 // ===========================================
 
 // Helmet: Security headers (XSS, clickjacking, MIME sniffing, etc.)
@@ -41,11 +65,8 @@ app.use(
 // CORS: Restrict origins in production
 app.use(cors(getCorsOptions()));
 
-// Rate limiting: Prevent DoS and brute force (general)
+// Rate limiting: Prevent DoS and brute force (general) - only for non-static routes
 app.use(generalLimiter);
-
-// Trust proxy for rate limiting behind reverse proxy (Railway, Render, etc.)
-app.set('trust proxy', 1);
 
 // ===========================================
 // Body Parsing Middlewares
@@ -62,26 +83,11 @@ app.use(requestLoggerMiddleware);
 app.use('/api', routes);
 
 // ===========================================
-// Static Frontend Files (Production)
+// SPA Fallback
 // ===========================================
-const frontendPath = path.join(__dirname, '../../public');
-
-// Serve static files with correct MIME types
-app.use(
-  express.static(frontendPath, {
-    setHeaders: (res, filePath) => {
-      // Ensure correct MIME types for JS modules
-      if (filePath.endsWith('.js') || filePath.endsWith('.mjs')) {
-        res.setHeader('Content-Type', 'application/javascript');
-      } else if (filePath.endsWith('.css')) {
-        res.setHeader('Content-Type', 'text/css');
-      }
-    },
-  })
-);
-
 // SPA fallback - serve index.html for all non-API routes
-app.get('*', (req: Request, res: Response) => {
+// Express 5 requires named wildcard parameter syntax
+app.get('/{*splat}', (req: Request, res: Response) => {
   // Don't serve index.html for API routes
   if (req.path.startsWith('/api')) {
     return res.status(404).json({ error: 'Not found' });

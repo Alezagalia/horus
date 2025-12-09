@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: horus_local_password
       POSTGRES_DB: horus
     ports:
-      - "5432:5432"
+      - "5433:5432"  # Use 5433 externally to avoid conflict with local PostgreSQL
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -32,8 +32,14 @@ services:
       - PORT=3000
       - DATABASE_URL=postgresql://horus:horus_local_password@db:5432/horus
       - JWT_SECRET=local-testing-secret-change-in-production
+      - JWT_REFRESH_SECRET=local-refresh-secret-change-in-production
       - JWT_EXPIRES_IN=7d
-      # Add other required env vars here
+      - JWT_REFRESH_EXPIRES_IN=30d
+      - CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+      # Rate limiting - more permissive for local testing
+      - RATE_LIMIT_WINDOW_MS=60000
+      - RATE_LIMIT_MAX_REQUESTS=1000
+      - RATE_LIMIT_AUTH_MAX=50
     depends_on:
       db:
         condition: service_healthy

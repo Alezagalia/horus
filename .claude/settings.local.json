@@ -142,7 +142,15 @@
       "Bash(git -C /c/Desarrollo/Horus2 fetch origin)",
       "Bash(git -C /c/Desarrollo/Horus2 log --oneline origin/main -3)",
       "Bash(git -C /c/Desarrollo/Horus2 commit --amend --no-edit)",
-      "Bash(git -C /c/Desarrollo/Horus2 push --force-with-lease)"
+      "Bash(git -C /c/Desarrollo/Horus2 push --force-with-lease)",
+      "Bash(docker --version:*)",
+      "Bash(docker-compose down:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(docker system prune:*)",
+      "Bash(docker builder prune:*)",
+      "Bash(docker-compose build:*)",
+      "Bash(docker logs:*)",
+      "Bash(openssl rand:*)"
     ],
     "deny": [],
     "ask": []

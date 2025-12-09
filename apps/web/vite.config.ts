@@ -122,62 +122,34 @@ export default defineConfig({
     cssCodeSplit: true, // Split CSS into separate files
     rollupOptions: {
       output: {
-        // Code splitting optimizado
-        manualChunks: (id) => {
-          // React core y routing
-          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
-            return 'react-core';
-          }
-          if (id.includes('node_modules/react-router')) {
-            return 'react-router';
-          }
-
-          // React Query
-          if (id.includes('node_modules/@tanstack/react-query')) {
-            return 'react-query';
-          }
-
-          // Form libraries
-          if (
-            id.includes('node_modules/react-hook-form') ||
-            id.includes('node_modules/@hookform')
-          ) {
-            return 'forms';
-          }
-
-          // Validation
-          if (id.includes('node_modules/zod')) {
-            return 'validation';
-          }
-
-          // UI libraries
-          if (
-            id.includes('node_modules/@radix-ui') ||
-            id.includes('node_modules/emoji-picker-react') ||
-            id.includes('node_modules/react-colorful')
-          ) {
-            return 'ui-libs';
-          }
-
-          // Charts/visualization
-          if (id.includes('node_modules/recharts') || id.includes('node_modules/d3')) {
-            return 'charts';
-          }
-
+        // Simplified code splitting to avoid circular dependencies
+        manualChunks: {
+          // Core vendor chunk - includes React and related
+          'vendor': [
+            'react',
+            'react-dom',
+            'react-router-dom',
+            'zustand',
+          ],
+          // Data fetching
+          'query': [
+            '@tanstack/react-query',
+          ],
+          // Forms and validation
+          'forms': [
+            'react-hook-form',
+            '@hookform/resolvers',
+            'zod',
+          ],
+          // Charts (large dependency)
+          'charts': [
+            'recharts',
+          ],
           // Utilities
-          if (id.includes('node_modules/axios') || id.includes('node_modules/date-fns')) {
-            return 'utils';
-          }
-
-          // State management
-          if (id.includes('node_modules/zustand')) {
-            return 'state';
-          }
-
-          // Keyboard shortcuts
-          if (id.includes('node_modules/react-hotkeys-hook')) {
-            return 'hotkeys';
-          }
+          'utils': [
+            'axios',
+            'date-fns',
+          ],
         },
         // Nombres de archivos con hash para cache busting
         chunkFileNames: 'assets/[name]-[hash].js',

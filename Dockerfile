@@ -84,8 +84,13 @@ RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 COPY --from=backend-builder /app/apps/backend/dist ./apps/backend/dist
 COPY --from=backend-builder /app/packages/shared/dist ./packages/shared/dist
 
-# Copy Prisma files
+# Copy Prisma files (schema + migrations + config)
 COPY --from=backend-builder /app/apps/backend/prisma ./apps/backend/prisma
+COPY apps/backend/prisma.config.js ./apps/backend/prisma.config.js
+
+# Copy entrypoint script and convert to Unix line endings
+COPY apps/backend/docker-entrypoint.sh ./apps/backend/docker-entrypoint.sh
+RUN sed -i 's/\r$//' ./apps/backend/docker-entrypoint.sh
 
 # Copy frontend build to backend's public folder
 COPY --from=frontend-builder /app/apps/web/dist ./apps/backend/dist/public
@@ -93,12 +98,9 @@ COPY --from=frontend-builder /app/apps/web/dist ./apps/backend/dist/public
 # Verify frontend files
 RUN echo "=== Frontend files ===" && ls -la ./apps/backend/dist/public/ && ls -la ./apps/backend/dist/public/assets/ | head -10
 
-# Copy start script
-COPY apps/backend/start.sh ./apps/backend/start.sh
-RUN chmod +x ./apps/backend/start.sh
-
-# Set ownership
-RUN chown -R horus:nodejs /app
+# Make entrypoint executable and set ownership
+RUN chmod +x ./apps/backend/docker-entrypoint.sh && \
+    chown -R horus:nodejs /app
 
 USER horus
 
@@ -109,7 +111,8 @@ ENV NODE_ENV=production
 
 EXPOSE 3000
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT}/api/health || exit 1
 
-CMD ["./start.sh"]
+# Use entrypoint to run migrations before starting app
+ENTRYPOINT ["./docker-entrypoint.sh"]
