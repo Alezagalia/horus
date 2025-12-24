@@ -52,6 +52,7 @@ const menuSections: MenuSection[] = [
   {
     title: 'Fitness',
     items: [
+      { name: 'Ejercicios', path: '/exercises', icon: '💪', gradient: 'from-orange-500 to-red-500' },
       { name: 'Rutinas', path: '/routines', icon: '🏋️', gradient: 'from-fuchsia-500 to-pink-500' },
       { name: 'Mi Progreso', path: '/workouts', icon: '📈', gradient: 'from-purple-500 to-indigo-500' },
     ],
