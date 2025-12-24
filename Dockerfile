@@ -1,6 +1,7 @@
 # ===========================================
 # Horus Unified Dockerfile
 # Backend + Frontend in a single container
+# Build timestamp: 2024-12-24T03:15:00Z
 # ===========================================
 
 # ===========================================
@@ -8,34 +9,22 @@
 # ===========================================
 FROM node:20-alpine AS frontend-builder
 
-# Cache bust argument - Railway passes this automatically on each deploy
-ARG RAILWAY_GIT_COMMIT_SHA
-ARG CACHEBUST=1
-
 RUN corepack enable && corepack prepare pnpm@10.18.3 --activate
 
 WORKDIR /app
 
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
-COPY apps/web/package.json ./apps/web/
-COPY packages/shared/package.json ./packages/shared/
+# Copy ALL source files FIRST to ensure changes are detected
+COPY . .
 
 RUN pnpm install --frozen-lockfile
 
-# Force rebuild of source files by invalidating cache
-RUN echo "Build SHA: ${RAILWAY_GIT_COMMIT_SHA:-$CACHEBUST}"
-
-COPY packages/shared ./packages/shared
-COPY apps/web ./apps/web
-COPY tsconfig.base.json ./
-
 WORKDIR /app/packages/shared
-RUN pnpm build
+RUN rm -rf dist && pnpm build
 
 WORKDIR /app/apps/web
 # For unified deploy, API is on same origin (empty = relative URLs)
 ENV VITE_API_URL=""
-RUN pnpm build
+RUN rm -rf dist && pnpm build
 
 # ===========================================
 # Stage 2: Build Backend
@@ -46,15 +35,10 @@ RUN corepack enable && corepack prepare pnpm@10.18.3 --activate
 
 WORKDIR /app
 
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
-COPY apps/backend/package.json ./apps/backend/
-COPY packages/shared/package.json ./packages/shared/
+# Copy ALL source files to ensure changes are detected
+COPY . .
 
 RUN pnpm install --frozen-lockfile
-
-COPY packages/shared ./packages/shared
-COPY apps/backend ./apps/backend
-COPY tsconfig.base.json ./
 
 WORKDIR /app/packages/shared
 RUN rm -rf dist && pnpm build
@@ -62,7 +46,7 @@ RUN rm -rf dist && pnpm build
 WORKDIR /app/apps/backend
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
 RUN npx prisma generate
-RUN pnpm build
+RUN rm -rf dist && pnpm build
 
 # ===========================================
 # Stage 3: Production
