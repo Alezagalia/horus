@@ -19,7 +19,7 @@ export function RoutineDetailPage() {
   };
 
   const handleExecute = () => {
-    navigate(`/routines/${id}/execute`);
+    navigate(`/workouts/execute/${id}`);
   };
 
   const handleBack = () => {
