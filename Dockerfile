@@ -8,6 +8,10 @@
 # ===========================================
 FROM node:20-alpine AS frontend-builder
 
+# Cache bust argument - Railway passes this automatically on each deploy
+ARG RAILWAY_GIT_COMMIT_SHA
+ARG CACHEBUST=1
+
 RUN corepack enable && corepack prepare pnpm@10.18.3 --activate
 
 WORKDIR /app
@@ -17,6 +21,9 @@ COPY apps/web/package.json ./apps/web/
 COPY packages/shared/package.json ./packages/shared/
 
 RUN pnpm install --frozen-lockfile
+
+# Force rebuild of source files by invalidating cache
+RUN echo "Build SHA: ${RAILWAY_GIT_COMMIT_SHA:-$CACHEBUST}"
 
 COPY packages/shared ./packages/shared
 COPY apps/web ./apps/web
