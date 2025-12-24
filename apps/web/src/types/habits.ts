@@ -21,6 +21,7 @@ export interface HabitOfDay {
   completed: boolean;
   value?: number;
   notes?: string;
+  order: number;
 }
 
 export interface Habit {

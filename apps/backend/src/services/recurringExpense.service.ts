@@ -40,13 +40,15 @@ export const createRecurringExpense = async (userId: string, data: CreateRecurri
       categoryId: data.categoryId,
       currency: data.currency,
       dueDay: data.dueDay,
+      notes: data.notes,
     },
     include: {
-      user: {
+      category: {
         select: {
           id: true,
-          email: true,
           name: true,
+          icon: true,
+          color: true,
         },
       },
     },
@@ -65,11 +67,12 @@ export const getRecurringExpenses = async (userId: string, activeOnly: boolean =
       ...(activeOnly && { isActive: true }),
     },
     include: {
-      user: {
+      category: {
         select: {
           id: true,
-          email: true,
           name: true,
+          icon: true,
+          color: true,
         },
       },
       monthlyExpenseInstances: {
@@ -99,11 +102,12 @@ export const getRecurringExpenseById = async (id: string, userId: string) => {
       userId,
     },
     include: {
-      user: {
+      category: {
         select: {
           id: true,
-          email: true,
           name: true,
+          icon: true,
+          color: true,
         },
       },
       monthlyExpenseInstances: {
@@ -175,13 +179,15 @@ export const updateRecurringExpense = async (
       ...(data.categoryId && { categoryId: data.categoryId }),
       ...(data.currency && { currency: data.currency }),
       ...(data.dueDay !== undefined && { dueDay: data.dueDay }),
+      ...(data.notes !== undefined && { notes: data.notes }),
     },
     include: {
-      user: {
+      category: {
         select: {
           id: true,
-          email: true,
           name: true,
+          icon: true,
+          color: true,
         },
       },
     },

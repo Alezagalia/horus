@@ -15,6 +15,7 @@ const formSchema = z.object({
   categoryId: z.string().min(1, 'Categoría requerida'),
   currency: z.enum(['ARS', 'USD', 'EUR', 'BRL'], { required_error: 'Moneda requerida' }),
   dueDay: z.number().int().min(1).max(31).nullable().optional(),
+  notes: z.string().max(500, 'Máximo 500 caracteres').nullable().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -55,6 +56,7 @@ export function RecurringExpenseFormModal({
       categoryId: '',
       currency: 'ARS',
       dueDay: null,
+      notes: '',
     },
   });
 
@@ -68,6 +70,7 @@ export function RecurringExpenseFormModal({
         categoryId: editingExpense.categoryId,
         currency: editingExpense.currency as 'ARS' | 'USD' | 'EUR' | 'BRL',
         dueDay: editingExpense.dueDay,
+        notes: editingExpense.notes || '',
       });
     } else {
       reset({
@@ -75,6 +78,7 @@ export function RecurringExpenseFormModal({
         categoryId: '',
         currency: 'ARS',
         dueDay: null,
+        notes: '',
       });
     }
   }, [editingExpense, reset, isOpen]);
@@ -226,6 +230,27 @@ export function RecurringExpenseFormModal({
               </p>
               {errors.dueDay && (
                 <p className="mt-1 text-sm text-red-600">{errors.dueDay.message}</p>
+              )}
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">
+                Notas (opcional)
+              </label>
+              <textarea
+                id="notes"
+                {...register('notes')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                placeholder="Comentarios adicionales sobre este gasto..."
+                rows={3}
+                maxLength={500}
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Opcional: Agrega notas o detalles sobre este gasto recurrente
+              </p>
+              {errors.notes && (
+                <p className="mt-1 text-sm text-red-600">{errors.notes.message}</p>
               )}
             </div>
 

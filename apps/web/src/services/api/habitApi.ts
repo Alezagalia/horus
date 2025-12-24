@@ -30,7 +30,7 @@ export interface HabitFromAPI {
   unit?: string;
   periodicity: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'CUSTOM';
   weekDays: number[];
-  timeOfDay: 'MANANA' | 'TARDE' | 'NOCHE' | 'ANYTIME';
+  timeOfDay: 'AYUNO' | 'MANANA' | 'MEDIA_MANANA' | 'TARDE' | 'MEDIA_TARDE' | 'NOCHE' | 'ANTES_DORMIR' | 'ANYTIME';
   reminderTime?: string;
   color?: string;
   order: number;
@@ -222,5 +222,26 @@ export async function getHabitStats(): Promise<HabitStats> {
  */
 export async function getHabitDetailedStats(habitId: string): Promise<unknown> {
   const response = await axiosInstance.get(`/habits/${habitId}/stats`);
+  return response.data;
+}
+
+// ==================== Reorder ====================
+
+export type TimeOfDay = 'AYUNO' | 'MANANA' | 'MEDIA_MANANA' | 'TARDE' | 'MEDIA_TARDE' | 'NOCHE' | 'ANTES_DORMIR' | 'ANYTIME';
+
+export interface ReorderHabitsDTO {
+  timeOfDay: TimeOfDay;
+  habitIds: string[];
+}
+
+/**
+ * PUT /api/habits/reorder
+ * Reordena los hábitos dentro de un momento del día específico
+ */
+export async function reorderHabits(data: ReorderHabitsDTO): Promise<{ success: boolean; reorderedCount: number }> {
+  const response = await axiosInstance.put<{ message: string; success: boolean; reorderedCount: number }>(
+    '/habits/reorder',
+    data
+  );
   return response.data;
 }

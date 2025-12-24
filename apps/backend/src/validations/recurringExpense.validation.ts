@@ -29,6 +29,12 @@ export const createRecurringExpenseSchema = z.object({
     .max(31, 'El día de vencimiento no puede ser mayor a 31')
     .nullable()
     .optional(),
+  notes: z
+    .string()
+    .max(500, 'Las notas no pueden exceder 500 caracteres')
+    .trim()
+    .nullable()
+    .optional(),
 });
 
 export type CreateRecurringExpenseInput = z.infer<typeof createRecurringExpenseSchema>;
@@ -55,6 +61,12 @@ export const updateRecurringExpenseSchema = z.object({
     .int('El día de vencimiento debe ser un número entero')
     .min(1, 'El día de vencimiento debe ser al menos 1')
     .max(31, 'El día de vencimiento no puede ser mayor a 31')
+    .nullable()
+    .optional(),
+  notes: z
+    .string()
+    .max(500, 'Las notas no pueden exceder 500 caracteres')
+    .trim()
     .nullable()
     .optional(),
 });

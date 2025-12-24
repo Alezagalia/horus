@@ -1,18 +1,34 @@
 /**
  * Habits Today Page
  * Sprint 11 - US-096, US-098
+ * Sprint 13 - Drag & Drop Reordering
  * Connected to backend API
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
 import { format } from 'date-fns';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 
 import { DateSelector } from '@/components/habits/DateSelector';
 import { ProgressBar } from '@/components/habits/ProgressBar';
-import { HabitCard } from '@/components/habits/HabitCard';
-import { useHabits, useToggleHabitComplete, useUpdateHabitProgress } from '@/hooks/useHabits';
-import type { HabitOfDay, HabitsGrouped, DayProgress } from '@/types/habits';
+import { SortableHabitCard } from '@/components/habits/SortableHabitCard';
+import { useHabits, useToggleHabitComplete, useUpdateHabitProgress, useReorderHabits } from '@/hooks/useHabits';
+import type { HabitOfDay, HabitsGrouped, DayProgress, TimeOfDay } from '@/types/habits';
 
 /**
  * Extracts the YYYY-MM-DD portion from an ISO date string.
@@ -78,6 +94,19 @@ export function HabitsTodayPage() {
   // Mutations
   const toggleCompleteMutation = useToggleHabitComplete();
   const updateProgressMutation = useUpdateHabitProgress();
+  const reorderHabitsMutation = useReorderHabits();
+
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // 8px movement needed before drag starts
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Transform habits to today's format with completion status
   const todayHabits: HabitOfDay[] = useMemo(() => {
@@ -123,11 +152,12 @@ export function HabitsTodayPage() {
           currentStreak: habit.currentStreak,
           completed: isCompletedToday,
           value: isCompletedToday ? habit.targetValue : 0,
+          order: habit.order,
         };
       });
   }, [habitsFromAPI, selectedDate, dateStr]);
 
-  // Group habits by time of day, with completed habits at the bottom
+  // Group habits by time of day, sorted by order then completed status
   const groupedHabits: HabitsGrouped = useMemo(() => {
     const groups: HabitsGrouped = {
       AYUNO: [],
@@ -142,15 +172,47 @@ export function HabitsTodayPage() {
     todayHabits.forEach((habit) => {
       groups[habit.timeOfDay].push(habit);
     });
-    // Sort each group: incomplete habits first, completed at the bottom
+    // Sort each group: first by order, then completed at the bottom
     Object.keys(groups).forEach((key) => {
       groups[key as keyof HabitsGrouped].sort((a, b) => {
-        if (a.completed === b.completed) return 0;
-        return a.completed ? 1 : -1;
+        // First sort by order
+        if (a.order !== b.order) return a.order - b.order;
+        // Then completed habits at the bottom
+        if (a.completed !== b.completed) return a.completed ? 1 : -1;
+        return 0;
       });
     });
     return groups;
   }, [todayHabits]);
+
+  // Handle drag end for reordering
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent, timeOfDay: TimeOfDay) => {
+      const { active, over } = event;
+
+      if (over && active.id !== over.id) {
+        const habitsInSection = groupedHabits[timeOfDay];
+        const oldIndex = habitsInSection.findIndex((h) => h.id === active.id);
+        const newIndex = habitsInSection.findIndex((h) => h.id === over.id);
+
+        if (oldIndex !== -1 && newIndex !== -1) {
+          const reorderedHabits = arrayMove(habitsInSection, oldIndex, newIndex);
+          const habitIds = reorderedHabits.map((h) => h.id);
+
+          // Call API to persist the new order
+          reorderHabitsMutation.mutate(
+            { timeOfDay, habitIds },
+            {
+              onSuccess: () => {
+                toast.success('Orden actualizado', { icon: '✅', duration: 1500 });
+              },
+            }
+          );
+        }
+      }
+    },
+    [groupedHabits, reorderHabitsMutation]
+  );
 
   // Calculate progress
   const progress: DayProgress = useMemo(() => {
@@ -320,19 +382,35 @@ export function HabitsTodayPage() {
                 <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
                   {timeOfDayIcons[timeOfDay]}
                   {timeOfDayLabels[timeOfDay]}
+                  {habitsInSection.length > 1 && (
+                    <span className="text-xs text-gray-400 font-normal ml-2">
+                      (arrastra para reordenar)
+                    </span>
+                  )}
                 </h2>
-                <div className="space-y-3">
-                  {habitsInSection.map((habit) => (
-                    <HabitCard
-                      key={habit.id}
-                      habit={habit}
-                      onToggleComplete={isFuture ? undefined : handleToggleComplete}
-                      onUpdateValue={isFuture ? undefined : handleUpdateValue}
-                      onUpdateNotes={handleUpdateNotes}
-                      disabled={isFuture}
-                    />
-                  ))}
-                </div>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={(event) => handleDragEnd(event, timeOfDay)}
+                >
+                  <SortableContext
+                    items={habitsInSection.map((h) => h.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="space-y-3">
+                      {habitsInSection.map((habit) => (
+                        <SortableHabitCard
+                          key={habit.id}
+                          habit={habit}
+                          onToggleComplete={isFuture ? undefined : handleToggleComplete}
+                          onUpdateValue={isFuture ? undefined : handleUpdateValue}
+                          onUpdateNotes={handleUpdateNotes}
+                          disabled={isFuture}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
               </div>
             );
           })}

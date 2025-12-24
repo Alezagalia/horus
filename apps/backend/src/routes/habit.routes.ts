@@ -15,6 +15,9 @@ router.use(authMiddleware);
 // Stats routes (Sprint 5 - US-037, US-038) - Must be before /:id to avoid conflict
 router.get('/stats', habitController.getStats);
 
+// Reorder habits (Sprint 13) - Must be before /:id to avoid conflict
+router.put('/reorder', habitController.reorderHabits);
+
 // Habit CRUD routes
 router.get('/', habitController.getAll);
 router.get('/:id', habitController.getById);

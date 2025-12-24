@@ -114,3 +114,12 @@ export const getAuditHistorySchema = z.object({
 export const reactivateHabitSchema = z.object({
   reason: z.string().max(500).optional(),
 });
+
+/**
+ * Validation schema for reordering habits within a time of day
+ * Sprint 13
+ */
+export const reorderHabitsSchema = z.object({
+  timeOfDay: timeOfDayEnum,
+  habitIds: z.array(z.string().uuid()).min(1, 'At least one habit ID is required'),
+});

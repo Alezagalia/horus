@@ -6,6 +6,7 @@
 import { useEffect } from 'react';
 import { useForm, type FieldValues } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { toast } from 'react-hot-toast';
 import type { Habit, Category, HabitFormData } from '@/types/habits';
 import { habitSchema, type HabitFormSchema } from '@/schemas/habitSchema';
 
@@ -61,24 +62,28 @@ export function HabitFormModal({
     mode: 'onChange',
   });
 
+
   const watchType = watch('type');
   const watchPeriodicity = watch('periodicity');
   const watchWeekDays = watch('weekDays');
 
-  // Load editing habit data
+  // Reset form when modal opens or editingHabit changes
   useEffect(() => {
+    if (!isOpen) return; // Only reset when modal is open
+
     if (editingHabit) {
+      // Convert null to undefined for Zod schema compatibility
       reset({
         name: editingHabit.name,
         description: editingHabit.description || '',
         categoryId: editingHabit.categoryId,
         type: editingHabit.type,
-        targetValue: editingHabit.targetValue,
+        targetValue: editingHabit.targetValue ?? undefined,
         unit: editingHabit.unit || '',
         periodicity: editingHabit.periodicity,
         weekDays: editingHabit.weekDays || [],
         timeOfDay: editingHabit.timeOfDay,
-        color: editingHabit.color || undefined,
+        color: editingHabit.color ?? undefined,
       });
     } else {
       reset({
@@ -94,11 +99,42 @@ export function HabitFormModal({
         color: undefined,
       });
     }
-  }, [editingHabit, reset]);
+  }, [isOpen, editingHabit, reset]);
 
   const handleFormSubmit = (data: HabitFormSchema) => {
+    console.log('✅ handleFormSubmit called - validation passed!', data);
+    toast.success('Procesando...', { duration: 1000 });
     onSubmit(data as HabitFormData);
-    // Toast y onClose se manejan en el componente padre después del success de la mutation
+  };
+
+  const handleFormError = (formErrors: typeof errors) => {
+    console.log('❌ handleFormError called - validation failed!', formErrors);
+    // Show user-friendly error for the first validation error
+    const firstError = Object.entries(formErrors)[0];
+    if (firstError) {
+      const [field, error] = firstError;
+      const fieldLabels: Record<string, string> = {
+        name: 'Nombre',
+        description: 'Descripción',
+        categoryId: 'Categoría',
+        type: 'Tipo',
+        targetValue: 'Valor objetivo',
+        unit: 'Unidad',
+        periodicity: 'Periodicidad',
+        weekDays: 'Días de la semana',
+        timeOfDay: 'Momento del día',
+        color: 'Color',
+      };
+      const fieldLabel = fieldLabels[field] || field;
+      toast.error(`${fieldLabel}: ${error?.message || 'Valor inválido'}`, { icon: '⚠️', duration: 5000 });
+    }
+  };
+
+  // Debug form submission
+  const onFormSubmitAttempt = (e: React.FormEvent) => {
+    console.log('🔵 Form submit event triggered');
+    console.log('Current form errors:', errors);
+    console.log('Errors count:', Object.keys(errors).length);
   };
 
   const handleWeekDayToggle = (day: number) => {
@@ -112,10 +148,10 @@ export function HabitFormModal({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Overlay */}
-      <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity" onClick={onClose} />
+      <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity z-40" onClick={onClose} />
 
       {/* Modal */}
-      <div className="flex min-h-full items-center justify-center p-4">
+      <div className="relative z-50 flex min-h-full items-center justify-center p-4">
         <div className="relative bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
           {/* Header */}
           <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
@@ -139,7 +175,13 @@ export function HabitFormModal({
 
           {/* Form */}
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-          <form onSubmit={handleSubmit(handleFormSubmit as any)} className="p-6 space-y-6">
+          <form
+            onSubmit={(e) => {
+              onFormSubmitAttempt(e);
+              handleSubmit(handleFormSubmit as any, handleFormError)(e);
+            }}
+            className="p-6 space-y-6"
+          >
             {/* Name */}
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
@@ -343,6 +385,7 @@ export function HabitFormModal({
               <button
                 type="submit"
                 disabled={isSubmitting}
+                onClick={() => console.log('🟡 Button clicked! isSubmitting:', isSubmitting)}
                 className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? 'Guardando...' : editingHabit ? 'Guardar cambios' : 'Crear hábito'}

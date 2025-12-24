@@ -57,7 +57,10 @@ export function CategoryModal({
     },
   });
 
+  // Reset form when modal opens or editingCategory changes
   useEffect(() => {
+    if (!isOpen) return; // Only reset when modal is open
+
     if (editingCategory) {
       reset({
         name: editingCategory.name,
@@ -77,7 +80,7 @@ export function CategoryModal({
       setSelectedEmoji('');
       setSelectedColor('#3B82F6');
     }
-  }, [editingCategory, reset, scope]);
+  }, [isOpen, editingCategory, reset, scope]);
 
   const handleEmojiClick = (emojiData: EmojiClickData) => {
     setSelectedEmoji(emojiData.emoji);

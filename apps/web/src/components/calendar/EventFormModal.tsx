@@ -77,7 +77,10 @@ export function EventFormModal({
 
   const isAllDay = watch('isAllDay');
 
+  // Reset form when modal opens or editingEvent changes
   useEffect(() => {
+    if (!isOpen) return; // Only reset when modal is open
+
     if (editingEvent) {
       // Extraer fecha y hora de inicio/fin
       const startDate = new Date(editingEvent.startDateTime);
@@ -93,11 +96,13 @@ export function EventFormModal({
         categoryId: editingEvent.categoryId || '',
         location: editingEvent.location || '',
       });
-    } else if (initialDate) {
+    } else {
       reset({
         title: '',
         description: '',
-        date: initialDate.toISOString().split('T')[0],
+        date: initialDate
+          ? initialDate.toISOString().split('T')[0]
+          : new Date().toISOString().split('T')[0],
         startTime: '09:00',
         endTime: '10:00',
         isAllDay: false,
@@ -105,7 +110,7 @@ export function EventFormModal({
         location: '',
       });
     }
-  }, [editingEvent, initialDate, reset]);
+  }, [isOpen, editingEvent, initialDate, reset]);
 
   const handleFormSubmit = (data: FormData) => {
     // Construir startDateTime y endDateTime

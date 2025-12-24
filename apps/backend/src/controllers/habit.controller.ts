@@ -16,6 +16,7 @@ import {
   getHabitsQuerySchema,
   getAuditHistorySchema,
   reactivateHabitSchema,
+  reorderHabitsSchema,
 } from '../validations/habit.validation.js';
 import { updateNotificationConfigSchema } from '../validations/notification.validation.js';
 import {
@@ -459,6 +460,38 @@ export const habitController = {
       res.status(200).json({
         message: 'Habit reactivated successfully',
         habit,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  /**
+   * PUT /api/habits/reorder
+   * Reorders habits within a specific time of day
+   * Sprint 13
+   *
+   * Body: { timeOfDay: string, habitIds: string[] }
+   * Updates the order field for each habit based on array position
+   */
+  async reorderHabits(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const user = req.user;
+      if (!user) {
+        throw new UnauthorizedError('User not found');
+      }
+
+      const validatedData = reorderHabitsSchema.parse(req.body);
+
+      const result = await habitService.reorderHabits(
+        user.id,
+        validatedData.timeOfDay,
+        validatedData.habitIds
+      );
+
+      res.status(200).json({
+        message: 'Habits reordered successfully',
+        ...result,
       });
     } catch (error) {
       next(error);

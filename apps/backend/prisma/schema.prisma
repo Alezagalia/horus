@@ -153,6 +153,7 @@ model Category {
   events                  Event[]
   transactions            Transaction[]
   monthlyExpenseInstances MonthlyExpenseInstance[]
+  recurringExpenses       RecurringExpense[]
 
   @@unique([userId, name, scope])
   @@index([userId, scope])
@@ -630,11 +631,13 @@ model RecurringExpense {
   categoryId String
   currency   String   @db.VarChar(3)
   dueDay     Int?     /// Día del mes en que vence (1-31), null si no tiene vencimiento fijo
+  notes      String?  @db.VarChar(500) /// Comentario o nota opcional
   isActive   Boolean  @default(true)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   user                    User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category                Category                 @relation(fields: [categoryId], references: [id])
   monthlyExpenseInstances MonthlyExpenseInstance[]
 
   @@index([userId, isActive])

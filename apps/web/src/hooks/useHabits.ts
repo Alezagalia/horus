@@ -17,9 +17,11 @@ import {
   getRecordsByDateRange,
   updateProgress,
   getHabitStats,
+  reorderHabits,
   type GetHabitsFilters,
   type CreateHabitRecordDTO,
   type HabitFromAPI,
+  type TimeOfDay,
 } from '@/services/api/habitApi';
 import type { HabitFormData } from '@/types/habits';
 
@@ -232,24 +234,42 @@ export function useUpdateHabitProgress() {
   });
 }
 
+/**
+ * Hook para reordenar hábitos dentro de un momento del día
+ */
+export function useReorderHabits() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ timeOfDay, habitIds }: { timeOfDay: TimeOfDay; habitIds: string[] }) =>
+      reorderHabits({ timeOfDay, habitIds }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: habitKeys.lists() });
+    },
+    onError: (error: Error) => {
+      toast.error(`Error al reordenar: ${error.message}`);
+    },
+  });
+}
+
 // ==================== Helper function to transform API habit to frontend format ====================
 
 export function transformHabitFromAPI(habit: HabitFromAPI) {
   return {
     id: habit.id,
     name: habit.name,
-    description: habit.description,
+    description: habit.description ?? undefined,
     type: habit.type,
-    targetValue: habit.targetValue,
-    unit: habit.unit,
+    targetValue: habit.targetValue ?? undefined,
+    unit: habit.unit ?? undefined,
     periodicity: habit.periodicity,
-    weekDays: habit.weekDays,
+    weekDays: habit.weekDays ?? [],
     timeOfDay: habit.timeOfDay,
     categoryId: habit.categoryId,
     categoryName: habit.category?.name || '',
-    categoryIcon: habit.category?.icon,
-    categoryColor: habit.category?.color,
-    color: habit.color,
+    categoryIcon: habit.category?.icon ?? undefined,
+    categoryColor: habit.category?.color ?? undefined,
+    color: habit.color ?? undefined,
     currentStreak: habit.currentStreak,
     longestStreak: habit.longestStreak,
     isActive: habit.isActive,

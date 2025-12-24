@@ -76,7 +76,10 @@ export function AccountFormModal({
 
   const selectedType = watch('type');
 
+  // Reset form when modal opens or editingAccount changes
   useEffect(() => {
+    if (!isOpen) return; // Only reset when modal is open
+
     if (editingAccount) {
       reset({
         name: editingAccount.name,
@@ -96,7 +99,7 @@ export function AccountFormModal({
         icon: ACCOUNT_TYPE_ICONS.efectivo,
       });
     }
-  }, [editingAccount, reset]);
+  }, [isOpen, editingAccount, reset]);
 
   // Auto-set default color and icon when type changes (only for new accounts)
   useEffect(() => {

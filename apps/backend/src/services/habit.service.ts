@@ -256,6 +256,46 @@ export const habitService = {
   },
 
   /**
+   * Reorders habits within a specific time of day
+   * Sprint 13
+   *
+   * Updates the order field for each habit based on the provided array order
+   */
+  async reorderHabits(userId: string, timeOfDay: TimeOfDay, habitIds: string[]) {
+    // Verify all habits belong to user and have the specified timeOfDay
+    const habits = await prisma.habit.findMany({
+      where: {
+        id: { in: habitIds },
+        userId,
+        isActive: true,
+        timeOfDay,
+      },
+      select: { id: true },
+    });
+
+    const foundIds = new Set(habits.map((h) => h.id));
+    const invalidIds = habitIds.filter((id) => !foundIds.has(id));
+
+    if (invalidIds.length > 0) {
+      throw new BadRequestError(
+        `Some habits were not found or don't belong to the specified time of day: ${invalidIds.join(', ')}`
+      );
+    }
+
+    // Update order for each habit in a transaction
+    await prisma.$transaction(
+      habitIds.map((id, index) =>
+        prisma.habit.update({
+          where: { id },
+          data: { order: index },
+        })
+      )
+    );
+
+    return { success: true, reorderedCount: habitIds.length };
+  },
+
+  /**
    * Reactivates a previously deleted habit
    * Sprint 6 - US-049
    *
