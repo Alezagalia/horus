@@ -65,8 +65,11 @@ export function useCreateTask() {
   return useMutation({
     mutationFn: (data: TaskFormData) => createTask(data),
     onSuccess: () => {
-      // Invalidar todas las listas de tareas para refrescarlas
-      queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
+      // Invalidar todas las listas de tareas para refrescarlas inmediatamente
+      queryClient.invalidateQueries({
+        queryKey: taskKeys.lists(),
+        refetchType: 'active',
+      });
       toast.success('Tarea creada', { icon: '✨' });
     },
     onError: (error: Error) => {
@@ -84,8 +87,11 @@ export function useUpdateTask() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<TaskFormData> }) => updateTask(id, data),
     onSuccess: (updatedTask) => {
-      // Invalidar listas y detalles
-      queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
+      // Invalidar listas y detalles inmediatamente
+      queryClient.invalidateQueries({
+        queryKey: taskKeys.lists(),
+        refetchType: 'active',
+      });
       queryClient.invalidateQueries({ queryKey: taskKeys.detail(updatedTask.id) });
       toast.success('Tarea actualizada', { icon: '✏️' });
     },
@@ -104,8 +110,11 @@ export function useDeleteTask() {
   return useMutation({
     mutationFn: (id: string) => deleteTask(id),
     onSuccess: (_, deletedId) => {
-      // Invalidar todas las listas
-      queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
+      // Invalidar todas las listas inmediatamente
+      queryClient.invalidateQueries({
+        queryKey: taskKeys.lists(),
+        refetchType: 'active',
+      });
       // Remover del cache el detalle eliminado
       queryClient.removeQueries({ queryKey: taskKeys.detail(deletedId) });
       toast.success('Tarea eliminada');

@@ -250,21 +250,29 @@ export const googleAuthService = {
   async getStatus(userId: string) {
     const syncSetting = await prisma.syncSetting.findUnique({
       where: { userId },
+      include: { user: true },
     });
 
     if (!syncSetting) {
       return {
-        googleCalendarEnabled: false,
+        isConnected: false,
+        googleEmail: undefined,
         lastSyncAt: null,
-        nextSyncAt: null,
+        hasValidToken: false,
       };
     }
 
+    // Check if token is valid (not expired)
+    const now = new Date();
+    const tokenValid = syncSetting.googleTokenExpiresAt
+      ? syncSetting.googleTokenExpiresAt > now
+      : true; // If no expiry date, assume valid
+
     return {
-      googleCalendarEnabled: syncSetting.googleCalendarEnabled,
+      isConnected: syncSetting.googleCalendarEnabled,
+      googleEmail: syncSetting.user.email, // Get email from user relation
       lastSyncAt: syncSetting.lastSyncAt,
-      nextSyncAt: null, // TODO: Calculate based on sync job schedule
-      tokenExpiresAt: syncSetting.googleTokenExpiresAt,
+      hasValidToken: tokenValid,
     };
   },
 
@@ -298,5 +306,17 @@ export const googleAuthService = {
     }
 
     return oauth2Client;
+  },
+
+  /**
+   * Resets sync timestamp to force full sync
+   */
+  async resetSyncTimestamp(userId: string) {
+    await prisma.syncSetting.update({
+      where: { userId },
+      data: {
+        lastSyncAt: null,
+      },
+    });
   },
 };

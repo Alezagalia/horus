@@ -71,9 +71,18 @@ export function GoogleCalendarSyncModal({ isOpen, onClose }: GoogleCalendarSyncM
 
       // Monitor popup closure
       const checkClosed = setInterval(() => {
-        if (popup.closed) {
-          clearInterval(checkClosed);
-          setIsConnecting(false);
+        try {
+          if (popup.closed) {
+            clearInterval(checkClosed);
+            setIsConnecting(false);
+            // Refresh status after popup closes (user might have connected)
+            setTimeout(() => {
+              refetch();
+            }, 500);
+          }
+        } catch (error) {
+          // COOP policy might block popup.closed check - ignore and continue
+          console.log('Cannot check popup status (COOP policy)');
         }
       }, 500);
     } catch (error) {

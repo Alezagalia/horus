@@ -481,14 +481,23 @@ export const googleCalendarSyncService = {
 
       const params: any = {
         calendarId: 'primary',
-        maxResults: 250,
+        maxResults: 2500,
         singleEvents: true, // Expand recurring events
         orderBy: 'startTime',
       };
 
-      // If since date provided, only get events updated after that
       if (since) {
+        // Incremental sync: only get events updated after last sync
         params.updatedMin = since.toISOString();
+      } else {
+        // Full sync: get all events from 1 year ago to 1 year in the future
+        const oneYearAgo = new Date();
+        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+        const oneYearAhead = new Date();
+        oneYearAhead.setFullYear(oneYearAhead.getFullYear() + 1);
+
+        params.timeMin = oneYearAgo.toISOString();
+        params.timeMax = oneYearAhead.toISOString();
       }
 
       const response = await calendar.events.list(params);
@@ -527,8 +536,18 @@ export const googleCalendarSyncService = {
         throw new BadRequestError('No default category found for events');
       }
 
-      // Fetch events from Google since last sync
-      const since = syncSetting.lastSyncAt || undefined;
+      // Check if this is the first real sync (no events synced yet)
+      const syncedEventsCount = await prisma.event.count({
+        where: {
+          userId,
+          syncWithGoogle: true,
+          googleEventId: { not: null },
+        },
+      });
+
+      // For first sync, fetch all events (ignore lastSyncAt)
+      // Otherwise, only fetch events updated since last sync
+      const since = syncedEventsCount === 0 ? undefined : syncSetting.lastSyncAt || undefined;
       const googleEvents = await this.fetchGoogleEvents(userId, since);
 
       const stats = {

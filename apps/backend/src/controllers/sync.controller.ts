@@ -131,4 +131,28 @@ export const syncController = {
       next(error);
     }
   },
+
+  /**
+   * POST /api/sync/google-calendar/reset-sync
+   * Resets sync timestamp to force full sync (for testing/debugging)
+   */
+  async resetSync(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const user = req.user;
+      if (!user) {
+        throw new UnauthorizedError('User not found');
+      }
+
+      const userId = user.id;
+
+      await googleAuthService.resetSyncTimestamp(userId);
+
+      res.status(200).json({
+        success: true,
+        message: 'Sync timestamp reset. Next sync will be a full sync.',
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
 };
