@@ -6,7 +6,7 @@
 import { z } from 'zod';
 
 export const routineExerciseSchema = z.object({
-  exerciseId: z.string().cuid(),
+  exerciseId: z.string().uuid(),
   order: z.number().int().positive(),
   targetSets: z.number().int().positive().nullable().optional(),
   targetReps: z.number().int().positive().nullable().optional(),
