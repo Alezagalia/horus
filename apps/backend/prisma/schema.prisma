@@ -15,6 +15,7 @@ enum Scope {
   tareas
   eventos
   gastos
+  knowledge
 }
 
 enum HabitType {
@@ -105,6 +106,12 @@ enum MuscleGroup {
   otro
 }
 
+enum ResourceType {
+  NOTE
+  SNIPPET
+  BOOKMARK
+}
+
 model User {
   id                   String                   @id @default(uuid())
   email                String                   @unique
@@ -130,6 +137,7 @@ model User {
   exercises            Exercise[]
   routines             Routine[]
   workouts             Workout[]
+  resources            Resource[]
 
   @@index([email])
   @@map("users")
@@ -154,6 +162,7 @@ model Category {
   transactions            Transaction[]
   monthlyExpenseInstances MonthlyExpenseInstance[]
   recurringExpenses       RecurringExpense[]
+  resources               Resource[]
 
   @@unique([userId, name, scope])
   @@index([userId, scope])
@@ -983,4 +992,64 @@ model WorkoutSet {
 
   @@index([workoutExerciseId])
   @@map("workout_sets")
+}
+
+/// Resource: Sistema de gestión de conocimiento
+/// Sprint 15 - Knowledge Base
+///
+/// Este modelo almacena 3 tipos de recursos:
+/// - NOTE: Notas en formato Markdown
+/// - SNIPPET: Fragmentos de código con syntax highlighting
+/// - BOOKMARK: Enlaces guardados con metadata
+///
+/// Campos polimórficos (varían según type):
+/// - content: Para NOTE y SNIPPET (texto/código)
+/// - url: Para BOOKMARK
+/// - language: Para SNIPPET (javascript, python, etc.)
+/// - metadata: JSON con datos adicionales (favicon, preview, etc.)
+///
+/// Características:
+/// - Tags para organización flexible
+/// - Pinned para destacar recursos importantes
+/// - Color para identificación visual
+/// - Integración con sistema de categorías existente
+///
+/// Índices:
+/// - (userId, type, isPinned): Para listado filtrado
+/// - (userId, title): Para búsqueda por título
+/// - (userId, createdAt DESC): Para ordenamiento por fecha
+model Resource {
+  id          String       @id @default(uuid())
+  userId      String
+  categoryId  String?
+  type        ResourceType
+
+  // Campos básicos
+  title       String       @db.VarChar(300)
+  description String?      @db.VarChar(1000)
+
+  // Campos polimórficos
+  content     String?      @db.Text           // Para NOTE/SNIPPET
+  url         String?      @db.Text           // Para BOOKMARK
+  language    String?      @db.VarChar(50)    // Para SNIPPET (js, py, sql, etc.)
+  metadata    Json?                           // Datos adicionales (favicon, preview, etc.)
+
+  // Organización
+  tags        String[]     @default([])
+  isPinned    Boolean      @default(false)
+  color       String?      @db.VarChar(7)     // Color hexadecimal (#FF5733)
+
+  // Auditoría
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relaciones
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category    Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  // Índices
+  @@index([userId, type, isPinned])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([categoryId])
+  @@map("resources")
 }

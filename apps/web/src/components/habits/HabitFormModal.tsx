@@ -131,7 +131,7 @@ export function HabitFormModal({
   };
 
   // Debug form submission
-  const onFormSubmitAttempt = (e: React.FormEvent) => {
+  const onFormSubmitAttempt = (_e: React.FormEvent) => {
     console.log('🔵 Form submit event triggered');
     console.log('Current form errors:', errors);
     console.log('Errors count:', Object.keys(errors).length);

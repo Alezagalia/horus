@@ -16,6 +16,7 @@ import exerciseRoutes from './exercise.routes.js';
 import routineRoutes from './routine.routes.js';
 import workoutRoutes from './workout.routes.js';
 import statsRoutes from './stats.routes.js';
+import resourceRoutes from './resource.routes.js';
 
 const router: IRouter = Router();
 
@@ -36,6 +37,7 @@ router.use('/exercises', exerciseRoutes);
 router.use('/routines', routineRoutes);
 router.use('/workouts', workoutRoutes);
 router.use('/stats', statsRoutes);
+router.use('/resources', resourceRoutes);
 
 // Health check
 router.get('/health', (_req, res) => {

@@ -79,6 +79,9 @@ const WorkoutDetailPage = lazy(() =>
 const WorkoutStatsPage = lazy(() =>
   import('@/pages/WorkoutStatsPage').then((m) => ({ default: m.WorkoutStatsPage }))
 );
+const ResourcesPage = lazy(() =>
+  import('@/pages/ResourcesPage').then((m) => ({ default: m.ResourcesPage }))
+);
 
 export function App() {
   const checkAuth = useAuthStore((state) => state.checkAuth);
@@ -305,6 +308,16 @@ export function App() {
                 <ProtectedRoute>
                   <MainLayout>
                     <WorkoutStatsPage />
+                  </MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/resources"
+              element={
+                <ProtectedRoute>
+                  <MainLayout>
+                    <ResourcesPage />
                   </MainLayout>
                 </ProtectedRoute>
               }

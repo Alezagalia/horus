@@ -12,9 +12,6 @@ const router: IRouter = Router();
 // All workout routes are protected
 router.use(authMiddleware);
 
-// Start workout from a routine (US-128)
-router.post('/routines/:id/start', workoutController.startWorkout);
-
 // Set management (US-129)
 router.post('/:workoutId/exercises/:exerciseId/sets', workoutController.addSet);
 router.put('/:workoutId/exercises/:exerciseId/sets/:setId', workoutController.updateSet);
@@ -25,6 +22,9 @@ router.put('/:workoutId/exercises/:exerciseId', workoutController.updateWorkoutE
 
 // Finish workout (US-130)
 router.put('/:id/finish', workoutController.finishWorkout);
+
+// Cancel workout (delete active workout)
+router.delete('/:id/cancel', workoutController.cancelWorkout);
 
 // Get workout detail (US-130)
 router.get('/:id', workoutController.getWorkoutById);

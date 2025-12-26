@@ -41,6 +41,10 @@ import { ExecuteRoutineScreen } from './src/screens/ExecuteRoutineScreen';
 import { WorkoutHistoryScreen } from './src/screens/WorkoutHistoryScreen';
 import { WorkoutDetailScreen } from './src/screens/WorkoutDetailScreen';
 import { StatsScreen } from './src/screens/StatsScreen';
+// Resources screens - Fase 3
+import { ResourcesScreen } from './src/screens/ResourcesScreen';
+import { CreateResourceScreen } from './src/screens/CreateResourceScreen';
+import { ResourceDetailScreen } from './src/screens/ResourceDetailScreen';
 
 // Navigation types
 type RootStackParamList = {
@@ -60,6 +64,10 @@ type RootStackParamList = {
   WorkoutHistory: undefined;
   WorkoutDetail: { workoutId: string };
   Stats: undefined;
+  // Resources routes - Fase 3
+  Resources: undefined;
+  CreateResource: { resourceId?: string };
+  ResourceDetail: { resourceId: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -216,6 +224,22 @@ export default function App() {
               name="Stats"
               component={StatsScreen}
               options={{ title: 'Estadísticas' }}
+            />
+            {/* Resources Routes - Fase 3 */}
+            <Stack.Screen
+              name="Resources"
+              component={ResourcesScreen}
+              options={{ title: 'Conocimiento' }}
+            />
+            <Stack.Screen
+              name="CreateResource"
+              component={CreateResourceScreen}
+              options={{ title: 'Nuevo Recurso', presentation: 'modal', headerShown: false }}
+            />
+            <Stack.Screen
+              name="ResourceDetail"
+              component={ResourceDetailScreen}
+              options={{ title: 'Detalle del Recurso' }}
             />
           </Stack.Navigator>
           <StatusBar style="auto" />

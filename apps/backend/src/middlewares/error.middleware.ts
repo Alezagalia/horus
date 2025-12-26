@@ -13,6 +13,7 @@ export interface ErrorResponse {
   message: string;
   statusCode: number;
   details?: unknown;
+  meta?: Record<string, unknown>;
 }
 
 export const errorMiddleware = (
@@ -62,11 +63,18 @@ export const errorMiddleware = (
 
   // Custom app errors
   if (err.statusCode) {
-    res.status(err.statusCode).json({
+    const response: ErrorResponse = {
       error: err.name || 'Error',
       message: err.message,
       statusCode: err.statusCode,
-    });
+    };
+
+    // Include meta if present (e.g., ConflictError with workoutId)
+    if (err.meta) {
+      response.meta = err.meta;
+    }
+
+    res.status(err.statusCode).json(response);
     return;
   }
 

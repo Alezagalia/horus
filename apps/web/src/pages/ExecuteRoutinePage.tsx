@@ -51,6 +51,12 @@ export function ExecuteRoutinePage() {
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [finishNotes, setFinishNotes] = useState('');
 
+  // Conflict modal (active workout)
+  const [showConflictModal, setShowConflictModal] = useState(false);
+  const [activeWorkoutId, setActiveWorkoutId] = useState<string | null>(null);
+  const [activeWorkoutTime, setActiveWorkoutTime] = useState<string | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
+
   // Start workout on mount
   useEffect(() => {
     if (!routineId) return;
@@ -60,9 +66,9 @@ export function ExecuteRoutinePage() {
         setWorkoutData(data);
         // Initialize local state
         const initial: Record<string, ExerciseLocal> = {};
-        data.routine.exercises.forEach((ex) => {
-          initial[ex.id] = {
-            workoutExerciseId: ex.id,
+        data.exercises.forEach((ex) => {
+          initial[ex.workoutExerciseId] = {
+            workoutExerciseId: ex.workoutExerciseId,
             sets: [],
           };
         });
@@ -70,9 +76,28 @@ export function ExecuteRoutinePage() {
         setIsLoading(false);
       })
       .catch((error) => {
-        toast.error('Error al iniciar workout');
-        console.error(error);
-        navigate('/routines');
+        console.error('Error completo:', error);
+        console.error('Error.response:', error?.response);
+        console.error('Error.response.data:', error?.response?.data);
+        console.error('Error.response.status:', error?.response?.status);
+        console.error('Error.response.data.meta:', error?.response?.data?.meta);
+        console.error('Condición 1 (status === 409):', error?.response?.status === 409);
+        console.error('Condición 2 (meta exists):', !!error?.response?.data?.meta);
+
+        // Check if it's a conflict error (409) - active workout exists
+        if (error?.response?.status === 409 && error?.response?.data?.meta) {
+          console.log('✅ Entrando a mostrar modal de conflicto');
+          const { workoutId, startTime } = error.response.data.meta;
+          console.log('workoutId:', workoutId, 'startTime:', startTime);
+          setActiveWorkoutId(workoutId);
+          setActiveWorkoutTime(startTime);
+          setShowConflictModal(true);
+          setIsLoading(false);
+        } else {
+          console.log('❌ No se cumple la condición, mostrando error genérico');
+          toast.error('Error al iniciar workout');
+          navigate('/routines');
+        }
       });
   }, [routineId, navigate]);
 
@@ -105,19 +130,19 @@ export function ExecuteRoutinePage() {
       return;
     }
 
-    const currentExercise = workoutData.routine.exercises[currentExerciseIndex];
+    const currentExercise = workoutData.exercises[currentExerciseIndex];
     const data: AddSetInput = { reps, weight };
 
     try {
-      await addSet(workoutData.workoutId, currentExercise.id, data);
+      await addSet(workoutData.workout.id, currentExercise.workoutExerciseId, data);
 
       // Update local state
       setExercisesLocal((prev) => ({
         ...prev,
-        [currentExercise.id]: {
-          ...prev[currentExercise.id],
+        [currentExercise.workoutExerciseId]: {
+          ...prev[currentExercise.workoutExerciseId],
           sets: [
-            ...prev[currentExercise.id].sets,
+            ...prev[currentExercise.workoutExerciseId].sets,
             {
               tempId: `temp-${Date.now()}`,
               reps,
@@ -141,7 +166,7 @@ export function ExecuteRoutinePage() {
     if (!workoutData) return;
 
     try {
-      await finishWorkout(workoutData.workoutId, finishNotes || undefined);
+      await finishWorkout(workoutData.workout.id, finishNotes || undefined);
       toast.success('Workout completado');
       navigate('/routines');
     } catch (error) {
@@ -154,7 +179,7 @@ export function ExecuteRoutinePage() {
     if (!workoutData) return;
 
     if (window.confirm('¿Seguro que quieres cancelar el workout? Se perderán todos los datos.')) {
-      cancelWorkout(workoutData.workoutId)
+      cancelWorkout(workoutData.workout.id)
         .then(() => {
           toast.success('Workout cancelado');
           navigate('/routines');
@@ -166,6 +191,48 @@ export function ExecuteRoutinePage() {
     }
   };
 
+  const handleCancelActiveWorkout = async () => {
+    if (!activeWorkoutId) return;
+
+    console.log('🔄 Iniciando cancelación del workout:', activeWorkoutId);
+    setIsCancelling(true);
+    try {
+      console.log('🗑️ Cancelando workout...');
+      await cancelWorkout(activeWorkoutId);
+      console.log('✅ Workout cancelado exitosamente');
+      toast.success('Workout activo cancelado');
+      setShowConflictModal(false);
+
+      // Retry starting the workout
+      if (routineId) {
+        console.log('🔄 Reintentando iniciar workout con routineId:', routineId);
+        const data = await startWorkout(routineId);
+        console.log('✅ Nuevo workout iniciado:', data);
+        setWorkoutData(data);
+        // Initialize local state
+        const initial: Record<string, ExerciseLocal> = {};
+        // Note: backend returns data.exercises directly, not data.routine.exercises
+        data.exercises.forEach((ex) => {
+          initial[ex.workoutExerciseId] = {
+            workoutExerciseId: ex.workoutExerciseId,
+            sets: [],
+          };
+        });
+        setExercisesLocal(initial);
+        setIsLoading(false);
+        console.log('✅ Estados actualizados correctamente');
+      }
+    } catch (error) {
+      console.error('❌ Error en handleCancelActiveWorkout:', error);
+      toast.error('Error al cancelar workout activo');
+      setShowConflictModal(false);
+      navigate('/routines');
+    } finally {
+      setIsCancelling(false);
+      console.log('🏁 Finalizó handleCancelActiveWorkout');
+    }
+  };
+
   const handlePreviousExercise = () => {
     if (currentExerciseIndex > 0) {
       setCurrentExerciseIndex(currentExerciseIndex - 1);
@@ -173,15 +240,89 @@ export function ExecuteRoutinePage() {
   };
 
   const handleNextExercise = () => {
-    if (workoutData && currentExerciseIndex < workoutData.routine.exercises.length - 1) {
+    if (workoutData && currentExerciseIndex < workoutData.exercises.length - 1) {
       setCurrentExerciseIndex(currentExerciseIndex + 1);
     }
   };
 
   const getHistory = (exerciseId: string) => {
     if (!workoutData) return null;
-    return workoutData.history.find((h) => h.exerciseId === exerciseId);
+    const exercise = workoutData.exercises.find((ex) => ex.exerciseId === exerciseId);
+    return exercise?.lastWorkoutData || null;
   };
+
+  // Debug: log state changes
+  console.log('🔍 Estado actual:', {
+    isLoading,
+    hasWorkoutData: !!workoutData,
+    showConflictModal,
+    activeWorkoutId,
+    activeWorkoutTime,
+  });
+
+  // Show conflict modal if there's an active workout
+  if (showConflictModal) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Toaster position="top-right" />
+
+        {/* Conflict Modal - Active Workout Exists */}
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="flex-shrink-0 w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
+                <svg
+                  className="w-6 h-6 text-amber-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-gray-900">Workout en Progreso</h3>
+                <p className="text-gray-600 mt-1">
+                  Ya tienes un entrenamiento activo iniciado
+                  {activeWorkoutTime && (
+                    <> el {new Date(activeWorkoutTime).toLocaleString('es-ES')}</>
+                  )}
+                  .
+                </p>
+                <p className="text-gray-600 mt-2">
+                  Debes cancelar o finalizar el workout anterior antes de iniciar uno nuevo.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowConflictModal(false);
+                  navigate('/routines');
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                Volver
+              </button>
+              <button
+                onClick={handleCancelActiveWorkout}
+                disabled={isCancelling}
+                className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50"
+              >
+                {isCancelling ? 'Cancelando...' : 'Cancelar Workout Anterior'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading || !workoutData) {
     return (
@@ -194,8 +335,8 @@ export function ExecuteRoutinePage() {
     );
   }
 
-  const currentExercise = workoutData.routine.exercises[currentExerciseIndex];
-  const currentSets = exercisesLocal[currentExercise.id]?.sets || [];
+  const currentExercise = workoutData.exercises[currentExerciseIndex];
+  const currentSets = exercisesLocal[currentExercise.workoutExerciseId]?.sets || [];
   const history = getHistory(currentExercise.exerciseId);
 
   return (
@@ -207,9 +348,9 @@ export function ExecuteRoutinePage() {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">{workoutData.routine.name}</h1>
+              <h1 className="text-2xl font-bold text-gray-900">{workoutData.workout.routineName}</h1>
               <p className="text-sm text-gray-600">
-                Ejercicio {currentExerciseIndex + 1} de {workoutData.routine.exercises.length}
+                Ejercicio {currentExerciseIndex + 1} de {workoutData.exercises.length}
               </p>
             </div>
             <div className="flex items-center gap-4">
@@ -246,11 +387,11 @@ export function ExecuteRoutinePage() {
             <div className="bg-white rounded-lg border border-gray-200 p-4">
               <h2 className="text-lg font-bold text-gray-900 mb-4">Ejercicios</h2>
               <div className="space-y-2">
-                {workoutData.routine.exercises.map((ex, index) => {
-                  const setsCount = exercisesLocal[ex.id]?.sets.length || 0;
+                {workoutData.exercises.map((ex, index) => {
+                  const setsCount = exercisesLocal[ex.workoutExerciseId]?.sets.length || 0;
                   return (
                     <button
-                      key={ex.id}
+                      key={ex.workoutExerciseId}
                       onClick={() => setCurrentExerciseIndex(index)}
                       className={`w-full text-left p-3 rounded-lg transition-colors ${
                         index === currentExerciseIndex
@@ -260,9 +401,9 @@ export function ExecuteRoutinePage() {
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
-                          <p className="font-medium text-gray-900">{ex.exercise.name}</p>
-                          {ex.exercise.muscleGroup && (
-                            <p className="text-xs text-gray-500">{ex.exercise.muscleGroup}</p>
+                          <p className="font-medium text-gray-900">{ex.exerciseName}</p>
+                          {ex.muscleGroup && (
+                            <p className="text-xs text-gray-500">{ex.muscleGroup}</p>
                           )}
                         </div>
                         <div className="text-right">
@@ -286,10 +427,10 @@ export function ExecuteRoutinePage() {
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">
-                    {currentExercise.exercise.name}
+                    {currentExercise.exerciseName}
                   </h2>
-                  {currentExercise.exercise.muscleGroup && (
-                    <p className="text-gray-600 mt-1">{currentExercise.exercise.muscleGroup}</p>
+                  {currentExercise.muscleGroup && (
+                    <p className="text-gray-600 mt-1">{currentExercise.muscleGroup}</p>
                   )}
                 </div>
                 <div className="flex gap-2">
@@ -309,7 +450,7 @@ export function ExecuteRoutinePage() {
                   </button>
                   <button
                     onClick={handleNextExercise}
-                    disabled={currentExerciseIndex === workoutData.routine.exercises.length - 1}
+                    disabled={currentExerciseIndex === workoutData.exercises.length - 1}
                     className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-30"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -355,9 +496,9 @@ export function ExecuteRoutinePage() {
                   Última Vez ({new Date(history.date).toLocaleDateString('es-ES')})
                 </h3>
                 <div className="space-y-2">
-                  {history.sets.map((set, index) => (
+                  {history.allSets.map((set, index) => (
                     <div key={index} className="flex justify-between text-sm">
-                      <span className="text-gray-600">Serie {index + 1}</span>
+                      <span className="text-gray-600">Serie {set.setNumber}</span>
                       <span className="font-medium">
                         {set.reps} reps × {set.weight} kg
                       </span>

@@ -14,3 +14,4 @@ export * from './monthlyExpense.types.js';
 export * from './exercise.types.js';
 export * from './routine.types.js';
 export * from './workout.types.js';
+export * from './resource.types.js';

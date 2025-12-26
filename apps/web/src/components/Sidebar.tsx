@@ -38,6 +38,7 @@ const menuSections: MenuSection[] = [
       { name: 'Tareas', path: '/tasks', icon: '✅', gradient: 'from-amber-500 to-orange-500' },
       { name: 'Hábitos', path: '/habits', icon: '🎯', gradient: 'from-blue-500 to-cyan-500' },
       { name: 'Calendario', path: '/calendar', icon: '📅', gradient: 'from-pink-500 to-rose-500' },
+      { name: 'Conocimiento', path: '/resources', icon: '📚', gradient: 'from-violet-500 to-purple-500' },
     ],
   },
   {

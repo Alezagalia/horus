@@ -34,6 +34,8 @@ type RootStackParamList = {
   Routines: undefined;
   WorkoutHistory: undefined;
   Stats: undefined;
+  // Resources routes - Fase 3
+  Resources: undefined;
   // Add other routes as needed
 };
 
@@ -169,6 +171,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             <Text style={styles.fitnessLabel}>Estadísticas</Text>
           </TouchableOpacity>
         </View>
+      </View>
+
+      {/* Resources Section - Fase 3 */}
+      <View style={styles.sectionContainer}>
+        <Text style={styles.sectionTitle}>📚 Conocimiento</Text>
+        <TouchableOpacity
+          style={styles.resourcesButton}
+          onPress={() => navigation.navigate('Resources')}
+        >
+          <Text style={styles.resourcesIcon}>📚</Text>
+          <View style={styles.resourcesTextContainer}>
+            <Text style={styles.resourcesButtonText}>Gestión de Conocimiento</Text>
+            <Text style={styles.resourcesButtonSubtext}>Notas, snippets de código y bookmarks</Text>
+          </View>
+          <Text style={styles.resourcesArrow}>→</Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );
@@ -310,5 +328,40 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     textAlign: 'center',
+  },
+  // Resources section styles - Fase 3
+  resourcesButton: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  resourcesIcon: {
+    fontSize: 32,
+    marginRight: 16,
+  },
+  resourcesTextContainer: {
+    flex: 1,
+  },
+  resourcesButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  resourcesButtonSubtext: {
+    fontSize: 12,
+    color: '#666',
+  },
+  resourcesArrow: {
+    fontSize: 24,
+    color: '#2196F3',
+    marginLeft: 8,
   },
 });

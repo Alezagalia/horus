@@ -11,33 +11,40 @@ export interface AddSetInput {
 }
 
 export interface StartWorkoutResponse {
-  workoutId: string;
-  routine: {
+  workout: {
     id: string;
-    name: string;
-    exercises: Array<{
-      id: string;
-      order: number;
-      exerciseId: string;
-      exercise: {
-        id: string;
-        name: string;
-        muscleGroup: string | null;
-      };
-      targetSets: number | null;
-      targetReps: number | null;
-      targetWeight: number | null;
-      restTime: number | null;
-      notes: string | null;
-    }>;
+    routineId: string;
+    routineName: string;
+    startTime: string;
+    endTime: string | null;
   };
-  history: Array<{
-    date: string;
+  exercises: Array<{
+    workoutExerciseId: string;
     exerciseId: string;
-    sets: Array<{
-      reps: number;
-      weight: number;
-    }>;
+    exerciseName: string;
+    muscleGroup: string | null;
+    order: number;
+    targetSets: number | null;
+    targetReps: number | null;
+    targetWeight: number | null;
+    restTime: number | null;
+    notes: string | null;
+    lastWorkoutData: {
+      date: string;
+      lastReps: number;
+      lastWeight: number;
+      lastWeightUnit: string;
+      avgReps: number;
+      avgWeight: number;
+      maxWeight: number;
+      totalSets: number;
+      allSets: Array<{
+        setNumber: number;
+        reps: number;
+        weight: number;
+      }>;
+    } | null;
+    sets: Array<any>;
   }>;
 }
 
@@ -75,11 +82,11 @@ export async function deleteSet(
 }
 
 /**
- * POST /api/workouts/:workoutId/finish
+ * PUT /api/workouts/:workoutId/finish
  * Finaliza el workout
  */
 export async function finishWorkout(workoutId: string, notes?: string): Promise<void> {
-  await axiosInstance.post(`/workouts/${workoutId}/finish`, { notes });
+  await axiosInstance.put(`/workouts/${workoutId}/finish`, { notes });
 }
 
 /**

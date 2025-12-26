@@ -817,4 +817,32 @@ export const workoutService = {
       },
     };
   },
+
+  /**
+   * Cancel a workout (delete it)
+   * - Validates workout exists and belongs to user
+   * - Only allows canceling unfinished workouts
+   * - Deletes workout and all associated data (cascading)
+   */
+  async cancelWorkout(userId: string, workoutId: string) {
+    return await prisma.$transaction(async (tx) => {
+      // 1. Validate workout exists, belongs to user, not finished
+      const workout = await tx.workout.findFirst({
+        where: { id: workoutId, userId },
+      });
+
+      if (!workout) {
+        throw new NotFoundError('Workout not found');
+      }
+
+      if (workout.endTime !== null) {
+        throw new ForbiddenError('Cannot cancel a finished workout');
+      }
+
+      // 2. Delete workout (cascade will delete workoutExercises and workoutSets)
+      await tx.workout.delete({
+        where: { id: workoutId },
+      });
+    });
+  },
 };

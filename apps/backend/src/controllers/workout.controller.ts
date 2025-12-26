@@ -171,4 +171,21 @@ export const workoutController = {
       next(error);
     }
   },
+
+  async cancelWorkout(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const user = req.user;
+      if (!user) {
+        throw new UnauthorizedError('User not found');
+      }
+
+      const { id: workoutId } = req.params;
+
+      await workoutService.cancelWorkout(user.id, workoutId);
+
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  },
 };
