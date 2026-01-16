@@ -24,6 +24,7 @@ export const transactionService = {
       accountId?: string;
       categoryId?: string;
       type?: TransactionType;
+      isTransfer?: boolean;
       date?: {
         gte?: Date;
         lte?: Date;
@@ -43,6 +44,8 @@ export const transactionService = {
 
     if (filters.type) {
       where.type = filters.type as TransactionType;
+      // When filtering by type, exclude transfers
+      where.isTransfer = false;
     }
 
     // Date range filter
@@ -89,11 +92,12 @@ export const transactionService = {
       prisma.transaction.count({ where }),
     ]);
 
-    // Calculate totals for the filtered range
+    // Calculate totals for the filtered range (excluding transfers)
     const totalIncome = await prisma.transaction.aggregate({
       where: {
         ...where,
         type: 'ingreso',
+        isTransfer: false,
       },
       _sum: {
         amount: true,
@@ -104,6 +108,7 @@ export const transactionService = {
       where: {
         ...where,
         type: 'egreso',
+        isTransfer: false,
       },
       _sum: {
         amount: true,
