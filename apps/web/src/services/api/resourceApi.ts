@@ -1,12 +1,10 @@
-import axios from 'axios';
+import { axiosInstance } from '@/lib/axios';
 import type {
   Resource,
   CreateResourceDto,
   UpdateResourceDto,
   ResourceFilters,
 } from '@horus/shared';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 export const resourceApi = {
   /**
@@ -21,7 +19,7 @@ export const resourceApi = {
     if (filters?.search) params.append('search', filters.search);
     if (filters?.tags) filters.tags.forEach((tag) => params.append('tags', tag));
 
-    const response = await axios.get(`${API_URL}/api/resources?${params}`);
+    const response = await axiosInstance.get(`/resources?${params}`);
     return response.data;
   },
 
@@ -29,7 +27,7 @@ export const resourceApi = {
    * Obtener un resource por ID
    */
   async getById(id: string): Promise<Resource> {
-    const response = await axios.get(`${API_URL}/api/resources/${id}`);
+    const response = await axiosInstance.get(`/resources/${id}`);
     return response.data;
   },
 
@@ -37,7 +35,7 @@ export const resourceApi = {
    * Crear un nuevo resource
    */
   async create(data: CreateResourceDto): Promise<Resource> {
-    const response = await axios.post(`${API_URL}/api/resources`, data);
+    const response = await axiosInstance.post('/resources', data);
     return response.data;
   },
 
@@ -45,7 +43,7 @@ export const resourceApi = {
    * Actualizar un resource
    */
   async update(id: string, data: UpdateResourceDto): Promise<Resource> {
-    const response = await axios.put(`${API_URL}/api/resources/${id}`, data);
+    const response = await axiosInstance.put(`/resources/${id}`, data);
     return response.data;
   },
 
@@ -53,14 +51,14 @@ export const resourceApi = {
    * Eliminar un resource
    */
   async delete(id: string): Promise<void> {
-    await axios.delete(`${API_URL}/api/resources/${id}`);
+    await axiosInstance.delete(`/resources/${id}`);
   },
 
   /**
    * Toggle pin
    */
   async togglePin(id: string): Promise<Resource> {
-    const response = await axios.patch(`${API_URL}/api/resources/${id}/pin`);
+    const response = await axiosInstance.patch(`/resources/${id}/pin`);
     return response.data;
   },
 
@@ -71,7 +69,7 @@ export const resourceApi = {
     const params = new URLSearchParams({ q: query });
     if (limit) params.append('limit', String(limit));
 
-    const response = await axios.get(`${API_URL}/api/resources/search?${params}`);
+    const response = await axiosInstance.get(`/resources/search?${params}`);
     return response.data;
   },
 
@@ -79,7 +77,7 @@ export const resourceApi = {
    * Obtener tags
    */
   async getTags(): Promise<string[]> {
-    const response = await axios.get(`${API_URL}/api/resources/tags`);
+    const response = await axiosInstance.get('/resources/tags');
     return response.data;
   },
 
@@ -87,7 +85,7 @@ export const resourceApi = {
    * Obtener estadísticas
    */
   async getStats(): Promise<any> {
-    const response = await axios.get(`${API_URL}/api/resources/stats`);
+    const response = await axiosInstance.get('/resources/stats');
     return response.data;
   },
 };
