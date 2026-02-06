@@ -76,21 +76,28 @@ export function TransactionsPage() {
     const groups: { label: string; date: Date; transactions: Transaction[] }[] = [];
 
     filteredTransactions.forEach((transaction) => {
-      const transDate = new Date(transaction.date);
-      let group = groups.find((g) => isSameDay(g.date, transDate));
+      // Parse the ISO date string and extract just the date part
+      // This avoids timezone issues by working with the date string directly
+      const dateStr = transaction.date.split('T')[0]; // "2026-01-08"
+      const [year, month, day] = dateStr.split('-').map(Number);
+
+      // Create a local date at midnight (no timezone conversion)
+      const localDate = new Date(year, month - 1, day, 0, 0, 0, 0);
+
+      let group = groups.find((g) => isSameDay(g.date, localDate));
 
       if (!group) {
         let label: string;
-        if (isToday(transDate)) {
+        if (isToday(localDate)) {
           label = 'Hoy';
-        } else if (isYesterday(transDate)) {
+        } else if (isYesterday(localDate)) {
           label = 'Ayer';
         } else {
-          label = format(transDate, "EEEE d 'de' MMMM", { locale: es });
+          label = format(localDate, "EEEE d 'de' MMMM", { locale: es });
           label = label.charAt(0).toUpperCase() + label.slice(1);
         }
 
-        group = { label, date: transDate, transactions: [] };
+        group = { label, date: localDate, transactions: [] };
         groups.push(group);
       }
 
@@ -155,15 +162,15 @@ export function TransactionsPage() {
   };
 
   const handleFormSubmit = (data: TransactionFormData) => {
-    // Agregar hora al mediodía para evitar problemas de zona horaria
-    const dateWithTime = `${data.date}T12:00:00`;
+    // Agregar hora al mediodía UTC para evitar problemas de zona horaria
+    const dateWithTime = `${data.date}T12:00:00.000Z`;
     const payload = {
       type: data.type,
       accountId: data.accountId,
       categoryId: data.categoryId,
       amount: data.amount,
       concept: data.concept,
-      date: new Date(dateWithTime).toISOString(),
+      date: dateWithTime,
       notes: data.notes || undefined,
     };
 

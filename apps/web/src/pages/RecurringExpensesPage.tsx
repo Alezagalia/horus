@@ -82,6 +82,7 @@ export function RecurringExpensesPage() {
             categoryId: data.categoryId,
             currency: data.currency,
             dueDay: data.dueDay,
+            notes: data.notes,
           },
         },
         {
