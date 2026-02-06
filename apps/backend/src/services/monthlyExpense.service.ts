@@ -23,6 +23,9 @@ export const getMonthlyExpenses = async (
       month,
       year,
       ...(status && { status }),
+      recurringExpense: {
+        isActive: true, // Only show instances from active templates
+      },
     },
     include: {
       recurringExpense: {
