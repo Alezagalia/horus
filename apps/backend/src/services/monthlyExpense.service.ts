@@ -31,6 +31,7 @@ export const getMonthlyExpenses = async (
           concept: true,
           currency: true,
           dueDay: true,
+          notes: true,
           isActive: true,
         },
       },
