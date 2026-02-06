@@ -188,8 +188,8 @@ export const accountService = {
 
   /**
    * Update an account
-   * Only allows updating: name, color, icon
-   * Does NOT allow updating: type, currency, initialBalance
+   * Allows updating: name, color, icon, initialBalance, currency
+   * Does NOT allow updating: type
    */
   async update(accountId: string, userId: string, data: UpdateAccountInput) {
     // Verify account exists and belongs to user
@@ -204,6 +204,13 @@ export const accountService = {
       throw new NotFoundError('Cuenta no encontrada');
     }
 
+    // Calculate new currentBalance if initialBalance is being updated
+    let newCurrentBalance = existingAccount.currentBalance;
+    if (data.initialBalance !== undefined) {
+      const initialBalanceDiff = data.initialBalance - Number(existingAccount.initialBalance);
+      newCurrentBalance = Number(existingAccount.currentBalance) + initialBalanceDiff;
+    }
+
     // Update account
     const account = await prisma.account.update({
       where: {
@@ -213,6 +220,9 @@ export const accountService = {
         name: data.name,
         color: data.color,
         icon: data.icon,
+        initialBalance: data.initialBalance,
+        currentBalance: data.initialBalance !== undefined ? newCurrentBalance : undefined,
+        currency: data.currency,
       },
     });
 

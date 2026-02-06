@@ -86,7 +86,14 @@ export const updateAccountSchema = z.object({
     .regex(/^#[0-9A-Fa-f]{6}$/, 'El color debe ser un código hexadecimal válido (#RRGGBB)')
     .optional(),
   icon: z.string().max(10, 'El ícono no puede exceder 10 caracteres').optional(),
-  // No permitimos actualizar: type, currency, initialBalance (integridad)
+  initialBalance: z
+    .number()
+    .or(z.string().transform((val) => parseFloat(val)))
+    .refine((val) => !isNaN(val), { message: 'El balance inicial debe ser un número válido' })
+    .refine((val) => val >= 0, { message: 'El balance inicial no puede ser negativo' })
+    .optional(),
+  currency: currencyCodeEnum.optional(),
+  // No permitimos actualizar: type (integridad)
 });
 
 export type CreateAccountInput = z.infer<typeof createAccountSchema>;

@@ -53,6 +53,8 @@ export interface UpdateAccountDTO {
   name?: string;
   color?: string;
   icon?: string;
+  initialBalance?: number;
+  currency?: Currency;
 }
 
 export interface FinanceStats {
