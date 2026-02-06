@@ -85,15 +85,26 @@ function getOAuth2Client() {
 export const googleAuthService = {
   /**
    * Generates authorization URL for OAuth2 flow
+   * @param isReconnect - Whether this is a reconnection (skip forcing consent)
    */
-  generateAuthUrl(userId: string): string {
+  async generateAuthUrl(userId: string, isReconnect: boolean = false): Promise<string> {
     const oauth2Client = getOAuth2Client();
+
+    // Check if user already has a connection
+    if (!isReconnect) {
+      const existingSetting = await prisma.syncSetting.findUnique({
+        where: { userId },
+      });
+      isReconnect = !!existingSetting?.googleRefreshToken;
+    }
 
     const authUrl = oauth2Client.generateAuthUrl({
       access_type: 'offline', // Request refresh token
       scope: GOOGLE_SCOPES,
       state: userId, // Pass userId to callback
-      prompt: 'consent', // Force consent screen to get refresh token
+      // Only force consent on first connection
+      // This prevents hitting Google's 50 refresh token limit per user
+      prompt: isReconnect ? 'select_account' : 'consent',
     });
 
     return authUrl;
@@ -189,6 +200,45 @@ export const googleAuthService = {
       return credentials.access_token;
     } catch (error: any) {
       console.error('Error refreshing access token:', error);
+
+      // Check if error is irrecoverable (token revoked, expired, or invalid)
+      const errorMessage = error.message || '';
+      const isIrrecoverableError =
+        errorMessage.includes('invalid_grant') ||
+        errorMessage.includes('Token has been expired or revoked') ||
+        errorMessage.includes('Token has been revoked') ||
+        error.code === 400;
+
+      if (isIrrecoverableError) {
+        console.error(`Irrecoverable token error for user ${userId}. Disconnecting...`);
+
+        // Disconnect Google Calendar sync
+        await prisma.syncSetting.update({
+          where: { userId },
+          data: {
+            googleCalendarEnabled: false,
+            googleAccessToken: null,
+            googleRefreshToken: null,
+            googleTokenExpiresAt: null,
+          },
+        });
+
+        // Mark all synced events as local only
+        await prisma.event.updateMany({
+          where: {
+            userId,
+            syncWithGoogle: true,
+          },
+          data: {
+            syncWithGoogle: false,
+          },
+        });
+
+        throw new BadRequestError(
+          'Your Google Calendar connection has expired. Please reconnect to continue syncing.'
+        );
+      }
+
       throw new BadRequestError(error.message || 'Failed to refresh access token');
     }
   },
@@ -259,6 +309,7 @@ export const googleAuthService = {
         googleEmail: undefined,
         lastSyncAt: null,
         hasValidToken: false,
+        needsReconnect: false,
       };
     }
 
@@ -268,11 +319,19 @@ export const googleAuthService = {
       ? syncSetting.googleTokenExpiresAt > now
       : true; // If no expiry date, assume valid
 
+    // Check if has refresh token
+    const hasRefreshToken = !!syncSetting.googleRefreshToken;
+
+    // Needs reconnect if enabled but no valid refresh token
+    const needsReconnect =
+      syncSetting.googleCalendarEnabled && (!hasRefreshToken || !tokenValid);
+
     return {
       isConnected: syncSetting.googleCalendarEnabled,
       googleEmail: syncSetting.user.email, // Get email from user relation
       lastSyncAt: syncSetting.lastSyncAt,
-      hasValidToken: tokenValid,
+      hasValidToken: tokenValid && hasRefreshToken,
+      needsReconnect,
     };
   },
 

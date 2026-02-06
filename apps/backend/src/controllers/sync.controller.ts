@@ -24,7 +24,7 @@ export const syncController = {
 
       const userId = user.id;
 
-      const authUrl = googleAuthService.generateAuthUrl(userId);
+      const authUrl = await googleAuthService.generateAuthUrl(userId);
 
       res.status(200).json({
         success: true,

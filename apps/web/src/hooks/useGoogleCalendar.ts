@@ -97,8 +97,21 @@ export function useSyncGoogleCalendar() {
         toast.error(data.message || 'Error en la sincronización');
       }
     },
-    onError: (error: Error) => {
-      toast.error(`Error al sincronizar: ${error.message}`);
+    onError: (error: any) => {
+      // Check if it's an authentication error
+      const isAuthError =
+        error.response?.status === 401 ||
+        error.response?.status === 400 ||
+        error.message?.includes('expired') ||
+        error.message?.includes('reconnect');
+
+      if (isAuthError) {
+        toast.error('Tu conexión con Google Calendar ha expirado. Por favor reconecta tu cuenta.');
+        // Refresh status to show the needsReconnect state
+        queryClient.invalidateQueries({ queryKey: googleCalendarKeys.status() });
+      } else {
+        toast.error(`Error al sincronizar: ${error.message || 'Error desconocido'}`);
+      }
     },
   });
 }

@@ -192,9 +192,9 @@ export function GoogleCalendarSyncModal({ isOpen, onClose }: GoogleCalendarSyncM
                 )}
 
                 {/* Token Warning */}
-                {status?.hasValidToken === false && (
+                {status?.needsReconnect && (
                   <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                    <p className="text-sm text-amber-800">
+                    <p className="text-sm text-amber-800 font-medium">
                       ⚠️ Tu conexión ha expirado. Por favor, reconecta tu cuenta.
                     </p>
                   </div>
@@ -202,35 +202,67 @@ export function GoogleCalendarSyncModal({ isOpen, onClose }: GoogleCalendarSyncM
 
                 {/* Actions */}
                 <div className="space-y-2 pt-2">
-                  <button
-                    onClick={handleSync}
-                    disabled={isSyncing || status?.hasValidToken === false}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isSyncing ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                        Sincronizando...
-                      </>
-                    ) : (
-                      <>
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                          />
-                        </svg>
-                        Sincronizar Ahora
-                      </>
-                    )}
-                  </button>
+                  {status?.needsReconnect ? (
+                    <button
+                      onClick={handleConnect}
+                      disabled={isConnecting}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isConnecting ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                          Reconectando...
+                        </>
+                      ) : (
+                        <>
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                            />
+                          </svg>
+                          Reconectar Google Calendar
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleSync}
+                      disabled={isSyncing}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isSyncing ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                          Sincronizando...
+                        </>
+                      ) : (
+                        <>
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                            />
+                          </svg>
+                          Sincronizar Ahora
+                        </>
+                      )}
+                    </button>
+                  )}
 
                   <button
                     onClick={handleDisconnect}

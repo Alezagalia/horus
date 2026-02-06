@@ -10,6 +10,7 @@ export interface GoogleCalendarStatus {
   googleEmail?: string;
   lastSyncAt?: string;
   hasValidToken?: boolean;
+  needsReconnect?: boolean;
 }
 
 export interface GoogleCalendarSyncResult {
@@ -55,6 +56,12 @@ export async function disconnectGoogleCalendar(): Promise<{ success: boolean; me
  * Manually trigger synchronization from Google Calendar
  */
 export async function syncGoogleCalendar(): Promise<GoogleCalendarSyncResult> {
-  const response = await axiosInstance.post<GoogleCalendarSyncResult>('/sync/google-calendar/sync');
+  const response = await axiosInstance.post<GoogleCalendarSyncResult>(
+    '/sync/google-calendar/sync',
+    {},
+    {
+      timeout: 60000, // 60 seconds for sync operation (can take time with many events)
+    }
+  );
   return response.data;
 }

@@ -614,7 +614,12 @@ export const googleCalendarSyncService = {
               // Local is more recent or equal, skip update
               // Next export cycle will push local changes to Google
               stats.conflicts++;
-              console.log(`Conflict: Local event ${existingEvent.id} is more recent than Google`);
+              // Only log first 10 conflicts to avoid spam
+              if (stats.conflicts <= 10) {
+                console.log(`Conflict: Local event ${existingEvent.id} is more recent than Google`);
+              } else if (stats.conflicts === 11) {
+                console.log('Additional conflicts suppressed for log cleanliness');
+              }
             }
           } else {
             // Event doesn't exist, create new
@@ -637,9 +642,13 @@ export const googleCalendarSyncService = {
         },
       });
 
+      const conflictMsg = stats.conflicts > 0 ? `, ${stats.conflicts} conflictos (versión local más reciente)` : '';
       return {
         success: true,
-        stats,
+        message: `Sincronización completada: ${stats.created} creados, ${stats.updated} actualizados${conflictMsg}`,
+        eventsImported: stats.created,
+        eventsUpdated: stats.updated,
+        eventsDeleted: stats.deleted,
       };
     } catch (error: any) {
       console.error('Error syncing from Google Calendar:', error);

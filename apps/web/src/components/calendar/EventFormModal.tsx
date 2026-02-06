@@ -121,15 +121,26 @@ export function EventFormModal({
     let endDateTimeStr: string;
 
     if (data.isAllDay) {
-      // Para eventos de todo el día, usar 00:00 y 23:59
-      startDateTimeStr = `${dateStr}T00:00:00.000Z`;
-      endDateTimeStr = `${dateStr}T23:59:59.000Z`;
+      // Para eventos de todo el día, usar 00:00 y 23:59 en hora local
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const startDate = new Date(year, month - 1, day, 0, 0, 0);
+      const endDate = new Date(year, month - 1, day, 23, 59, 59);
+      startDateTimeStr = startDate.toISOString();
+      endDateTimeStr = endDate.toISOString();
     } else {
-      // Usar las horas especificadas
+      // Usar las horas especificadas en hora local
       const startTime = data.startTime || '09:00';
       const endTime = data.endTime || '10:00';
-      startDateTimeStr = `${dateStr}T${startTime}:00.000Z`;
-      endDateTimeStr = `${dateStr}T${endTime}:00.000Z`;
+
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const [startHour, startMinute] = startTime.split(':').map(Number);
+      const [endHour, endMinute] = endTime.split(':').map(Number);
+
+      const startDate = new Date(year, month - 1, day, startHour, startMinute, 0);
+      const endDate = new Date(year, month - 1, day, endHour, endMinute, 0);
+
+      startDateTimeStr = startDate.toISOString();
+      endDateTimeStr = endDate.toISOString();
     }
 
     const submitData: CreateCalendarEventDTO = {
