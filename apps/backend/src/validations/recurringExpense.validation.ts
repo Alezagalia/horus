@@ -69,6 +69,7 @@ export const updateRecurringExpenseSchema = z.object({
     .trim()
     .nullable()
     .optional(),
+  isActive: z.boolean().optional(),
 });
 
 export type UpdateRecurringExpenseInput = z.infer<typeof updateRecurringExpenseSchema>;

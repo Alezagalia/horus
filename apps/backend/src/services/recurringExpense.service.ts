@@ -180,6 +180,7 @@ export const updateRecurringExpense = async (
       ...(data.currency && { currency: data.currency }),
       ...(data.dueDay !== undefined && { dueDay: data.dueDay }),
       ...(data.notes !== undefined && { notes: data.notes }),
+      ...(data.isActive !== undefined && { isActive: data.isActive }),
     },
     include: {
       category: {
