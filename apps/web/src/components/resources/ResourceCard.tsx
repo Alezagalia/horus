@@ -93,7 +93,29 @@ export function ResourceCard({ resource, onEdit, onDelete, onTogglePin }: Resour
       <div className="mb-3">
         {resource.type === ResourceType.NOTE && resource.content && (
           <div className="prose prose-sm max-w-none bg-gray-50 p-3 rounded line-clamp-4">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                table: ({node, ...props}) => (
+                  <table className="min-w-full divide-y divide-gray-300 border border-gray-300 rounded-lg overflow-hidden text-xs" {...props} />
+                ),
+                thead: ({node, ...props}) => (
+                  <thead className="bg-gray-100" {...props} />
+                ),
+                th: ({node, ...props}) => (
+                  <th className="px-2 py-1 text-left font-semibold text-gray-900 border border-gray-300" {...props} />
+                ),
+                tbody: ({node, ...props}) => (
+                  <tbody className="divide-y divide-gray-200" {...props} />
+                ),
+                tr: ({node, ...props}) => (
+                  <tr className="hover:bg-gray-50" {...props} />
+                ),
+                td: ({node, ...props}) => (
+                  <td className="px-2 py-1 text-gray-700 border border-gray-300" {...props} />
+                ),
+              }}
+            >
               {resource.content.slice(0, 200)}
             </ReactMarkdown>
           </div>

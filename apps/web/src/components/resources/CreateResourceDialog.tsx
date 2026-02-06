@@ -101,6 +101,7 @@ export function CreateResourceDialog({ open, onClose, resource }: CreateResource
   if (!open) return null;
 
   const isLoading = createMutation.isPending || updateMutation.isPending;
+  const isButtonDisabled = isLoading || !title || (type !== ResourceType.BOOKMARK && !content) || (type === ResourceType.BOOKMARK && !url);
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -284,7 +285,7 @@ export function CreateResourceDialog({ open, onClose, resource }: CreateResource
             </button>
             <button
               onClick={handleSubmit}
-              disabled={isLoading || !title || (type !== ResourceType.BOOKMARK && !content) || (type === ResourceType.BOOKMARK && !url)}
+              disabled={isButtonDisabled}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <Save className="w-4 h-4" />

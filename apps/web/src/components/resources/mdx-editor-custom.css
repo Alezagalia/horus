@@ -1,0 +1,248 @@
+/* Estilos personalizados para MDXEditor */
+
+/* Wrapper general */
+.mdx-editor-wrapper {
+  font-family: inherit;
+}
+
+/* Toolbar personalizado */
+.mdx-editor-wrapper [role="toolbar"] {
+  background-color: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 0.5rem;
+}
+
+.mdx-editor-wrapper button {
+  transition: all 0.2s ease;
+}
+
+.mdx-editor-wrapper button:hover:not(:disabled) {
+  background-color: #e5e7eb;
+}
+
+.mdx-editor-wrapper button[data-active="true"] {
+  background-color: #3b82f6;
+  color: white;
+}
+
+/* Área de edición */
+.mdx-editor-wrapper [contenteditable="true"] {
+  min-height: 24rem;
+  padding: 1rem;
+  outline: none;
+}
+
+/* Tablas mejoradas */
+.mdx-editor-wrapper table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+  overflow: hidden;
+}
+
+.mdx-editor-wrapper thead {
+  background-color: #f3f4f6;
+}
+
+.mdx-editor-wrapper th {
+  font-weight: 600;
+  padding: 0.75rem;
+  text-align: left;
+  border: 1px solid #e5e7eb;
+  background-color: #f9fafb;
+  color: #374151;
+}
+
+.mdx-editor-wrapper td {
+  padding: 0.75rem;
+  border: 1px solid #e5e7eb;
+  color: #4b5563;
+}
+
+.mdx-editor-wrapper tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+/* Columna seleccionada */
+.mdx-editor-wrapper td.selectedCell,
+.mdx-editor-wrapper th.selectedCell {
+  background-color: #dbeafe;
+}
+
+/* Controles de tabla */
+.mdx-editor-wrapper .tableColumnMenu,
+.mdx-editor-wrapper .tableRowMenu {
+  background-color: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.mdx-editor-wrapper .tableColumnMenu button,
+.mdx-editor-wrapper .tableRowMenu button {
+  padding: 0.5rem 1rem;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.mdx-editor-wrapper .tableColumnMenu button:hover,
+.mdx-editor-wrapper .tableRowMenu button:hover {
+  background-color: #f3f4f6;
+}
+
+/* Headings */
+.mdx-editor-wrapper h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  line-height: 1.25;
+  color: #111827;
+}
+
+.mdx-editor-wrapper h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.375;
+  color: #1f2937;
+}
+
+.mdx-editor-wrapper h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+  color: #374151;
+}
+
+/* Listas */
+.mdx-editor-wrapper ul,
+.mdx-editor-wrapper ol {
+  margin: 0.75rem 0;
+  padding-left: 1.5rem;
+}
+
+.mdx-editor-wrapper li {
+  margin: 0.25rem 0;
+}
+
+/* Enlaces */
+.mdx-editor-wrapper a {
+  color: #3b82f6;
+  text-decoration: underline;
+}
+
+.mdx-editor-wrapper a:hover {
+  color: #2563eb;
+}
+
+/* Blockquotes */
+.mdx-editor-wrapper blockquote {
+  border-left: 4px solid #3b82f6;
+  padding-left: 1rem;
+  margin: 1rem 0;
+  color: #6b7280;
+  font-style: italic;
+}
+
+/* Código inline */
+.mdx-editor-wrapper code {
+  background-color: #f3f4f6;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+/* Separador */
+.mdx-editor-wrapper hr {
+  border: none;
+  border-top: 2px solid #e5e7eb;
+  margin: 2rem 0;
+}
+
+/* Placeholder */
+.mdx-editor-wrapper [data-placeholder]:empty:before {
+  content: attr(data-placeholder);
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .mdx-editor-wrapper [role="toolbar"] {
+    flex-wrap: wrap;
+  }
+
+  .mdx-editor-wrapper table {
+    font-size: 0.875rem;
+  }
+
+  .mdx-editor-wrapper th,
+  .mdx-editor-wrapper td {
+    padding: 0.5rem;
+  }
+}
+
+/* Focus states */
+.mdx-editor-wrapper [contenteditable="true"]:focus {
+  outline: none;
+}
+
+/* Selection color */
+.mdx-editor-wrapper ::selection {
+  background-color: #dbeafe;
+}
+
+/* Botones del toolbar con mejor spacing */
+.mdx-editor-wrapper [role="toolbar"] button {
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  background-color: transparent;
+  border: 1px solid transparent;
+}
+
+.mdx-editor-wrapper [role="toolbar"] button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Separadores en el toolbar */
+.mdx-editor-wrapper [role="separator"] {
+  width: 1px;
+  height: 1.5rem;
+  background-color: #d1d5db;
+  margin: 0 0.25rem;
+}
+
+/* Select dropdowns */
+.mdx-editor-wrapper select {
+  padding: 0.375rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  background-color: white;
+  color: #374151;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.mdx-editor-wrapper select:hover {
+  border-color: #9ca3af;
+}
+
+.mdx-editor-wrapper select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
