@@ -305,6 +305,26 @@ export function AccountDetailPage() {
         </div>
       </div>
 
+      {/* Initial Balance Info */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+              <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-blue-900">Saldo Inicial de la Cuenta</p>
+              <p className="text-xs text-blue-700">Monto con el que se creó la cuenta</p>
+            </div>
+          </div>
+          <p className="text-2xl font-bold text-blue-900">
+            {formatCurrency(account.initialBalance, account.currency)}
+          </p>
+        </div>
+      </div>
+
       {/* Transactions List */}
       <div className="mb-6">
         <TransactionList

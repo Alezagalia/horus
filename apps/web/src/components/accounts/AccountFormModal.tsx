@@ -190,10 +190,7 @@ export function AccountFormModal({
               <select
                 id="currency"
                 {...register('currency')}
-                disabled={isEditing}
-                className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                  isEditing ? 'bg-gray-50 cursor-not-allowed' : ''
-                }`}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 {CURRENCIES.map((curr) => (
                   <option key={curr} value={curr}>
@@ -201,9 +198,6 @@ export function AccountFormModal({
                   </option>
                 ))}
               </select>
-              {isEditing && (
-                <p className="mt-1 text-xs text-gray-500">La moneda no puede modificarse</p>
-              )}
             </div>
 
             {/* Initial Balance */}
@@ -219,17 +213,11 @@ export function AccountFormModal({
                 type="number"
                 step="0.01"
                 {...register('initialBalance', { valueAsNumber: true })}
-                disabled={isEditing}
-                className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                  isEditing ? 'bg-gray-50 cursor-not-allowed' : ''
-                }`}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 placeholder="0.00"
               />
               {errors.initialBalance && (
                 <p className="mt-1 text-sm text-red-600">{errors.initialBalance.message}</p>
-              )}
-              {isEditing && (
-                <p className="mt-1 text-xs text-gray-500">El saldo inicial no puede modificarse</p>
               )}
             </div>
 
