@@ -83,6 +83,244 @@ const ResourcesPage = lazy(() =>
   import('@/pages/ResourcesPage').then((m) => ({ default: m.ResourcesPage }))
 );
 
+function AppRoutes() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <Routes>
+        {/* Public routes */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/calendar/google-callback" element={<GoogleCallbackPage />} />
+
+        {/* Protected routes with MainLayout */}
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <DashboardPage />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/habits/today"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <HabitsTodayPage />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/habits"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <HabitsPage />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/habits/:id/stats"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <HabitStatsPage />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tasks"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <TasksPage />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/calendar"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <CalendarPage />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/categories"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <CategoriesPage />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/accounts"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <AccountsPage />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/accounts/:id"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <AccountDetailPage />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/recurring-expenses"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <RecurringExpensesPage />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/monthly-expenses"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <MonthlyExpensesPage />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/transactions"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <TransactionsPage />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/exercises"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <ExercisesPage />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/routines"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <RoutinesPage />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/routines/new"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <RoutineFormPage />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/routines/:id"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <RoutineDetailPage />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/routines/:id/edit"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <RoutineFormPage />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/workouts/execute/:routineId"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <ExecuteRoutinePage />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/workouts"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <WorkoutHistoryPage />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/workouts/:id"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <WorkoutDetailPage />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/stats"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <WorkoutStatsPage />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/resources"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <ResourcesPage />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Redirect unknown routes to home */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
+  );
+}
+
 export function App() {
   const checkAuth = useAuthStore((state) => state.checkAuth);
 
@@ -94,239 +332,7 @@ export function App() {
   return (
     <BrowserRouter>
       <KeyboardShortcutsProvider>
-        <Suspense fallback={<LoadingFallback />}>
-          <Routes>
-            {/* Public routes */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/calendar/google-callback" element={<GoogleCallbackPage />} />
-
-            {/* Protected routes with MainLayout */}
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <DashboardPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/habits/today"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <HabitsTodayPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/habits"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <HabitsPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/habits/:id/stats"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <HabitStatsPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/tasks"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <TasksPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/calendar"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <CalendarPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/categories"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <CategoriesPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/accounts"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <AccountsPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/accounts/:id"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <AccountDetailPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/recurring-expenses"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <RecurringExpensesPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/monthly-expenses"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <MonthlyExpensesPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/transactions"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <TransactionsPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/exercises"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <ExercisesPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/routines"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <RoutinesPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/routines/new"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <RoutineFormPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/routines/:id"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <RoutineDetailPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/routines/:id/edit"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <RoutineFormPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/workouts/execute/:routineId"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <ExecuteRoutinePage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/workouts"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <WorkoutHistoryPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/workouts/:id"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <WorkoutDetailPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/stats"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <WorkoutStatsPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/resources"
-              element={
-                <ProtectedRoute>
-                  <MainLayout>
-                    <ResourcesPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
-
-            {/* Redirect unknown routes to home */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Suspense>
+        <AppRoutes />
       </KeyboardShortcutsProvider>
     </BrowserRouter>
   );

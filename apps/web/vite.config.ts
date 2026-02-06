@@ -86,13 +86,16 @@ export default defineConfig({
       },
       devOptions: {
         enabled: false, // Deshabilitado en desarrollo para mejor DX
+        type: 'module',
       },
+      injectRegister: false, // No inyectar service worker automáticamente
     }),
   ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
+    dedupe: ['react', 'react-dom'],
   },
   server: {
     port: 5173,
@@ -162,6 +165,12 @@ export default defineConfig({
   },
   // Optimizaciones para desarrollo
   optimizeDeps: {
-    include: ['react', 'react-dom', 'react-router-dom', '@tanstack/react-query'],
+    include: [
+      'react',
+      'react-dom',
+      'react-router-dom',
+      '@tanstack/react-query',
+      '@mdxeditor/editor',
+    ],
   },
 });
