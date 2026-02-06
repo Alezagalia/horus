@@ -16,6 +16,7 @@ import {
 import { TotalBalanceCard } from '@/components/accounts/TotalBalanceCard';
 import { AccountCard } from '@/components/accounts/AccountCard';
 import { MonthStatsCards } from '@/components/accounts/MonthStatsCards';
+import { ExpensesByCategoryChart } from '@/components/accounts/ExpensesByCategoryChart';
 import { AccountFormModal } from '@/components/accounts/AccountFormModal';
 import { TransferModal } from '@/components/transfers/TransferModal';
 
@@ -158,6 +159,11 @@ export function AccountsPage() {
       <div className="mb-8">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Estadísticas del Mes</h2>
         <MonthStatsCards />
+      </div>
+
+      {/* Expenses by Category Chart */}
+      <div className="mb-8">
+        <ExpensesByCategoryChart />
       </div>
 
       {/* Accounts List Section */}
