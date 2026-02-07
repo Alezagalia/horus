@@ -13,6 +13,7 @@ import {
   deleteTransaction,
   createTransfer,
   updateTransfer,
+  getExpensesByCategory,
 } from '@/services/api/transactionApi';
 import type { GetTransactionsQuery, UpdateTransactionDTO, UpdateTransferDTO } from '@horus/shared';
 
@@ -22,6 +23,9 @@ export const transactionKeys = {
   list: (query?: GetTransactionsQuery) => [...transactionKeys.lists(), query] as const,
   details: () => [...transactionKeys.all, 'detail'] as const,
   detail: (id: string) => [...transactionKeys.details(), id] as const,
+  stats: () => [...transactionKeys.all, 'stats'] as const,
+  expensesByCategory: (month: number, year: number) =>
+    [...transactionKeys.stats(), 'by-category', month, year] as const,
 };
 
 /**
@@ -141,5 +145,16 @@ export function useUpdateTransfer() {
     onError: (error: Error) => {
       toast.error(`Error al actualizar transferencia: ${error.message}`);
     },
+  });
+}
+
+/**
+ * Get expenses aggregated by category for a specific month/year
+ */
+export function useExpensesByCategory(month: number, year: number) {
+  return useQuery({
+    queryKey: transactionKeys.expensesByCategory(month, year),
+    queryFn: () => getExpensesByCategory(month, year),
+    staleTime: 1000 * 60 * 2, // 2 minutes
   });
 }

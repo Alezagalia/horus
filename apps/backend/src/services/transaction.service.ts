@@ -885,4 +885,79 @@ export const transactionService = {
       },
     };
   },
+
+  /**
+   * Get expenses grouped by category for a specific month/year
+   * Returns aggregated totals without fetching all individual transactions
+   */
+  async getExpensesByCategory(userId: string, month: number, year: number) {
+    // Build date range for the month
+    const startDate = new Date(year, month - 1, 1); // month is 1-indexed
+    const endDate = new Date(year, month, 0, 23, 59, 59, 999); // last day of month
+
+    // Get all expense transactions grouped by category
+    const expensesByCategory = await prisma.transaction.groupBy({
+      by: ['categoryId'],
+      where: {
+        userId,
+        type: 'egreso',
+        isTransfer: false,
+        date: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      _sum: {
+        amount: true,
+      },
+      _count: {
+        id: true,
+      },
+    });
+
+    // Fetch category details for each group
+    const categoryIds = expensesByCategory.map((item) => item.categoryId);
+    const categories = await prisma.category.findMany({
+      where: {
+        id: {
+          in: categoryIds,
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        icon: true,
+        color: true,
+      },
+    });
+
+    // Map categories to a lookup object
+    const categoryMap = new Map(categories.map((cat) => [cat.id, cat]));
+
+    // Format response with category details
+    const formattedData = expensesByCategory.map((item) => {
+      const category = categoryMap.get(item.categoryId);
+      return {
+        categoryId: item.categoryId,
+        categoryName: category?.name || 'Sin categoría',
+        categoryIcon: category?.icon || '📄',
+        categoryColor: category?.color || '#6B7280',
+        totalAmount: Number(item._sum.amount || 0),
+        transactionCount: item._count.id,
+      };
+    });
+
+    // Sort by amount descending
+    formattedData.sort((a, b) => b.totalAmount - a.totalAmount);
+
+    // Calculate total
+    const total = formattedData.reduce((sum, item) => sum + item.totalAmount, 0);
+
+    return {
+      month,
+      year,
+      categories: formattedData,
+      total,
+    };
+  },
 };

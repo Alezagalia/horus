@@ -12,6 +12,7 @@ import type {
   TransactionListResponse,
   CreateTransferDTO,
   UpdateTransferDTO,
+  ExpensesByCategoryResponse,
 } from '@horus/shared';
 
 /**
@@ -86,5 +87,22 @@ export async function createTransfer(data: CreateTransferDTO): Promise<Transacti
  */
 export async function updateTransfer(id: string, data: UpdateTransferDTO): Promise<Transaction> {
   const response = await axiosInstance.put<Transaction>(`/transactions/transfer/${id}`, data);
+  return response.data;
+}
+
+/**
+ * Get expenses aggregated by category for a specific month/year
+ */
+export async function getExpensesByCategory(
+  month: number,
+  year: number
+): Promise<ExpensesByCategoryResponse> {
+  const params = new URLSearchParams();
+  params.append('month', month.toString());
+  params.append('year', year.toString());
+
+  const response = await axiosInstance.get<ExpensesByCategoryResponse>(
+    `/transactions/stats/by-category?${params.toString()}`
+  );
   return response.data;
 }

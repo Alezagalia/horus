@@ -11,6 +11,7 @@ import {
   getTransactionsQuerySchema,
   createTransferSchema,
   updateTransferSchema,
+  getExpensesByCategoryQuerySchema,
 } from '../validations/transaction.validation.js';
 import { UnauthorizedError } from '../middlewares/error.middleware.js';
 
@@ -156,6 +157,27 @@ export const transactionController = {
       const validatedData = updateTransferSchema.parse(req.body);
 
       const result = await transactionService.updateTransfer(id, user.id, validatedData);
+
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  /**
+   * GET /api/transactions/stats/by-category
+   * Gets expenses aggregated by category for a specific month/year
+   */
+  async getExpensesByCategory(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const user = req.user;
+      if (!user) {
+        throw new UnauthorizedError('User not found');
+      }
+
+      const { month, year } = getExpensesByCategoryQuerySchema.parse(req.query);
+
+      const result = await transactionService.getExpensesByCategory(user.id, month, year);
 
       res.status(200).json(result);
     } catch (error) {

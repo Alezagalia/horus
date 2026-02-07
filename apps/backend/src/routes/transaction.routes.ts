@@ -12,6 +12,9 @@ const router: IRouter = Router();
 // All routes protected with authMiddleware
 router.use(authMiddleware);
 
+// Stats routes (must come BEFORE /:id routes)
+router.get('/stats/by-category', transactionController.getExpensesByCategory);
+
 // Transfer routes (must come BEFORE /:id routes)
 router.post('/transfer', transactionController.createTransfer);
 router.put('/transfer/:id', transactionController.updateTransfer);

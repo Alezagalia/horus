@@ -79,3 +79,19 @@ export interface UpdateTransferDTO {
   date?: string;
   notes?: string | null;
 }
+
+export interface ExpensesByCategory {
+  categoryId: string;
+  categoryName: string;
+  categoryIcon: string;
+  categoryColor: string;
+  totalAmount: number;
+  transactionCount: number;
+}
+
+export interface ExpensesByCategoryResponse {
+  month: number;
+  year: number;
+  categories: ExpensesByCategory[];
+  total: number;
+}

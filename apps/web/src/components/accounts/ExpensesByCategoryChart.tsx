@@ -5,8 +5,7 @@
 
 import { useMemo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { startOfMonth, endOfMonth } from 'date-fns';
-import { useTransactions } from '@/hooks/useTransactions';
+import { useExpensesByCategory } from '@/hooks/useTransactions';
 import { formatCurrency } from '@/utils/currency';
 
 const COLORS = [
@@ -24,60 +23,25 @@ const COLORS = [
 
 export function ExpensesByCategoryChart() {
   const today = new Date();
-  const monthStart = startOfMonth(today);
-  const monthEnd = endOfMonth(today);
+  const month = today.getMonth() + 1; // getMonth() returns 0-11, we need 1-12
+  const year = today.getFullYear();
 
-  const { data, isLoading } = useTransactions({
-    type: 'egreso',
-    limit: 100,
-  });
+  const { data, isLoading } = useExpensesByCategory(month, year);
 
   const chartData = useMemo(() => {
-    if (!data?.transactions) return [];
+    if (!data?.categories) return [];
 
-    // Filter transactions to current month only
-    const currentMonthTransactions = data.transactions.filter((t) => {
-      const transactionDate = new Date(t.date);
-      return (
-        transactionDate >= monthStart &&
-        transactionDate <= monthEnd &&
-        !t.isTransfer // Exclude transfers
-      );
-    });
-
-    console.log('Total transactions received:', data.transactions.length);
-    console.log('Current month transactions:', currentMonthTransactions.length);
-    console.log('Month range:', monthStart, 'to', monthEnd);
-
-    // Group by category and sum amounts
-    const grouped = currentMonthTransactions
-      .reduce((acc, transaction) => {
-        const categoryName = transaction.category?.name || 'Sin categoría';
-        const categoryIcon = transaction.category?.icon || '📄';
-        const key = categoryName;
-
-        if (!acc[key]) {
-          acc[key] = {
-            name: categoryName,
-            icon: categoryIcon,
-            value: 0,
-            count: 0,
-          };
-        }
-
-        acc[key].value += Number(transaction.amount);
-        acc[key].count += 1;
-
-        return acc;
-      }, {} as Record<string, { name: string; icon: string; value: number; count: number }>);
-
-    // Convert to array and sort by value (highest first)
-    return Object.values(grouped).sort((a, b) => b.value - a.value);
-  }, [data, monthStart, monthEnd]);
+    return data.categories.map((category) => ({
+      name: category.categoryName,
+      icon: category.categoryIcon,
+      value: category.totalAmount,
+      count: category.transactionCount,
+    }));
+  }, [data]);
 
   const totalExpenses = useMemo(() => {
-    return chartData.reduce((sum, item) => sum + item.value, 0);
-  }, [chartData]);
+    return data?.total ?? 0;
+  }, [data]);
 
   if (isLoading) {
     return (

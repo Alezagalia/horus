@@ -185,8 +185,27 @@ export const updateTransferSchema = z.object({
   notes: z.string().max(1000, 'Las notas no pueden exceder 1000 caracteres').optional().nullable(),
 });
 
+/**
+ * Schema for expenses by category query params
+ */
+export const getExpensesByCategoryQuerySchema = z.object({
+  month: z
+    .string()
+    .transform((val) => parseInt(val, 10))
+    .refine((val) => !isNaN(val) && val >= 1 && val <= 12, {
+      message: 'Month must be between 1 and 12',
+    }),
+  year: z
+    .string()
+    .transform((val) => parseInt(val, 10))
+    .refine((val) => !isNaN(val) && val >= 2000 && val <= 2100, {
+      message: 'Year must be between 2000 and 2100',
+    }),
+});
+
 export type CreateTransactionInput = z.infer<typeof createTransactionSchema>;
 export type UpdateTransactionInput = z.infer<typeof updateTransactionSchema>;
 export type GetTransactionsQuery = z.infer<typeof getTransactionsQuerySchema>;
 export type CreateTransferInput = z.infer<typeof createTransferSchema>;
 export type UpdateTransferInput = z.infer<typeof updateTransferSchema>;
+export type GetExpensesByCategoryQuery = z.infer<typeof getExpensesByCategoryQuerySchema>;
