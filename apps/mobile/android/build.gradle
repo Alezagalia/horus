@@ -1,0 +1,54 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+
+buildscript {
+  repositories {
+    google()
+    mavenCentral()
+  }
+  dependencies {
+        classpath 'com.google.gms:google-services:4.4.1'
+    classpath('com.android.tools.build:gradle')
+    classpath('com.facebook.react:react-native-gradle-plugin')
+    classpath('org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.20')
+  }
+}
+
+def reactNativeAndroidDir = new File(
+  providers.exec {
+    workingDir(rootDir)
+    commandLine("node", "--print", "require.resolve('react-native/package.json')")
+  }.standardOutput.asText.get().trim(),
+  "../android"
+)
+
+allprojects {
+  repositories {
+    maven {
+      // All of React Native (JS, Obj-C sources, Android binaries) is installed from npm
+      url(reactNativeAndroidDir)
+    }
+
+    google()
+    mavenCentral()
+    maven { url 'https://www.jitpack.io' }
+  }
+
+  // Force kotlin-stdlib to 1.9.24 to match KGP version and prevent
+  // binary incompatibility caused by AGP 8.6.0 pulling in kotlin-stdlib:2.1.x
+  configurations.all {
+    resolutionStrategy.force(
+      'org.jetbrains.kotlin:kotlin-stdlib:1.9.24',
+      'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.24',
+      'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.24',
+      'org.jetbrains.kotlin:kotlin-stdlib-common:1.9.24',
+      'org.jetbrains.kotlin:kotlin-reflect:1.9.24'
+    )
+  }
+}
+
+// Set Kotlin 2.1.20 to match pre-built expo AAR artifacts (compiled with Kotlin 2.1.0)
+ext.kotlinVersion = "2.1.20"
+ext.kspVersion = "2.1.20-1.0.29"
+
+apply plugin: "expo-root-project"
+apply plugin: "com.facebook.react.rootproject"

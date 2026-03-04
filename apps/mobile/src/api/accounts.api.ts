@@ -5,21 +5,8 @@
  * API client for account endpoints
  */
 
-import axios from 'axios';
-
-// API base URL from environment variables
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
-
-// Create axios instance
-const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  timeout: 10000,
-});
-
-// TODO: Add auth interceptor when authentication is implemented
+// Sprint 1: Use centralized axios instance with auth interceptors
+import { apiClient } from '../lib/axios';
 
 export interface Account {
   id: string;
@@ -62,8 +49,8 @@ export const getAccounts = async (): Promise<AccountsResponse> => {
  * Get account by ID
  */
 export const getAccountById = async (id: string): Promise<AccountWithStats> => {
-  const response = await apiClient.get<AccountWithStats>(`/accounts/${id}`);
-  return response.data;
+  const response = await apiClient.get<{ account: AccountWithStats }>(`/accounts/${id}`);
+  return response.data.account;
 };
 
 /**
@@ -79,8 +66,8 @@ export interface CreateAccountInput {
 }
 
 export const createAccount = async (data: CreateAccountInput): Promise<Account> => {
-  const response = await apiClient.post<Account>('/accounts', data);
-  return response.data;
+  const response = await apiClient.post<{ account: Account }>('/accounts', data);
+  return response.data.account;
 };
 
 /**
@@ -93,8 +80,8 @@ export interface UpdateAccountInput {
 }
 
 export const updateAccount = async (id: string, data: UpdateAccountInput): Promise<Account> => {
-  const response = await apiClient.put<Account>(`/accounts/${id}`, data);
-  return response.data;
+  const response = await apiClient.put<{ account: Account }>(`/accounts/${id}`, data);
+  return response.data.account;
 };
 
 /**

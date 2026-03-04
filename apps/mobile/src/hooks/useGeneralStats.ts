@@ -26,15 +26,17 @@ export const useGeneralStats = (options: UseGeneralStatsOptions = {}) => {
     staleTime: 1000 * 60 * 5, // 5 minutes
     gcTime: 1000 * 60 * 30, // 30 minutes (formerly cacheTime)
     enabled,
+    retry: 1, // Only retry once on failure
+    retryDelay: 2000, // Wait 2 seconds before retry
   });
 
-  // Refetch on screen focus
+  // Refetch on screen focus (disabled on error to prevent infinite loop)
   useFocusEffect(
     useCallback(() => {
-      if (refetchOnFocus && !query.isFetching) {
+      if (refetchOnFocus && !query.isFetching && !query.isError) {
         query.refetch();
       }
-    }, [refetchOnFocus, query.isFetching])
+    }, [refetchOnFocus, query.isFetching, query.isError])
   );
 
   // Utility to invalidate general stats cache

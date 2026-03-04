@@ -1,0 +1,13 @@
+diff --git a/expo-module-gradle-plugin/build.gradle.kts b/expo-module-gradle-plugin/build.gradle.kts
+index 40a970e261a53794622e407a3faf0c84389b9991..9697cea7f2b307a92cacf8fc2f503d2198946aaa 100644
+--- a/expo-module-gradle-plugin/build.gradle.kts
++++ b/expo-module-gradle-plugin/build.gradle.kts
+@@ -2,7 +2,7 @@ import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+ 
+ plugins {
+-  kotlin("jvm") version "1.9.24"
++  kotlin("jvm") version "2.1.20"
+   id("java-gradle-plugin")
+ }
+ 

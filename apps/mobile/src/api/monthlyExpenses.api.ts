@@ -5,21 +5,8 @@
  * API client for monthly expense instances endpoints
  */
 
-import axios from 'axios';
-
-// API base URL from environment variables
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
-
-// Create axios instance
-const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  timeout: 10000,
-});
-
-// TODO: Add auth interceptor when authentication is implemented
+// Sprint 1: Use centralized axios instance with auth interceptors
+import { apiClient } from '../lib/axios';
 
 export type ExpenseStatus = 'pendiente' | 'pagado';
 

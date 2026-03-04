@@ -15,6 +15,15 @@ const config = getDefaultConfig(projectRoot);
 // Watch all files in the monorepo
 config.watchFolders = [workspaceRoot];
 
+// Exclude problematic node_modules from file watching
+config.resolver.blockList = [
+  // Exclude google-gax problematic directories
+  /node_modules\/google-gax\/node_modules\/@grpc\/proto-loader\/build/,
+  // Exclude other backend node_modules that might cause issues
+  /node_modules\/@firebase/,
+  /node_modules\/firebase-admin/,
+];
+
 // Let Metro know where to resolve packages
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, 'node_modules'),

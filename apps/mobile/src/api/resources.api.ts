@@ -3,7 +3,8 @@
  * Fase 3 - Mobile Implementation
  */
 
-import axios from 'axios';
+// Sprint 1: Use centralized axios instance with auth interceptors
+import { apiClient as api } from '../lib/axios';
 import type {
   Resource,
   CreateResourceDto,
@@ -11,29 +12,6 @@ import type {
   ResourceFilters,
   ResourceStats,
 } from '@horus/shared';
-
-const API_URL = 'http://localhost:3001/api/v1';
-
-// TODO: Get token from secure storage (AsyncStorage/SecureStore)
-const getAuthToken = () => {
-  return 'dummy-token-for-development';
-};
-
-const api = axios.create({
-  baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Add auth token to requests
-api.interceptors.request.use((config) => {
-  const token = getAuthToken();
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
 
 export const resourcesApi = {
   /**

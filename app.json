@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "horus",
+    "slug": "horus",
+    "version": "0.0.1",
+    "description": "Horus - Personal Productivity App (Habits, Tasks, Events, Finances)",
+    "sdkVersion": "50.0.0",
+    "platforms": [
+      "ios",
+      "android"
+    ]
+  }
+}

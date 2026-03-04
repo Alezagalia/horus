@@ -93,6 +93,7 @@ export const updateHabitSchema = z
 
 export const getHabitsQuerySchema = z.object({
   categoryId: z.string().uuid().optional(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), // YYYY-MM-DD
 });
 
 /**

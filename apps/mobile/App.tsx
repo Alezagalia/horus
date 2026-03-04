@@ -1,5 +1,6 @@
 /**
  * Horus Mobile App - Main Entry Point
+ * Sprint 1 - Authentication System
  * Sprint 2 - React Native/Expo Configuration
  * Sprint 5 - US-041: Improved Dashboard
  * Sprint 6 - US-052: Habit Audit Screen
@@ -8,10 +9,10 @@
  */
 
 import { useEffect, useRef } from 'react';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import type { NavigationContainerRef } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
@@ -20,57 +21,27 @@ import {
   getLastNotificationResponse,
 } from './src/services/NotificationService';
 import { initSentry } from './src/lib/sentry';
+import { AuthProvider, useAuth } from './src/contexts/AuthContext';
+import { AuthNavigator } from './src/navigation/AuthNavigator';
+import { TabNavigator } from './src/navigation/TabNavigator';
 
 // Initialize Sentry first (US-115)
 initSentry();
 
-// Import screens
-import { CategoriesScreen } from './src/screens/CategoriesScreen';
-import { HabitsListScreenWrapper } from './src/screens/HabitsListScreenWrapper';
-import { HabitFormScreenWrapper } from './src/screens/HabitFormScreenWrapper';
-import { HabitDetailScreenWrapper } from './src/screens/HabitDetailScreenWrapper';
-import { HomeScreen } from './src/screens/HomeScreen';
-import { HabitStatsScreen } from './src/screens/HabitStatsScreen';
-import { HabitAuditScreenWrapper } from './src/screens/HabitAuditScreenWrapper';
-// Fitness screens - Sprint 14
-import { ExercisesScreen } from './src/screens/ExercisesScreen';
-import { RoutinesScreen } from './src/screens/RoutinesScreen';
-import { RoutineDetailScreen } from './src/screens/RoutineDetailScreen';
-import { RoutineFormScreen } from './src/screens/RoutineFormScreen';
-import { ExecuteRoutineScreen } from './src/screens/ExecuteRoutineScreen';
-import { WorkoutHistoryScreen } from './src/screens/WorkoutHistoryScreen';
-import { WorkoutDetailScreen } from './src/screens/WorkoutDetailScreen';
-import { StatsScreen } from './src/screens/StatsScreen';
-// Resources screens - Fase 3
-import { ResourcesScreen } from './src/screens/ResourcesScreen';
-import { CreateResourceScreen } from './src/screens/CreateResourceScreen';
-import { ResourceDetailScreen } from './src/screens/ResourceDetailScreen';
+// Navigation Component (rendered inside AuthProvider)
+const AppNavigator: React.FC = () => {
+  const { isAuthenticated, isLoading } = useAuth();
 
-// Navigation types
-type RootStackParamList = {
-  Home: undefined;
-  Categories: undefined;
-  HabitsList: undefined;
-  HabitForm: { habitId?: string };
-  HabitDetail: { habitId: string };
-  HabitStats: { habitId: string };
-  HabitAudit: { habitId: string };
-  // Fitness routes - Sprint 14
-  Exercises: undefined;
-  Routines: undefined;
-  RoutineDetail: { routineId: string };
-  RoutineForm: { routineId?: string };
-  ExecuteRoutine: { routineId: string };
-  WorkoutHistory: undefined;
-  WorkoutDetail: { workoutId: string };
-  Stats: undefined;
-  // Resources routes - Fase 3
-  Resources: undefined;
-  CreateResource: { resourceId?: string };
-  ResourceDetail: { resourceId: string };
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#2196F3" />
+      </View>
+    );
+  }
+
+  return isAuthenticated ? <TabNavigator /> : <AuthNavigator />;
 };
-
-const Stack = createNativeStackNavigator<RootStackParamList>();
 
 // React Query configuration - US-045
 // Sprint 12 - US-108: Optimized cache settings for performance
@@ -97,7 +68,7 @@ const queryClient = new QueryClient({
 });
 
 export default function App() {
-  const navigationRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
+  const navigationRef = useRef<NavigationContainerRef<any>>(null);
 
   // US-055: Setup notification categories and listeners
   useEffect(() => {
@@ -110,10 +81,11 @@ export default function App() {
 
       if (habitId && navigationRef.current) {
         // Navigate to HabitDetail screen when notification is tapped
-        navigationRef.current.navigate('HabitDetail', { habitId });
-      } else if (navigationRef.current) {
-        // Navigate to HabitsList if no habitId
-        navigationRef.current.navigate('HabitsList');
+        // Note: This will need to be updated to work with Tab Navigator structure
+        navigationRef.current.navigate('HabitsTab', {
+          screen: 'HabitDetail',
+          params: { habitId },
+        });
       }
     });
 
@@ -125,7 +97,10 @@ export default function App() {
         if (habitId && navigationRef.current) {
           // Small delay to ensure navigation is ready
           setTimeout(() => {
-            navigationRef.current?.navigate('HabitDetail', { habitId });
+            navigationRef.current?.navigate('HabitsTab', {
+              screen: 'HabitDetail',
+              params: { habitId },
+            });
           }, 1000);
         }
       }
@@ -140,111 +115,22 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryClientProvider client={queryClient}>
-        <NavigationContainer ref={navigationRef}>
-          <Stack.Navigator
-            initialRouteName="Home"
-            screenOptions={{
-              headerStyle: {
-                backgroundColor: '#2196F3',
-              },
-              headerTintColor: '#fff',
-              headerTitleStyle: {
-                fontWeight: 'bold',
-              },
-            }}
-          >
-            <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Horus' }} />
-            <Stack.Screen
-              name="Categories"
-              component={CategoriesScreen}
-              options={{ title: 'Categorías' }}
-            />
-            <Stack.Screen
-              name="HabitsList"
-              component={HabitsListScreenWrapper}
-              options={{ title: 'Mis Hábitos' }}
-            />
-            <Stack.Screen
-              name="HabitForm"
-              component={HabitFormScreenWrapper}
-              options={{ title: 'Hábito', presentation: 'modal' }}
-            />
-            <Stack.Screen
-              name="HabitDetail"
-              component={HabitDetailScreenWrapper}
-              options={{ title: 'Detalle del Hábito' }}
-            />
-            <Stack.Screen
-              name="HabitStats"
-              component={HabitStatsScreen}
-              options={{ title: 'Estadísticas del Hábito' }}
-            />
-            <Stack.Screen
-              name="HabitAudit"
-              component={HabitAuditScreenWrapper}
-              options={{ title: 'Historial de Cambios' }}
-            />
-            {/* Fitness Routes - Sprint 14 */}
-            <Stack.Screen
-              name="Exercises"
-              component={ExercisesScreen}
-              options={{ title: 'Ejercicios' }}
-            />
-            <Stack.Screen
-              name="Routines"
-              component={RoutinesScreen}
-              options={{ title: 'Rutinas' }}
-            />
-            <Stack.Screen
-              name="RoutineDetail"
-              component={RoutineDetailScreen}
-              options={{ title: 'Detalle de Rutina' }}
-            />
-            <Stack.Screen
-              name="RoutineForm"
-              component={RoutineFormScreen}
-              options={{ title: 'Crear/Editar Rutina', presentation: 'modal' }}
-            />
-            <Stack.Screen
-              name="ExecuteRoutine"
-              component={ExecuteRoutineScreen}
-              options={{ title: 'Entrenar', headerShown: false }}
-            />
-            <Stack.Screen
-              name="WorkoutHistory"
-              component={WorkoutHistoryScreen}
-              options={{ title: 'Historial de Entrenamientos' }}
-            />
-            <Stack.Screen
-              name="WorkoutDetail"
-              component={WorkoutDetailScreen}
-              options={{ title: 'Detalle del Entrenamiento' }}
-            />
-            <Stack.Screen
-              name="Stats"
-              component={StatsScreen}
-              options={{ title: 'Estadísticas' }}
-            />
-            {/* Resources Routes - Fase 3 */}
-            <Stack.Screen
-              name="Resources"
-              component={ResourcesScreen}
-              options={{ title: 'Conocimiento' }}
-            />
-            <Stack.Screen
-              name="CreateResource"
-              component={CreateResourceScreen}
-              options={{ title: 'Nuevo Recurso', presentation: 'modal', headerShown: false }}
-            />
-            <Stack.Screen
-              name="ResourceDetail"
-              component={ResourceDetailScreen}
-              options={{ title: 'Detalle del Recurso' }}
-            />
-          </Stack.Navigator>
-          <StatusBar style="auto" />
-        </NavigationContainer>
+        <AuthProvider>
+          <NavigationContainer ref={navigationRef}>
+            <AppNavigator />
+          </NavigationContainer>
+        </AuthProvider>
+        <StatusBar style="auto" />
       </QueryClientProvider>
     </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F5F7FA',
+  },
+});

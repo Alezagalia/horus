@@ -3,7 +3,6 @@
     "name": "Horus",
     "slug": "horus",
     "version": "0.0.1",
-    "entryPoint": "./index.js",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -34,12 +33,13 @@
       "permissions": [
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE",
-        "android.permission.SCHEDULE_EXACT_ALARM"
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.POST_NOTIFICATIONS"
       ],
-      "useNextNotificationsApi": true
+      "googleServicesFile": "./google-services.json"
     },
     "notification": {
-      "icon": "./assets/adaptive-icon.png",
+      "icon": "./assets/notification-icon.png",
       "color": "#2196F3",
       "androidMode": "default",
       "androidCollapsedTitle": "Horus - Recordatorios"
@@ -48,7 +48,21 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-web-browser"
-    ]
+      "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#2196F3",
+          "sounds": [],
+          "mode": "production"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "4c0d777f-d4f3-42b3-991c-442bfd44bb36"
+      }
+    }
   }
 }

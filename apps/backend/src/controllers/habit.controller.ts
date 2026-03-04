@@ -39,7 +39,7 @@ export const habitController = {
 
       const query = getHabitsQuerySchema.parse(req.query);
 
-      const habits = await habitService.findAll(user.id, query.categoryId);
+      const habits = await habitService.findAll(user.id, query.categoryId, query.date);
 
       res.status(200).json({ habits });
     } catch (error) {

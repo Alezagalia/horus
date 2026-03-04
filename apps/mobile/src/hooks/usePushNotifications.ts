@@ -133,8 +133,9 @@ export function usePushNotifications(): UsePushNotificationsReturn {
         case 'event_reminder':
           if (data.eventId) {
             // @ts-ignore - Navigation types are dynamic
-            navigation.navigate('Calendar', {
-              highlightEventId: data.eventId,
+            navigation.navigate('MoreTab', {
+              screen: 'Calendar',
+              params: { highlightEventId: data.eventId },
             });
           }
           break;

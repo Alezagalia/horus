@@ -3,30 +3,8 @@
  * Sprint 3 - US-022
  */
 
-import axios from 'axios';
-
-const API_URL = 'http://localhost:3001/api/v1';
-
-// TODO: Get token from secure storage (AsyncStorage/SecureStore)
-const getAuthToken = () => {
-  return 'dummy-token-for-development';
-};
-
-const api = axios.create({
-  baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Add auth token to requests
-api.interceptors.request.use((config) => {
-  const token = getAuthToken();
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+// Sprint 1: Use centralized axios instance with auth interceptors
+import { apiClient as api } from '../lib/axios';
 
 export interface Habit {
   id: string;
@@ -97,12 +75,16 @@ export interface CreateHabitDTO {
 
 export interface HabitsFilters {
   categoryId?: string;
+  date?: string; // YYYY-MM-DD — incluye el record de ese día en cada hábito
 }
 
 export const getHabits = async (filters?: HabitsFilters): Promise<Habit[]> => {
   const params = new URLSearchParams();
   if (filters?.categoryId) {
     params.append('categoryId', filters.categoryId);
+  }
+  if (filters?.date) {
+    params.append('date', filters.date);
   }
 
   const response = await api.get<{ habits: Habit[] }>(
@@ -228,28 +210,24 @@ export const getHabitRecordsByDateRange = async (
 // ==================== Stats endpoints (Sprint 5 - US-037, US-041) ====================
 
 export interface GeneralStats {
-  completionRateToday: {
-    completed: number;
-    total: number;
-    percentage: number;
-  };
-  longestCurrentStreak: {
-    habitId: string | null;
-    habitName: string | null;
+  completionRateToday: number;
+  totalHabitsToday: number;
+  completedHabitsToday: number;
+  longestCurrentStreak: number;
+  habitWithLongestStreak: {
+    id: string;
+    name: string;
     streak: number;
-  };
-  last7Days: Array<{
+  } | null;
+  last7DaysCompletion: Array<{
     date: string;
-    completed: number;
-    total: number;
-    percentage: number;
+    completionRate: number;
   }>;
   statsByCategory: Array<{
     categoryId: string;
     categoryName: string;
-    completed: number;
-    total: number;
-    percentage: number;
+    totalHabits: number;
+    completionRate: number;
   }>;
 }
 

@@ -39,7 +39,7 @@ export interface UpdateHabitData {
 }
 
 export const habitService = {
-  async findAll(userId: string, categoryId?: string) {
+  async findAll(userId: string, categoryId?: string, date?: string) {
     const where: { userId: string; isActive: boolean; categoryId?: string } = {
       userId,
       isActive: true,
@@ -61,6 +61,21 @@ export const habitService = {
             scope: true,
           },
         },
+        ...(date && {
+          records: {
+            where: {
+              date: new Date(date),
+            },
+            select: {
+              id: true,
+              date: true,
+              completed: true,
+              value: true,
+              notes: true,
+            },
+            take: 1,
+          },
+        }),
       },
       orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
     });

@@ -5,22 +5,9 @@
  * API client for workout execution and history endpoints
  */
 
-import axios from 'axios';
+// Sprint 1: Use centralized axios instance with auth interceptors
+import { apiClient } from '../lib/axios';
 import type { WorkoutListItem, WorkoutListResponse, WorkoutDetailResponse } from '@horus/shared';
-
-// API base URL from environment variables
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
-
-// Create axios instance
-const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  timeout: 10000,
-});
-
-// TODO: Add auth interceptor when authentication is implemented
 
 export interface StartWorkoutResponse {
   workoutId: string;

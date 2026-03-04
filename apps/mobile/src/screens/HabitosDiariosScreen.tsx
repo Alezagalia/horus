@@ -37,9 +37,13 @@ import { CelebrationOverlay } from '../components/habits/CelebrationOverlay';
 import { RetroactiveMarkingSheet } from '../components/habits/RetroactiveMarkingSheet';
 
 const TIME_OF_DAY_LABELS = {
+  AYUNO: '🫙 En ayuno',
   MANANA: '🌅 Mañana',
+  MEDIA_MANANA: '☕ Media mañana',
   TARDE: '☀️ Tarde',
+  MEDIA_TARDE: '🌤️ Media tarde',
   NOCHE: '🌙 Noche',
+  ANTES_DORMIR: '😴 Antes de dormir',
   ANYTIME: '⏰ Todo el día',
 } as const;
 
@@ -81,11 +85,11 @@ export function HabitosDiariosScreen() {
     refetch,
     isRefetching,
   } = useQuery({
-    queryKey: ['habits'],
-    queryFn: () => getHabits(),
+    queryKey: ['habits', 'today', today],
+    queryFn: () => getHabits({ date: today }),
   });
 
-  // Filter only active habits
+  // Filter only active habits and map today's record
   const activeHabits = habits.filter((h) => h.isActive);
 
   // Mutation for marking CHECK habits
@@ -118,7 +122,7 @@ export function HabitosDiariosScreen() {
     },
     onSuccess: () => {
       // US-045: Invalidate habits and stats cache
-      queryClient.invalidateQueries({ queryKey: ['habits'] });
+      queryClient.invalidateQueries({ queryKey: ['habits', 'today'] });
       queryClient.invalidateQueries({ queryKey: ['generalStats'] });
       queryClient.invalidateQueries({ queryKey: ['habitStats'] });
       setLoadingHabitId(null);
@@ -143,7 +147,7 @@ export function HabitosDiariosScreen() {
     },
     onSuccess: () => {
       // US-045: Invalidate habits and stats cache
-      queryClient.invalidateQueries({ queryKey: ['habits'] });
+      queryClient.invalidateQueries({ queryKey: ['habits', 'today'] });
       queryClient.invalidateQueries({ queryKey: ['generalStats'] });
       queryClient.invalidateQueries({ queryKey: ['habitStats'] });
       setLoadingHabitId(null);
@@ -178,22 +182,43 @@ export function HabitosDiariosScreen() {
   };
 
   // Group habits by time of day
+  const toHabitWithRecord = (habit: Habit): HabitWithRecord => ({
+    habit,
+    record: (habit as any).records?.[0] ?? null,
+  });
+
   const groupedHabits: SectionData[] = [
     {
+      title: TIME_OF_DAY_LABELS.AYUNO,
+      data: activeHabits.filter((h) => h.timeOfDay === 'AYUNO').map(toHabitWithRecord),
+    },
+    {
       title: TIME_OF_DAY_LABELS.MANANA,
-      data: activeHabits.filter((h) => h.timeOfDay === 'MANANA').map((habit) => ({ habit })),
+      data: activeHabits.filter((h) => h.timeOfDay === 'MANANA').map(toHabitWithRecord),
+    },
+    {
+      title: TIME_OF_DAY_LABELS.MEDIA_MANANA,
+      data: activeHabits.filter((h) => h.timeOfDay === 'MEDIA_MANANA').map(toHabitWithRecord),
     },
     {
       title: TIME_OF_DAY_LABELS.TARDE,
-      data: activeHabits.filter((h) => h.timeOfDay === 'TARDE').map((habit) => ({ habit })),
+      data: activeHabits.filter((h) => h.timeOfDay === 'TARDE').map(toHabitWithRecord),
+    },
+    {
+      title: TIME_OF_DAY_LABELS.MEDIA_TARDE,
+      data: activeHabits.filter((h) => h.timeOfDay === 'MEDIA_TARDE').map(toHabitWithRecord),
     },
     {
       title: TIME_OF_DAY_LABELS.NOCHE,
-      data: activeHabits.filter((h) => h.timeOfDay === 'NOCHE').map((habit) => ({ habit })),
+      data: activeHabits.filter((h) => h.timeOfDay === 'NOCHE').map(toHabitWithRecord),
+    },
+    {
+      title: TIME_OF_DAY_LABELS.ANTES_DORMIR,
+      data: activeHabits.filter((h) => h.timeOfDay === 'ANTES_DORMIR').map(toHabitWithRecord),
     },
     {
       title: TIME_OF_DAY_LABELS.ANYTIME,
-      data: activeHabits.filter((h) => h.timeOfDay === 'ANYTIME').map((habit) => ({ habit })),
+      data: activeHabits.filter((h) => h.timeOfDay === 'ANYTIME').map(toHabitWithRecord),
     },
   ].filter((section) => section.data.length > 0);
 

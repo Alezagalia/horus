@@ -7,3 +7,4 @@ export { useGeneralStats } from './useGeneralStats';
 export { useHabitStats } from './useHabitStats';
 export * from './usePushNotifications';
 export * from './useBadgeCount';
+export * from './useEvents';

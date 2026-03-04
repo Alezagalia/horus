@@ -5,29 +5,9 @@
  * API client for exercise endpoints using axios
  */
 
-import axios from 'axios';
+// Sprint 1: Use centralized axios instance with auth interceptors
+import { apiClient } from '../lib/axios';
 import type { Exercise, CreateExerciseDTO, UpdateExerciseDTO, MuscleGroup } from '@horus/shared';
-
-// API base URL from environment variables
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
-
-// Create axios instance
-const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  timeout: 10000,
-});
-
-// TODO: Add auth interceptor when authentication is implemented
-// apiClient.interceptors.request.use((config) => {
-//   const token = await getStoredToken();
-//   if (token) {
-//     config.headers.Authorization = `Bearer ${token}`;
-//   }
-//   return config;
-// });
 
 export interface ExerciseFilters {
   muscleGroup?: MuscleGroup;
@@ -46,32 +26,32 @@ export const getExercises = async (filters?: ExerciseFilters): Promise<ExerciseW
   if (filters?.muscleGroup) params.append('muscleGroup', filters.muscleGroup);
   if (filters?.search) params.append('search', filters.search);
 
-  const response = await apiClient.get<ExerciseWithUsage[]>(`/exercises?${params.toString()}`);
-  return response.data;
+  const response = await apiClient.get<{ exercises: ExerciseWithUsage[] }>(`/exercises?${params.toString()}`);
+  return response.data.exercises;
 };
 
 /**
  * Get exercise by ID
  */
 export const getExerciseById = async (id: string): Promise<ExerciseWithUsage> => {
-  const response = await apiClient.get<ExerciseWithUsage>(`/exercises/${id}`);
-  return response.data;
+  const response = await apiClient.get<{ exercise: ExerciseWithUsage }>(`/exercises/${id}`);
+  return response.data.exercise;
 };
 
 /**
  * Create new exercise
  */
 export const createExercise = async (data: CreateExerciseDTO): Promise<Exercise> => {
-  const response = await apiClient.post<Exercise>('/exercises', data);
-  return response.data;
+  const response = await apiClient.post<{ exercise: Exercise }>('/exercises', data);
+  return response.data.exercise;
 };
 
 /**
  * Update exercise
  */
 export const updateExercise = async (id: string, data: UpdateExerciseDTO): Promise<Exercise> => {
-  const response = await apiClient.put<Exercise>(`/exercises/${id}`, data);
-  return response.data;
+  const response = await apiClient.put<{ exercise: Exercise }>(`/exercises/${id}`, data);
+  return response.data.exercise;
 };
 
 /**
