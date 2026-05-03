@@ -12,6 +12,7 @@
  */
 
 import { useState, useRef } from 'react';
+import { format } from 'date-fns';
 import {
   View,
   Text,
@@ -36,6 +37,9 @@ import { Toast } from '../components/common/Toast';
 import { CelebrationOverlay } from '../components/habits/CelebrationOverlay';
 import { RetroactiveMarkingSheet } from '../components/habits/RetroactiveMarkingSheet';
 
+// Habit as returned by the server when a date param is passed — includes records array
+type HabitWithRecords = Habit & { records?: HabitRecord[] };
+
 const TIME_OF_DAY_LABELS = {
   AYUNO: '🫙 En ayuno',
   MANANA: '🌅 Mañana',
@@ -57,6 +61,28 @@ interface SectionData {
   data: HabitWithRecord[];
 }
 
+// Mirrors backend debiaRealizarseEnFecha
+function isHabitScheduledForDate(habit: Habit, date: Date): boolean {
+  const dayOfWeek = date.getDay(); // 0 = domingo, 1 = lunes ... 6 = sábado
+
+  switch (habit.periodicity) {
+    case 'DAILY':
+      if (habit.weekDays.length > 0) return habit.weekDays.includes(dayOfWeek);
+      return true;
+    case 'WEEKLY':
+      return habit.weekDays.includes(dayOfWeek);
+    case 'MONTHLY': {
+      const createdDate = new Date(habit.createdAt);
+      return date.getDate() === createdDate.getDate();
+    }
+    case 'CUSTOM':
+      if (habit.weekDays.length > 0) return habit.weekDays.includes(dayOfWeek);
+      return true;
+    default:
+      return true;
+  }
+}
+
 export function HabitosDiariosScreen() {
   const queryClient = useQueryClient();
   const [toastVisible, setToastVisible] = useState(false);
@@ -75,62 +101,96 @@ export function HabitosDiariosScreen() {
   // US-043: Retroactive marking bottom sheet
   const retroactiveSheetRef = useRef<BottomSheet>(null!);
 
-  // Get today's date in YYYY-MM-DD format
-  const today = new Date().toISOString().split('T')[0];
+  // Get today's date in YYYY-MM-DD format (local time, not UTC)
+  const today = format(new Date(), 'yyyy-MM-dd');
+
+  const [refreshing, setRefreshing] = useState(false);
 
   // Fetch all active habits
+  // staleTime: 0 so that manual refetch (pull-to-refresh) always hits the server
+  // regardless of the global 10-minute staleTime configured in QueryClient.
   const {
     data: habits = [],
     isLoading,
     refetch,
-    isRefetching,
   } = useQuery({
     queryKey: ['habits', 'today', today],
     queryFn: () => getHabits({ date: today }),
+    staleTime: 0,
   });
 
-  // Filter only active habits and map today's record
-  const activeHabits = habits.filter((h) => h.isActive);
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  };
+
+  // Filter active habits scheduled for today
+  const todayDate = new Date();
+  const activeHabits = habits.filter((h) => h.isActive && isHabitScheduledForDate(h, todayDate));
 
   // Mutation for marking CHECK habits
   const markHabitMutation = useMutation({
     mutationFn: ({ habitId, completed }: { habitId: string; completed: boolean }) =>
-      markHabitForDate(habitId, today, {
-        completed,
-      }),
+      markHabitForDate(habitId, today, { completed }),
     onMutate: async ({ habitId, completed }) => {
       setLoadingHabitId(habitId);
 
-      // Cancel outgoing queries
-      await queryClient.cancelQueries({ queryKey: ['habits'] });
+      // Cancel outgoing queries with correct key
+      await queryClient.cancelQueries({ queryKey: ['habits', 'today', today] });
 
-      // Optimistic update
-      const previousHabits = queryClient.getQueryData<Habit[]>(['habits']);
+      // Save previous value with correct key
+      const previousHabits = queryClient.getQueryData<Habit[]>(['habits', 'today', today]);
 
-      queryClient.setQueryData<Habit[]>(['habits'], (old = []) =>
-        old.map((h) =>
-          h.id === habitId
-            ? {
-                ...h,
-                currentStreak: completed ? h.currentStreak + 1 : 0,
-              }
-            : h
-        )
+      // Optimistic update: correct key + update records so UI reflects completion
+      queryClient.setQueryData<Habit[]>(['habits', 'today', today], (old = []) =>
+        old.map((h) => {
+          if (h.id !== habitId) return h;
+          const existingRecord = (h as HabitWithRecords).records?.[0];
+          return {
+            ...h,
+            currentStreak: completed ? h.currentStreak + 1 : Math.max(0, h.currentStreak - 1),
+            records: [
+              {
+                ...(existingRecord ?? {
+                  id: 'optimistic',
+                  habitId,
+                  userId: h.userId,
+                  date: today,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                }),
+                completed,
+              },
+            ],
+          };
+        })
       );
 
       return { previousHabits };
     },
-    onSuccess: () => {
-      // US-045: Invalidate habits and stats cache
-      queryClient.invalidateQueries({ queryKey: ['habits', 'today'] });
+    onSuccess: (data) => {
+      // Confirm optimistic update with actual server response to avoid refetch reverting the state
+      queryClient.setQueryData<Habit[]>(['habits', 'today', today], (old = []) =>
+        old.map((h) => {
+          if (h.id !== data.habitId) return h;
+          return {
+            ...h,
+            currentStreak: data.habit?.currentStreak ?? h.currentStreak,
+            longestStreak: data.habit?.longestStreak ?? h.longestStreak,
+            records: [data],
+          };
+        })
+      );
+      // US-045: Invalidate stats cache (habits ya actualizados arriba)
       queryClient.invalidateQueries({ queryKey: ['generalStats'] });
       queryClient.invalidateQueries({ queryKey: ['habitStats'] });
       setLoadingHabitId(null);
     },
     onError: (_error, _variables, context) => {
-      // Rollback on error
+      // Rollback with correct key
       if (context?.previousHabits) {
-        queryClient.setQueryData(['habits'], context.previousHabits);
+        queryClient.setQueryData(['habits', 'today', today], context.previousHabits);
       }
       setLoadingHabitId(null);
       showToast('Error al marcar el hábito. Intenta de nuevo.');
@@ -184,7 +244,7 @@ export function HabitosDiariosScreen() {
   // Group habits by time of day
   const toHabitWithRecord = (habit: Habit): HabitWithRecord => ({
     habit,
-    record: (habit as any).records?.[0] ?? null,
+    record: (habit as HabitWithRecords).records?.[0] ?? null,
   });
 
   const groupedHabits: SectionData[] = [
@@ -363,7 +423,7 @@ export function HabitosDiariosScreen() {
         contentContainerStyle={styles.list}
         stickySectionHeadersEnabled={false}
         refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} colors={['#2196F3']} />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#2196F3']} />
         }
         ListEmptyComponent={renderEmptyState}
       />

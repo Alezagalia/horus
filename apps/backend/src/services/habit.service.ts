@@ -49,7 +49,7 @@ export const habitService = {
       where.categoryId = categoryId;
     }
 
-    return prisma.habit.findMany({
+    const habits = await prisma.habit.findMany({
       where,
       include: {
         category: {
@@ -61,24 +61,35 @@ export const habitService = {
             scope: true,
           },
         },
-        ...(date && {
-          records: {
-            where: {
-              date: new Date(date),
-            },
-            select: {
-              id: true,
-              date: true,
-              completed: true,
-              value: true,
-              notes: true,
-            },
-            take: 1,
-          },
-        }),
       },
       orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
     });
+
+    if (!date) return habits;
+
+    // Use $queryRaw with direct DATE comparison to avoid DATE vs TIMESTAMP
+    // timezone issues that break Prisma's ORM-level date range queries.
+    type RawRecord = {
+      id: string;
+      habitId: string;
+      completed: boolean;
+      value: number | null;
+      notes: string | null;
+    };
+
+    const records = await prisma.$queryRaw<RawRecord[]>`
+      SELECT id, "habitId", completed, value, notes
+      FROM "habit_records"
+      WHERE "userId" = ${userId}
+        AND date = ${date}::date
+    `;
+
+    const byHabitId = new Map(records.map((r) => [r.habitId, r]));
+
+    return habits.map((h) => ({
+      ...h,
+      records: byHabitId.has(h.id) ? [byHabitId.get(h.id)] : [],
+    }));
   },
 
   async findById(id: string, userId: string) {
