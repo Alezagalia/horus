@@ -17,6 +17,8 @@ import { RecurringExpenseFormModal } from '@/components/recurringExpenses/Recurr
 
 export function RecurringExpensesPage() {
   const [showInactive, setShowInactive] = useState(false);
+  const [groupByCategory, setGroupByCategory] = useState(true);
+  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<RecurringExpense | null>(null);
   const [togglingExpense, setTogglingExpense] = useState<RecurringExpense | null>(null);
@@ -32,6 +34,41 @@ export function RecurringExpensesPage() {
     return [...expenses].sort((a, b) => a.concept.localeCompare(b.concept));
   }, [expenses]);
 
+  // Group by category (sorted alphabetically)
+  const groupedExpenses = useMemo(() => {
+    const grouped = sortedExpenses.reduce(
+      (acc, expense) => {
+        const categoryName = expense.category?.name || 'Sin categoría';
+        if (!acc[categoryName]) {
+          acc[categoryName] = { category: expense.category, expenses: [] };
+        }
+        acc[categoryName].expenses.push(expense);
+        return acc;
+      },
+      {} as Record<string, { category: RecurringExpense['category']; expenses: RecurringExpense[] }>
+    );
+    return Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b));
+  }, [sortedExpenses]);
+
+  const toggleCategory = (categoryName: string) => {
+    setCollapsedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(categoryName)) {
+        next.delete(categoryName);
+      } else {
+        next.add(categoryName);
+      }
+      return next;
+    });
+  };
+
+  const handleToggleGroupByCategory = (value: boolean) => {
+    setGroupByCategory(value);
+    if (value) {
+      setCollapsedCategories(new Set()); // reset: all expanded
+    }
+  };
+
   const handleCreateNew = () => {
     setEditingExpense(null);
     setIsFormModalOpen(true);
@@ -44,36 +81,24 @@ export function RecurringExpensesPage() {
 
   const handleToggleActive = (expense: RecurringExpense) => {
     if (expense.isActive) {
-      // Show confirmation for deactivate
       setTogglingExpense(expense);
     } else {
-      // Activate without confirmation
-      updateMutation.mutate({
-        id: expense.id,
-        data: { isActive: true },
-      });
+      updateMutation.mutate({ id: expense.id, data: { isActive: true } });
     }
   };
 
   const confirmDeactivate = () => {
     if (togglingExpense) {
       updateMutation.mutate(
-        {
-          id: togglingExpense.id,
-          data: { isActive: false },
-        },
-        {
-          onSuccess: () => {
-            setTogglingExpense(null);
-          },
-        }
+        { id: togglingExpense.id, data: { isActive: false } },
+        { onSuccess: () => setTogglingExpense(null) }
       );
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleSubmitForm = (data: any) => {
     if (editingExpense) {
-      // Edit
       updateMutation.mutate(
         {
           id: editingExpense.id,
@@ -93,11 +118,8 @@ export function RecurringExpensesPage() {
         }
       );
     } else {
-      // Create
       createMutation.mutate(data, {
-        onSuccess: () => {
-          setIsFormModalOpen(false);
-        },
+        onSuccess: () => setIsFormModalOpen(false),
       });
     }
   };
@@ -119,13 +141,17 @@ export function RecurringExpensesPage() {
 
       {/* Header */}
       <div className="mb-6">
-        {/* Back link */}
         <Link
           to="/monthly-expenses"
           className="inline-flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-800 mb-4"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
           </svg>
           Volver a Gastos Mensuales
         </Link>
@@ -153,18 +179,32 @@ export function RecurringExpensesPage() {
           </button>
         </div>
 
-        {/* Filter Toggle */}
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            id="showInactive"
-            checked={showInactive}
-            onChange={(e) => setShowInactive(e.target.checked)}
-            className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-          />
-          <label htmlFor="showInactive" className="text-sm text-gray-700 cursor-pointer">
-            Mostrar plantillas inactivas
-          </label>
+        {/* Filters */}
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="showInactive"
+              checked={showInactive}
+              onChange={(e) => setShowInactive(e.target.checked)}
+              className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+            />
+            <label htmlFor="showInactive" className="text-sm text-gray-700 cursor-pointer">
+              Mostrar plantillas inactivas
+            </label>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="groupByCategory"
+              checked={groupByCategory}
+              onChange={(e) => handleToggleGroupByCategory(e.target.checked)}
+              className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+            />
+            <label htmlFor="groupByCategory" className="text-sm text-gray-700 cursor-pointer">
+              Agrupar por categoría
+            </label>
+          </div>
         </div>
       </div>
 
@@ -212,7 +252,67 @@ export function RecurringExpensesPage() {
               </button>
             )}
           </div>
+        ) : groupByCategory ? (
+          /* Grouped view */
+          <div className="space-y-4">
+            {groupedExpenses.map(([categoryName, { category, expenses: categoryExpenses }]) => {
+              const isExpanded = !collapsedCategories.has(categoryName);
+              return (
+                <div
+                  key={categoryName}
+                  className="border border-gray-200 rounded-lg overflow-hidden"
+                >
+                  {/* Category Header */}
+                  <button
+                    onClick={() => toggleCategory(categoryName)}
+                    className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{category?.icon || '📁'}</span>
+                      <div className="text-left">
+                        <h3 className="font-semibold text-gray-900">{categoryName}</h3>
+                        <p className="text-sm text-gray-600">
+                          {categoryExpenses.length} plantilla
+                          {categoryExpenses.length !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                    </div>
+                    <svg
+                      className={`w-5 h-5 text-gray-600 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </button>
+
+                  {/* Category Cards */}
+                  {isExpanded && (
+                    <div className="p-4 bg-white">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {categoryExpenses.map((expense) => (
+                          <RecurringExpenseCard
+                            key={expense.id}
+                            expense={expense}
+                            onEdit={handleEdit}
+                            onToggleActive={handleToggleActive}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         ) : (
+          /* Flat view */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {sortedExpenses.map((expense) => (
               <RecurringExpenseCard

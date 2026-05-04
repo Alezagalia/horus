@@ -25,6 +25,10 @@ const envSchema = z.object({
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GOOGLE_REDIRECT_URI: z.string().optional(),
   ENCRYPTION_KEY: z.string().optional(), // For encrypting tokens (32 bytes hex)
+  // Microsoft OAuth2 (Sprint 15 - Multi-Calendar)
+  MICROSOFT_CLIENT_ID: z.string().optional(),
+  MICROSOFT_CLIENT_SECRET: z.string().optional(),
+  MICROSOFT_REDIRECT_URI: z.string().optional(),
   // Firebase Cloud Messaging (Sprint 12 - US-105)
   FIREBASE_PROJECT_ID: z.string().optional(),
   FIREBASE_CLIENT_EMAIL: z.string().optional(),

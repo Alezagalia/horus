@@ -19,6 +19,8 @@ import { HabitDetailScreenWrapper } from '../screens/HabitDetailScreenWrapper';
 import { HabitStatsScreen } from '../screens/HabitStatsScreen';
 import { HabitAuditScreenWrapper } from '../screens/HabitAuditScreenWrapper';
 import { TareasScreen } from '../screens/TareasScreen';
+import { CreateTaskScreen } from '../screens/CreateTaskScreen';
+import { TaskDetailScreen } from '../screens/TaskDetailScreen';
 import { CategoriesScreen } from '../screens/CategoriesScreen';
 import { ExercisesScreen } from '../screens/ExercisesScreen';
 import { RoutinesScreen } from '../screens/RoutinesScreen';
@@ -120,6 +122,16 @@ const TasksStackNavigator = () => (
     }}
   >
     <TasksStack.Screen name="TasksList" component={TareasScreen} options={{ title: 'Tareas' }} />
+    <TasksStack.Screen
+      name="CreateTask"
+      component={CreateTaskScreen}
+      options={{ title: 'Nueva Tarea', presentation: 'modal' }}
+    />
+    <TasksStack.Screen
+      name="TaskDetail"
+      component={TaskDetailScreen}
+      options={{ title: 'Detalle de Tarea' }}
+    />
   </TasksStack.Navigator>
 );
 
@@ -200,7 +212,11 @@ const MoreStackNavigator = () => (
     }}
   >
     <MoreStack.Screen name="MoreMenu" component={CategoriesScreen} options={{ title: 'Más' }} />
-    <MoreStack.Screen name="Exercises" component={ExercisesScreen} options={{ title: 'Ejercicios' }} />
+    <MoreStack.Screen
+      name="Exercises"
+      component={ExercisesScreen}
+      options={{ title: 'Ejercicios' }}
+    />
     <MoreStack.Screen name="Routines" component={RoutinesScreen} options={{ title: 'Rutinas' }} />
     <MoreStack.Screen
       name="RoutineDetail"
@@ -228,7 +244,11 @@ const MoreStackNavigator = () => (
       options={{ title: 'Detalle del Entrenamiento' }}
     />
     <MoreStack.Screen name="Stats" component={StatsScreen} options={{ title: 'Estadísticas' }} />
-    <MoreStack.Screen name="Resources" component={ResourcesScreen} options={{ title: 'Conocimiento' }} />
+    <MoreStack.Screen
+      name="Resources"
+      component={ResourcesScreen}
+      options={{ title: 'Conocimiento' }}
+    />
     <MoreStack.Screen
       name="CreateResource"
       component={CreateResourceScreen}

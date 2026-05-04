@@ -47,6 +47,19 @@ export function getTodayNoon(): Date {
 }
 
 /**
+ * Parses a YYYY-MM-DD string directly to noon UTC, without depending on local timezone.
+ * Use this instead of normalizeToUTCNoon(new Date('YYYY-MM-DD')), which can shift the
+ * day by -1 when the server runs in a negative UTC offset (e.g. UTC-3).
+ *
+ * @param dateStr - Date string in YYYY-MM-DD format
+ * @returns Date object set to noon UTC on that calendar day
+ */
+export function parseISODateToNoonUTC(dateStr: string): Date {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
+}
+
+/**
  * Formats a date as YYYY-MM-DD string using local date components.
  *
  * @param date - The date to format

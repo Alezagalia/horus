@@ -112,6 +112,11 @@ enum ResourceType {
   BOOKMARK
 }
 
+enum CalendarProvider {
+  GOOGLE
+  MICROSOFT
+}
+
 model User {
   id                   String                   @id @default(uuid())
   email                String                   @unique
@@ -128,6 +133,7 @@ model User {
   tasks                Task[]
   events               Event[]
   syncSetting          SyncSetting?
+  calendarConnections  CalendarConnection[]
   accounts             Account[]
   transactions         Transaction[]
   recurringExpenses    RecurringExpense[]
@@ -445,26 +451,30 @@ model Event {
   completedAt      DateTime?
   canceledAt       DateTime?
   archivedAt       DateTime?
-  syncWithGoogle   Boolean     @default(true)
-  googleEventId    String?     @unique @db.VarChar(255)
-  syncRetryCount   Int         @default(0)
-  syncNextRetryAt  DateTime?
-  syncLastError    String?     @db.Text
-  reminderMinutes  Int?
-  notificationSent Boolean     @default(false)
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
+  syncWithGoogle       Boolean     @default(true)
+  googleEventId        String?     @unique @db.VarChar(255)
+  syncRetryCount       Int         @default(0)
+  syncNextRetryAt      DateTime?
+  syncLastError        String?     @db.Text
+  calendarConnectionId String?
+  externalEventId      String?     @db.VarChar(500)
+  reminderMinutes      Int?
+  notificationSent     Boolean     @default(false)
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
 
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category       Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  recurringEvent Event?   @relation("RecurringEvents", fields: [recurringEventId], references: [id], onDelete: Cascade)
-  instances      Event[]  @relation("RecurringEvents")
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category           Category            @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  recurringEvent     Event?              @relation("RecurringEvents", fields: [recurringEventId], references: [id], onDelete: Cascade)
+  instances          Event[]             @relation("RecurringEvents")
+  calendarConnection CalendarConnection? @relation(fields: [calendarConnectionId], references: [id], onDelete: SetNull)
 
   @@index([userId, startDateTime, endDateTime])
   @@index([userId, status, archivedAt])
   @@index([userId, syncWithGoogle])
   @@index([startDateTime, notificationSent])
   @@index([categoryId])
+  @@index([calendarConnectionId])
   @@map("events")
 }
 
@@ -506,6 +516,46 @@ model SyncSetting {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("sync_settings")
+}
+
+/// CalendarConnection: External calendar provider connections (Google, Microsoft)
+/// Sprint 15 - Multi-Calendar Support
+///
+/// Stores OAuth2 tokens and sync state for connected calendar providers.
+/// A user can have one active connection per provider.
+///
+/// Fields:
+/// - provider: Calendar provider (GOOGLE or MICROSOFT)
+/// - email: Email of the connected account (displayed in UI)
+/// - accessToken: Encrypted OAuth2 access token
+/// - refreshToken: Encrypted OAuth2 refresh token
+/// - tokenExpiresAt: When the access token expires
+/// - lastSyncAt: Timestamp of last successful sync
+/// - syncCursor: deltaLink for incremental sync (Microsoft Graph delta query)
+///
+/// Índices:
+/// - (userId, provider) unique: One connection per provider per user
+/// - (userId, isActive): For querying active connections
+model CalendarConnection {
+  id             String           @id @default(uuid())
+  userId         String
+  provider       CalendarProvider
+  email          String?          @db.VarChar(255)
+  accessToken    String?          @db.Text
+  refreshToken   String?          @db.Text
+  tokenExpiresAt DateTime?
+  lastSyncAt     DateTime?
+  syncCursor     String?          @db.Text
+  isActive       Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events Event[]
+
+  @@unique([userId, provider])
+  @@index([userId, isActive])
+  @@map("calendar_connections")
 }
 
 /// Account: Modelo de cuentas financieras

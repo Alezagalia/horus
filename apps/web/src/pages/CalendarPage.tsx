@@ -5,9 +5,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { Calendar, momentLocalizer, View, SlotInfo } from 'react-big-calendar';
-import withDragAndDrop, {
-  EventInteractionArgs,
-} from 'react-big-calendar/lib/addons/dragAndDrop';
+import withDragAndDrop, { EventInteractionArgs } from 'react-big-calendar/lib/addons/dragAndDrop';
 import moment from 'moment';
 import 'moment/locale/es';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
@@ -16,7 +14,7 @@ import { Toaster } from 'react-hot-toast';
 import type { CalendarEvent, CreateCalendarEventDTO } from '@horus/shared';
 import { EventModal } from '@/components/calendar/EventModal';
 import { EventFormModal } from '@/components/calendar/EventFormModal';
-import { GoogleCalendarSyncModal } from '@/components/calendar/GoogleCalendarSyncModal';
+import { CalendarConnectionsModal } from '@/components/calendar/CalendarConnectionsModal';
 import {
   useCalendarEvents,
   useCreateCalendarEvent,
@@ -61,7 +59,7 @@ export function CalendarPage() {
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [deletingEvent, setDeletingEvent] = useState<CalendarEvent | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<Date | null>(null);
-  const [isGoogleSyncModalOpen, setIsGoogleSyncModalOpen] = useState(false);
+  const [isCalendarConnectionsModalOpen, setIsCalendarConnectionsModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   // Calculate date range for fetching events
@@ -95,9 +93,7 @@ export function CalendarPage() {
     // Map calendar events
     const eventItems = events.map((event) => {
       // Use startDateTime/endDateTime if available, fallback to date
-      const startDate = event.startDateTime
-        ? new Date(event.startDateTime)
-        : new Date(event.date);
+      const startDate = event.startDateTime ? new Date(event.startDateTime) : new Date(event.date);
       const endDate = event.endDateTime ? new Date(event.endDateTime) : new Date(event.date);
 
       return {
@@ -139,6 +135,7 @@ export function CalendarPage() {
     setView(newView);
   }, []);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleSelectEvent = useCallback((event: any) => {
     if (event.type === 'task') {
       // It's a task - show task details
@@ -226,6 +223,7 @@ export function CalendarPage() {
 
   // Handle drag and drop of events
   const handleEventDrop = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ({ event, start, end }: EventInteractionArgs<any>) => {
       // Only allow dragging calendar events, not tasks
       if (event.type === 'task') {
@@ -246,6 +244,7 @@ export function CalendarPage() {
 
   // Handle resize of events
   const handleEventResize = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ({ event, start, end }: EventInteractionArgs<any>) => {
       // Only allow resizing calendar events, not tasks
       if (event.type === 'task') {
@@ -265,14 +264,17 @@ export function CalendarPage() {
   );
 
   // Determine if an event can be dragged
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const draggableAccessor = useCallback((event: any) => {
     // Only calendar events can be dragged, not tasks
     return event.type !== 'task';
   }, []);
 
   // Event style getter - distinguish Google events and tasks
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const eventStyleGetter = (event: any) => {
     const isGoogleEvent = event.source === 'google_calendar';
+    const isMicrosoftEvent = event.source === 'microsoft_calendar';
     const isTask = event.type === 'task';
 
     let backgroundColor = event.category?.color || '#3B82F6';
@@ -293,6 +295,9 @@ export function CalendarPage() {
     } else if (isGoogleEvent) {
       backgroundColor = '#4285F4';
       border = '2px solid #1967D2';
+    } else if (isMicrosoftEvent) {
+      backgroundColor = '#0078D4';
+      border = '2px solid #005A9E';
     }
 
     const style: React.CSSProperties = {
@@ -332,7 +337,7 @@ export function CalendarPage() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setIsGoogleSyncModalOpen(true)}
+              onClick={() => setIsCalendarConnectionsModalOpen(true)}
               className="p-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               title="Integraciones"
             >
@@ -380,11 +385,7 @@ export function CalendarPage() {
         <div className="mb-4 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg">
           <div className="flex items-start">
             <div className="flex-shrink-0">
-              <svg
-                className="h-5 w-5 text-yellow-400"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
+              <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
                 <path
                   fillRule="evenodd"
                   d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
@@ -396,7 +397,7 @@ export function CalendarPage() {
               <p className="text-sm text-yellow-700">
                 Tu conexión con Google Calendar ha expirado.{' '}
                 <button
-                  onClick={() => setIsGoogleSyncModalOpen(true)}
+                  onClick={() => setIsCalendarConnectionsModalOpen(true)}
                   className="font-medium underline text-yellow-700 hover:text-yellow-800"
                 >
                   Reconectar ahora
@@ -413,6 +414,14 @@ export function CalendarPage() {
         <div className="flex items-center gap-1">
           <span className="w-3 h-3 rounded bg-blue-500" />
           <span>Eventos</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="w-3 h-3 rounded" style={{ backgroundColor: '#4285F4' }} />
+          <span>Google</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="w-3 h-3 rounded" style={{ backgroundColor: '#0078D4' }} />
+          <span>Outlook</span>
         </div>
         <div className="flex items-center gap-1">
           <span className="w-3 h-3 rounded bg-red-500 border border-dashed border-white" />
@@ -493,10 +502,11 @@ export function CalendarPage() {
               <p className="text-gray-600 mb-4">
                 ¿Estás seguro de que deseas eliminar el evento "{deletingEvent.title}"?
               </p>
-              {deletingEvent.source === 'google_calendar' && (
+              {(deletingEvent.source === 'google_calendar' ||
+                deletingEvent.source === 'microsoft_calendar') && (
                 <p className="text-sm text-amber-600 bg-amber-50 p-3 rounded mb-4">
-                  ⚠️ Este evento proviene de Google Calendar. Eliminarlo aquí no lo eliminará de
-                  Google Calendar.
+                  ⚠️ Este evento proviene de un calendario externo. Eliminarlo aquí no lo eliminará
+                  del calendario original.
                 </p>
               )}
               <div className="flex justify-end gap-3">
@@ -518,10 +528,10 @@ export function CalendarPage() {
         </div>
       )}
 
-      {/* Google Calendar Sync Modal */}
-      <GoogleCalendarSyncModal
-        isOpen={isGoogleSyncModalOpen}
-        onClose={() => setIsGoogleSyncModalOpen(false)}
+      {/* Calendar Connections Modal */}
+      <CalendarConnectionsModal
+        isOpen={isCalendarConnectionsModalOpen}
+        onClose={() => setIsCalendarConnectionsModalOpen(false)}
       />
 
       {/* Task Detail Modal */}

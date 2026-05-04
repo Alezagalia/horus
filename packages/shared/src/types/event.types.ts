@@ -25,7 +25,8 @@ export interface CalendarEvent {
   archivedAt?: string | null;
   syncWithGoogle: boolean;
   googleEventId?: string | null;
-  source?: 'google_calendar' | 'horus';
+  calendarConnectionId?: string | null;
+  source?: 'google_calendar' | 'microsoft_calendar' | 'horus';
   reminderMinutes?: number | null;
   notificationSent: boolean;
   createdAt: string;

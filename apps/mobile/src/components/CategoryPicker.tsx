@@ -16,16 +16,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-
-// TODO: Import from categories API when available
-// For now, using a simplified interface
-interface Category {
-  id: string;
-  name: string;
-  icon?: string;
-  color?: string;
-  scope: string;
-}
+import { getCategories } from '../api/categories.api';
+import { Scope, type Category } from '@horus/shared';
 
 interface CategoryPickerProps {
   value: string;
@@ -53,18 +45,8 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({ value, onChange,
   const loadCategories = async () => {
     try {
       setLoading(true);
-      // TODO: Replace with actual API call
-      // const data = await getCategories({ scope: 'tareas' });
-
-      // Mock data for now
-      const mockCategories: Category[] = [
-        { id: '1', name: 'Trabajo', icon: 'briefcase', color: '#2196F3', scope: 'tareas' },
-        { id: '2', name: 'Personal', icon: 'person', color: '#4CAF50', scope: 'tareas' },
-        { id: '3', name: 'Casa', icon: 'home', color: '#FF9800', scope: 'tareas' },
-        { id: '4', name: 'Estudio', icon: 'school', color: '#9C27B0', scope: 'tareas' },
-      ];
-
-      setCategories(mockCategories);
+      const data = await getCategories({ scope: Scope.TAREAS });
+      setCategories(data);
     } catch (error) {
       console.error('Error loading categories:', error);
     } finally {
@@ -84,6 +66,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({ value, onChange,
       onPress={() => handleSelect(item)}
     >
       <View style={[styles.categoryIcon, { backgroundColor: item.color || '#CCC' }]}>
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
         <Ionicons name={(item.icon as any) || 'folder'} size={20} color="#FFF" />
       </View>
       <Text style={styles.categoryName}>{item.name}</Text>
@@ -105,6 +88,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({ value, onChange,
             <View
               style={[styles.selectedIcon, { backgroundColor: selectedCategory.color || '#CCC' }]}
             >
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
               <Ionicons name={(selectedCategory.icon as any) || 'folder'} size={20} color="#FFF" />
             </View>
             <Text style={styles.selectedText}>{selectedCategory.name}</Text>

@@ -46,7 +46,8 @@ export const formatCurrency = (
   const { showSymbol = true, decimals = 2 } = options || {};
 
   // Format number with thousands separator and decimals
-  const formattedNumber = amount.toLocaleString('es-AR', {
+  // Coerce to number to handle Prisma Decimal strings ("1234.56") and undefined/null
+  const formattedNumber = Number(amount ?? 0).toLocaleString('es-AR', {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   });
@@ -64,16 +65,17 @@ export const formatCurrency = (
  */
 export const formatCurrencyCompact = (amount: number, currencyCode: string): string => {
   const symbol = getCurrencySymbol(currencyCode);
+  const num = Number(amount ?? 0);
 
-  if (Math.abs(amount) >= 1000000) {
-    return `${symbol} ${(amount / 1000000).toFixed(1)}M`;
+  if (Math.abs(num) >= 1000000) {
+    return `${symbol} ${(num / 1000000).toFixed(1)}M`;
   }
 
-  if (Math.abs(amount) >= 1000) {
-    return `${symbol} ${(amount / 1000).toFixed(1)}K`;
+  if (Math.abs(num) >= 1000) {
+    return `${symbol} ${(num / 1000).toFixed(1)}K`;
   }
 
-  return `${symbol} ${amount.toFixed(0)}`;
+  return `${symbol} ${num.toFixed(0)}`;
 };
 
 /**

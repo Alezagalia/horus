@@ -196,7 +196,13 @@
       "Bash(cd \"C:\\\\Desarrollo\\\\Horus2\\\\apps\\\\mobile\\\\android\" && JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" PATH=\"$JAVA_HOME/bin:$PATH\" java -version 2>&1)",
       "Bash(true:*)",
       "Bash(head:*)",
-      "Bash(git:*)"
+      "Bash(git:*)",
+      "Bash(wc:*)",
+      "Bash(python3:*)",
+      "WebFetch(domain:www.mercadopago.com.ar)",
+      "Bash(\"C:/Users/zagal/AppData/Local/Android/Sdk/emulator/emulator.exe\":*)",
+      "Bash(npm run:*)",
+      "Bash(emulator:*)"
     ],
     "deny": [],
     "ask": []

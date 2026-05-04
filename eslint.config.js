@@ -64,6 +64,7 @@ export default tseslint.config(
       '**/*.d.ts',
       '**/prisma.config.ts',
       '**/vitest.config.ts',
+      '**/vite.config.ts',
       '**/babel.config.js',
       '**/metro.config.js',
     ],

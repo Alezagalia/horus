@@ -27,7 +27,12 @@ import {
 import { DateSelector } from '@/components/habits/DateSelector';
 import { ProgressBar } from '@/components/habits/ProgressBar';
 import { SortableHabitCard } from '@/components/habits/SortableHabitCard';
-import { useHabits, useToggleHabitComplete, useUpdateHabitProgress, useReorderHabits } from '@/hooks/useHabits';
+import {
+  useHabits,
+  useToggleHabitComplete,
+  useUpdateHabitProgress,
+  useReorderHabits,
+} from '@/hooks/useHabits';
 import type { HabitOfDay, HabitsGrouped, DayProgress, TimeOfDay } from '@/types/habits';
 
 /**
@@ -61,24 +66,26 @@ const timeOfDayIcons: Record<string, string> = {
   ANYTIME: '⏰',
 };
 
-// Helper to check if habit is scheduled for a specific day
+// Helper to check if habit is scheduled for a specific day — mirrors backend debiaRealizarseEnFecha
 function isHabitScheduledForDate(
-  habit: { periodicity: string; weekDays: number[] },
+  habit: { periodicity: string; weekDays: number[]; createdAt: string },
   date: Date
 ): boolean {
   const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
 
   switch (habit.periodicity) {
     case 'DAILY':
+      if (habit.weekDays.length > 0) return habit.weekDays.includes(dayOfWeek);
       return true;
     case 'WEEKLY':
-      // weekDays in DB uses: 0 = Sunday, 1 = Monday... 6 = Saturday
       return habit.weekDays.includes(dayOfWeek);
-    case 'MONTHLY':
-      // For monthly, we'd need more logic - for now, assume it's scheduled
-      return true;
+    case 'MONTHLY': {
+      const createdDate = new Date(habit.createdAt);
+      return date.getDate() === createdDate.getDate();
+    }
     case 'CUSTOM':
-      return habit.weekDays.includes(dayOfWeek);
+      if (habit.weekDays.length > 0) return habit.weekDays.includes(dayOfWeek);
+      return true;
     default:
       return true;
   }
@@ -112,11 +119,14 @@ export function HabitsTodayPage() {
   const todayHabits: HabitOfDay[] = useMemo(() => {
     if (!habitsFromAPI) return [];
 
-    console.log('Processing habitsFromAPI:', habitsFromAPI.map(h => ({
-      id: h.id,
-      name: h.name,
-      lastCompletedDate: h.lastCompletedDate,
-    })));
+    console.log(
+      'Processing habitsFromAPI:',
+      habitsFromAPI.map((h) => ({
+        id: h.id,
+        name: h.name,
+        lastCompletedDate: h.lastCompletedDate,
+      }))
+    );
 
     // Filter only active habits scheduled for selected date
     return habitsFromAPI
@@ -167,7 +177,7 @@ export function HabitsTodayPage() {
       MEDIA_TARDE: [],
       NOCHE: [],
       ANTES_DORMIR: [],
-      ANYTIME: []
+      ANYTIME: [],
     };
     todayHabits.forEach((habit) => {
       groups[habit.timeOfDay].push(habit);
@@ -252,7 +262,9 @@ export function HabitsTodayPage() {
             // Check if all habits are now completed
             const allCompleted = todayHabits.every((h) => h.id === habitId || h.completed);
             if (allCompleted) {
-              toast.success('¡Felicitaciones! Completaste todos tus hábitos de hoy', { icon: '🎉' });
+              toast.success('¡Felicitaciones! Completaste todos tus hábitos de hoy', {
+                icon: '🎉',
+              });
             }
           }
         },
@@ -288,7 +300,13 @@ export function HabitsTodayPage() {
   const isToday = format(selectedDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
   const isFuture = selectedDate > new Date();
 
-  console.log('HabitsTodayPage state:', { isToday, isFuture, selectedDate: selectedDate.toISOString(), dateStr, habitsCount: todayHabits.length });
+  console.log('HabitsTodayPage state:', {
+    isToday,
+    isFuture,
+    selectedDate: selectedDate.toISOString(),
+    dateStr,
+    habitsCount: todayHabits.length,
+  });
 
   if (isLoading) {
     return (
@@ -328,10 +346,7 @@ export function HabitsTodayPage() {
             </button>
           )}
         </div>
-        <DateSelector
-          selectedDate={selectedDate}
-          onDateChange={setSelectedDate}
-        />
+        <DateSelector selectedDate={selectedDate} onDateChange={setSelectedDate} />
       </div>
 
       {/* Progress Bar */}
@@ -373,7 +388,18 @@ export function HabitsTodayPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          {(['AYUNO', 'MANANA', 'MEDIA_MANANA', 'TARDE', 'MEDIA_TARDE', 'NOCHE', 'ANTES_DORMIR', 'ANYTIME'] as const).map((timeOfDay) => {
+          {(
+            [
+              'AYUNO',
+              'MANANA',
+              'MEDIA_MANANA',
+              'TARDE',
+              'MEDIA_TARDE',
+              'NOCHE',
+              'ANTES_DORMIR',
+              'ANYTIME',
+            ] as const
+          ).map((timeOfDay) => {
             const habitsInSection = groupedHabits[timeOfDay];
             if (habitsInSection.length === 0) return null;
 
@@ -422,7 +448,9 @@ export function HabitsTodayPage() {
         <div className="mt-8 glass-card p-6 text-center bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
           <div className="text-5xl mb-3">🎉</div>
           <h3 className="text-xl font-bold text-green-800 mb-2">¡Día Completado!</h3>
-          <p className="text-green-600">Has completado todos tus hábitos de hoy. ¡Excelente trabajo!</p>
+          <p className="text-green-600">
+            Has completado todos tus hábitos de hoy. ¡Excelente trabajo!
+          </p>
         </div>
       )}
     </div>

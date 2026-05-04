@@ -32,6 +32,7 @@ interface BackendEvent {
   archivedAt?: string | null;
   syncWithGoogle: boolean;
   googleEventId?: string | null;
+  calendarConnectionId?: string | null;
   reminderMinutes?: number | null;
   notificationSent: boolean;
   createdAt: string;
@@ -49,7 +50,11 @@ function transformBackendEvent(event: BackendEvent): CalendarEvent {
   return {
     ...event,
     date: event.startDateTime, // Use startDateTime as the main date
-    source: event.googleEventId ? 'google_calendar' : 'horus',
+    source: event.googleEventId
+      ? 'google_calendar'
+      : event.calendarConnectionId
+        ? 'microsoft_calendar'
+        : 'horus',
   };
 }
 
@@ -64,7 +69,9 @@ export async function getCalendarEvents(
   if (filters?.to) params.append('to', filters.to);
   if (filters?.categoryId) params.append('categoryId', filters.categoryId);
 
-  const response = await axiosInstance.get<{ events: BackendEvent[] }>(`/events?${params.toString()}`);
+  const response = await axiosInstance.get<{ events: BackendEvent[] }>(
+    `/events?${params.toString()}`
+  );
   return response.data.events.map(transformBackendEvent);
 }
 

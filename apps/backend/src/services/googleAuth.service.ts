@@ -8,62 +8,13 @@
 import { google, type Auth } from 'googleapis';
 import { prisma } from '../lib/prisma.js';
 import { env } from '../config/env.js';
-import crypto from 'crypto';
+import { encrypt, decrypt } from '../utils/tokenEncryption.utils.js';
 import { BadRequestError, NotFoundError } from '../middlewares/error.middleware.js';
 
 const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/calendar.events',
   'https://www.googleapis.com/auth/calendar.readonly',
 ];
-
-/**
- * Encrypts a string using AES-256-GCM
- */
-function encrypt(text: string): string {
-  if (!env.ENCRYPTION_KEY) {
-    throw new Error('ENCRYPTION_KEY not configured');
-  }
-
-  const key = Buffer.from(env.ENCRYPTION_KEY, 'hex');
-  const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
-
-  let encrypted = cipher.update(text, 'utf8', 'hex');
-  encrypted += cipher.final('hex');
-
-  const authTag = cipher.getAuthTag();
-
-  // Format: iv:authTag:encrypted
-  return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
-}
-
-/**
- * Decrypts a string encrypted with encrypt()
- */
-function decrypt(encryptedText: string): string {
-  if (!env.ENCRYPTION_KEY) {
-    throw new Error('ENCRYPTION_KEY not configured');
-  }
-
-  const key = Buffer.from(env.ENCRYPTION_KEY, 'hex');
-  const parts = encryptedText.split(':');
-
-  if (parts.length !== 3) {
-    throw new Error('Invalid encrypted text format');
-  }
-
-  const iv = Buffer.from(parts[0], 'hex');
-  const authTag = Buffer.from(parts[1], 'hex');
-  const encrypted = parts[2];
-
-  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
-  decipher.setAuthTag(authTag);
-
-  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-  decrypted += decipher.final('utf8');
-
-  return decrypted;
-}
 
 /**
  * Creates OAuth2 client
@@ -148,6 +99,7 @@ export const googleAuthService = {
       });
 
       return { success: true };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error('Error exchanging code for tokens:', error);
       throw new BadRequestError(
@@ -198,6 +150,7 @@ export const googleAuthService = {
       });
 
       return credentials.access_token;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error('Error refreshing access token:', error);
 
@@ -323,8 +276,7 @@ export const googleAuthService = {
     const hasRefreshToken = !!syncSetting.googleRefreshToken;
 
     // Needs reconnect if enabled but no valid refresh token
-    const needsReconnect =
-      syncSetting.googleCalendarEnabled && (!hasRefreshToken || !tokenValid);
+    const needsReconnect = syncSetting.googleCalendarEnabled && (!hasRefreshToken || !tokenValid);
 
     return {
       isConnected: syncSetting.googleCalendarEnabled,

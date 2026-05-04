@@ -15,6 +15,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { getAccounts } from '../api/accounts.api';
@@ -24,6 +25,8 @@ import { TotalBalanceCard } from '../components/accounts/TotalBalanceCard';
 import { MonthStatsCard } from '../components/accounts/MonthStatsCard';
 
 export function AccountsScreen() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const navigation = useNavigation<any>();
   const [refreshing, setRefreshing] = useState(false);
 
   // Fetch accounts
@@ -59,14 +62,12 @@ export function AccountsScreen() {
 
   // Navigate to account detail
   const handleAccountPress = (accountId: string) => {
-    // TODO: Navigate to AccountDetailScreen
-    console.log('Navigate to account detail:', accountId);
+    navigation.navigate('AccountDetail', { accountId });
   };
 
   // Navigate to create account
   const handleCreateAccount = () => {
-    // TODO: Navigate to CreateAccountScreen
-    console.log('Navigate to create account');
+    navigation.navigate('CreateAccount');
   };
 
   // Loading state

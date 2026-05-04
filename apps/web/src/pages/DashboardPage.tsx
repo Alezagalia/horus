@@ -43,7 +43,7 @@ function ProgressRing({
   percentage,
   size = 160,
   strokeWidth = 12,
-  className = ''
+  className = '',
 }: {
   percentage: number;
   size?: number;
@@ -94,20 +94,28 @@ function ProgressRing({
   );
 }
 
-// Helper to check if habit is scheduled for today
-function isHabitScheduledForToday(habit: { periodicity: string; weekDays: number[] }): boolean {
+// Helper to check if habit is scheduled for today — mirrors backend debiaRealizarseEnFecha
+function isHabitScheduledForToday(habit: {
+  periodicity: string;
+  weekDays: number[];
+  createdAt: string;
+}): boolean {
   const today = new Date();
   const dayOfWeek = today.getDay();
 
   switch (habit.periodicity) {
     case 'DAILY':
+      if (habit.weekDays.length > 0) return habit.weekDays.includes(dayOfWeek);
       return true;
     case 'WEEKLY':
       return habit.weekDays.includes(dayOfWeek);
-    case 'MONTHLY':
-      return true;
+    case 'MONTHLY': {
+      const createdDate = new Date(habit.createdAt);
+      return today.getDate() === createdDate.getDate();
+    }
     case 'CUSTOM':
-      return habit.weekDays.includes(dayOfWeek);
+      if (habit.weekDays.length > 0) return habit.weekDays.includes(dayOfWeek);
+      return true;
     default:
       return true;
   }
@@ -200,7 +208,7 @@ export function DashboardPage() {
               setTimeout(() => {
                 toast.success('¡Felicitaciones! Completaste todos tus hábitos de hoy', {
                   icon: '🎉',
-                  duration: 4000
+                  duration: 4000,
                 });
               }, 500);
             }
@@ -318,10 +326,11 @@ export function DashboardPage() {
   const stats = useMemo(() => {
     const activeHabits = habitsData?.filter((h) => h.isActive).length || 0;
     const pendingTasks = tasksData?.filter((t) => t.status !== 'completed').length || 0;
-    const overdueTasks = tasksData?.filter((t) => {
-      if (!t.dueDate || t.status === 'completed') return false;
-      return new Date(t.dueDate) < new Date(todayStr);
-    }).length || 0;
+    const overdueTasks =
+      tasksData?.filter((t) => {
+        if (!t.dueDate || t.status === 'completed') return false;
+        return new Date(t.dueDate) < new Date(todayStr);
+      }).length || 0;
 
     return { activeHabits, pendingTasks, overdueTasks };
   }, [habitsData, tasksData, todayStr]);
@@ -346,7 +355,8 @@ export function DashboardPage() {
   // Completion percentage
   const completedCount = todayHabits.filter((h) => h.completed).length;
   const totalCount = todayHabits.length;
-  const habitsCompletionPercentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+  const habitsCompletionPercentage =
+    totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -382,8 +392,7 @@ export function DashboardPage() {
   // Pending monthly expenses (sorted: no due day first, then by due day ascending)
   const pendingExpenses = useMemo(() => {
     if (!monthlyExpensesData?.monthlyExpenses) return [];
-    const pending = monthlyExpensesData.monthlyExpenses
-      .filter((e) => e.status === 'pendiente');
+    const pending = monthlyExpensesData.monthlyExpenses.filter((e) => e.status === 'pendiente');
 
     // Sort: first those WITHOUT due day, then those WITH due day sorted ascending (closest first)
     pending.sort((a, b) => {
@@ -415,7 +424,11 @@ export function DashboardPage() {
     } else if (daysUntilDue === 0) {
       return { text: 'Vence hoy', class: 'bg-amber-100 text-amber-700', urgent: true };
     } else if (daysUntilDue <= 3) {
-      return { text: `Vence en ${daysUntilDue}d`, class: 'bg-amber-100 text-amber-700', urgent: false };
+      return {
+        text: `Vence en ${daysUntilDue}d`,
+        class: 'bg-amber-100 text-amber-700',
+        urgent: false,
+      };
     } else {
       return { text: `Día ${dueDay}`, class: 'bg-gray-100 text-gray-600', urgent: false };
     }
@@ -492,7 +505,9 @@ export function DashboardPage() {
           <div className="flex flex-wrap gap-4 mt-8">
             <div className="bg-white/20 backdrop-blur-sm rounded-2xl px-5 py-3 border border-white/30">
               <p className="text-white/70 text-sm">Habitos hoy</p>
-              <p className="text-2xl font-bold">{completedCount}/{totalCount}</p>
+              <p className="text-2xl font-bold">
+                {completedCount}/{totalCount}
+              </p>
             </div>
             <div className="bg-white/20 backdrop-blur-sm rounded-2xl px-5 py-3 border border-white/30">
               <p className="text-white/70 text-sm">Racha maxima</p>
@@ -515,7 +530,10 @@ export function DashboardPage() {
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Habits Progress Card */}
-        <div className="glass-card p-6 animate-slide-up opacity-0 delay-200" style={{ animationFillMode: 'forwards' }}>
+        <div
+          className="glass-card p-6 animate-slide-up opacity-0 delay-200"
+          style={{ animationFillMode: 'forwards' }}
+        >
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-xl font-bold text-gray-900">Habitos de Hoy</h2>
@@ -526,8 +544,18 @@ export function DashboardPage() {
               className="text-sm font-medium text-indigo-600 hover:text-indigo-700 flex items-center gap-1 group"
             >
               Ver todos
-              <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              <svg
+                className="w-4 h-4 transition-transform group-hover:translate-x-1"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
               </svg>
             </button>
           </div>
@@ -559,31 +587,55 @@ export function DashboardPage() {
                     } ${toggleCompleteMutation.isPending ? 'opacity-70 cursor-wait' : 'cursor-pointer'}`}
                     style={{ animationDelay: `${(index + 3) * 100}ms` }}
                   >
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 ${
-                      habit.completed
-                        ? 'bg-green-500 text-white scale-100'
-                        : 'bg-white border-2 border-gray-200 group-hover:border-green-400 group-hover:scale-105'
-                    }`}>
+                    <div
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 ${
+                        habit.completed
+                          ? 'bg-green-500 text-white scale-100'
+                          : 'bg-white border-2 border-gray-200 group-hover:border-green-400 group-hover:scale-105'
+                      }`}
+                    >
                       {habit.completed ? (
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5 13l4 4L19 7"
+                          />
                         </svg>
                       ) : (
-                        <svg className="w-4 h-4 text-gray-300 group-hover:text-green-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        <svg
+                          className="w-4 h-4 text-gray-300 group-hover:text-green-400 transition-colors"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5 13l4 4L19 7"
+                          />
                         </svg>
                       )}
                     </div>
                     <span className="text-lg">{habit.categoryIcon}</span>
-                    <span className={`flex-1 text-sm font-medium transition-colors ${
-                      habit.completed ? 'text-gray-400 line-through' : 'text-gray-700 group-hover:text-gray-900'
-                    }`}>
+                    <span
+                      className={`flex-1 text-sm font-medium transition-colors ${
+                        habit.completed
+                          ? 'text-gray-400 line-through'
+                          : 'text-gray-700 group-hover:text-gray-900'
+                      }`}
+                    >
                       {habit.name}
                     </span>
                     {habit.currentStreak > 0 && (
-                      <span className="badge-gradient text-xs">
-                        🔥 {habit.currentStreak}
-                      </span>
+                      <span className="badge-gradient text-xs">🔥 {habit.currentStreak}</span>
                     )}
                   </button>
                 ))
@@ -593,7 +645,10 @@ export function DashboardPage() {
         </div>
 
         {/* Unified Agenda Card */}
-        <div className="glass-card p-6 animate-slide-up opacity-0 delay-300" style={{ animationFillMode: 'forwards' }}>
+        <div
+          className="glass-card p-6 animate-slide-up opacity-0 delay-300"
+          style={{ animationFillMode: 'forwards' }}
+        >
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-xl font-bold text-gray-900">Próximamente</h2>
@@ -604,8 +659,18 @@ export function DashboardPage() {
               className="text-sm font-medium text-indigo-600 hover:text-indigo-700 flex items-center gap-1 group"
             >
               Ver calendario
-              <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              <svg
+                className="w-4 h-4 transition-transform group-hover:translate-x-1"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
               </svg>
             </button>
           </div>
@@ -636,9 +701,11 @@ export function DashboardPage() {
                 <div key={group.label}>
                   {/* Day Header */}
                   <div className="flex items-center gap-2 mb-2">
-                    <span className={`text-xs font-semibold uppercase tracking-wider ${
-                      group.label === 'Hoy' ? 'text-indigo-600' : 'text-gray-500'
-                    }`}>
+                    <span
+                      className={`text-xs font-semibold uppercase tracking-wider ${
+                        group.label === 'Hoy' ? 'text-indigo-600' : 'text-gray-500'
+                      }`}
+                    >
                       {group.label}
                     </span>
                     <div className="flex-1 h-px bg-gray-200" />
@@ -657,19 +724,19 @@ export function DashboardPage() {
                         }`}
                       >
                         {/* Icon */}
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                          item.type === 'event'
-                            ? 'bg-purple-500 text-white'
-                            : 'bg-amber-500 text-white'
-                        }`}>
+                        <div
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                            item.type === 'event'
+                              ? 'bg-purple-500 text-white'
+                              : 'bg-amber-500 text-white'
+                          }`}
+                        >
                           <span className="text-sm">{item.type === 'event' ? '📅' : '📝'}</span>
                         </div>
 
                         {/* Content */}
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-800 truncate">
-                            {item.title}
-                          </p>
+                          <p className="text-sm font-medium text-gray-800 truncate">{item.title}</p>
                           <div className="flex items-center gap-2 mt-1 flex-wrap">
                             {/* Event time */}
                             {item.type === 'event' && item.time && (
@@ -691,7 +758,9 @@ export function DashboardPage() {
                             )}
                             {/* Task priority */}
                             {item.type === 'task' && item.priority && (
-                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${getPriorityStyles(item.priority)}`}>
+                              <span
+                                className={`text-xs px-2 py-0.5 rounded-full font-medium ${getPriorityStyles(item.priority)}`}
+                              >
                                 {item.priority.charAt(0).toUpperCase() + item.priority.slice(1)}
                               </span>
                             )}
@@ -699,11 +768,13 @@ export function DashboardPage() {
                         </div>
 
                         {/* Type indicator */}
-                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                          item.type === 'event'
-                            ? 'bg-purple-100 text-purple-700'
-                            : 'bg-amber-100 text-amber-700'
-                        }`}>
+                        <span
+                          className={`text-xs px-2 py-1 rounded-full font-medium ${
+                            item.type === 'event'
+                              ? 'bg-purple-100 text-purple-700'
+                              : 'bg-amber-100 text-amber-700'
+                          }`}
+                        >
                           {item.type === 'event' ? 'Evento' : 'Tarea'}
                         </span>
                       </div>
@@ -716,7 +787,10 @@ export function DashboardPage() {
         </div>
 
         {/* Best Streak Card */}
-        <div className="glass-card p-6 animate-slide-up opacity-0 delay-400" style={{ animationFillMode: 'forwards' }}>
+        <div
+          className="glass-card p-6 animate-slide-up opacity-0 delay-400"
+          style={{ animationFillMode: 'forwards' }}
+        >
           <h2 className="text-xl font-bold text-gray-900 mb-6">Tu Mejor Racha</h2>
 
           {bestStreak ? (
@@ -726,7 +800,9 @@ export function DashboardPage() {
               </div>
               <div className="mb-4">
                 <p className="text-6xl font-bold text-gradient-warm">{bestStreak.streakDays}</p>
-                <p className="text-gray-500 uppercase tracking-wider text-sm font-medium mt-1">dias consecutivos</p>
+                <p className="text-gray-500 uppercase tracking-wider text-sm font-medium mt-1">
+                  dias consecutivos
+                </p>
               </div>
               <p className="text-lg font-medium text-gray-700">{bestStreak.habitName}</p>
               <p className="text-sm text-gray-500 mt-2">Sigue asi!</p>
@@ -741,7 +817,10 @@ export function DashboardPage() {
         </div>
 
         {/* Pending Monthly Expenses Card */}
-        <div className="glass-card p-6 animate-slide-up opacity-0 delay-500" style={{ animationFillMode: 'forwards' }}>
+        <div
+          className="glass-card p-6 animate-slide-up opacity-0 delay-500"
+          style={{ animationFillMode: 'forwards' }}
+        >
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-xl font-bold text-gray-900">Gastos Pendientes</h2>
@@ -752,8 +831,18 @@ export function DashboardPage() {
               className="text-sm font-medium text-indigo-600 hover:text-indigo-700 flex items-center gap-1 group"
             >
               Ver todos
-              <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              <svg
+                className="w-4 h-4 transition-transform group-hover:translate-x-1"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
               </svg>
             </button>
           </div>
@@ -773,13 +862,19 @@ export function DashboardPage() {
                     <div
                       key={expense.id}
                       className={`flex items-center justify-between p-3 rounded-xl transition-colors ${
-                        dueStatus?.urgent ? 'bg-red-50 hover:bg-red-100' : 'bg-gray-50 hover:bg-gray-100'
+                        dueStatus?.urgent
+                          ? 'bg-red-50 hover:bg-red-100'
+                          : 'bg-gray-50 hover:bg-gray-100'
                       }`}
                     >
                       <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <span className="text-xl flex-shrink-0">{expense.category?.icon || '📄'}</span>
+                        <span className="text-xl flex-shrink-0">
+                          {expense.category?.icon || '📄'}
+                        </span>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-800 truncate">{expense.concept}</p>
+                          <p className="text-sm font-medium text-gray-800 truncate">
+                            {expense.concept}
+                          </p>
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="text-xs text-gray-500">
                               {expense.previousAmount
@@ -787,7 +882,9 @@ export function DashboardPage() {
                                 : 'Sin monto previo'}
                             </p>
                             {dueStatus && (
-                              <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${dueStatus.class}`}>
+                              <span
+                                className={`text-xs px-1.5 py-0.5 rounded font-medium ${dueStatus.class}`}
+                              >
                                 {dueStatus.text}
                               </span>
                             )}
@@ -831,30 +928,26 @@ export function DashboardPage() {
               <h3 className="text-lg font-bold text-gray-900 mb-1">
                 Pagar: {payingExpense.concept}
               </h3>
-              <p className="text-sm text-gray-500 mb-4">
-                {payingExpense.category?.name}
-              </p>
+              <p className="text-sm text-gray-500 mb-4">{payingExpense.category?.name}</p>
 
               <div className="space-y-4">
                 {/* Amount */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Monto
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Monto</label>
                   <input
                     type="number"
                     step="0.01"
                     value={payFormData.amount}
-                    onChange={(e) => setPayFormData({ ...payFormData, amount: parseFloat(e.target.value) || 0 })}
+                    onChange={(e) =>
+                      setPayFormData({ ...payFormData, amount: parseFloat(e.target.value) || 0 })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
 
                 {/* Account */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Cuenta
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Cuenta</label>
                   <select
                     value={payFormData.accountId}
                     onChange={(e) => setPayFormData({ ...payFormData, accountId: e.target.value })}
@@ -871,9 +964,7 @@ export function DashboardPage() {
 
                 {/* Date */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Fecha
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
                   <input
                     type="date"
                     value={payFormData.paidDate}
@@ -893,7 +984,9 @@ export function DashboardPage() {
                 </button>
                 <button
                   onClick={handlePaySubmit}
-                  disabled={!payFormData.accountId || payFormData.amount <= 0 || payMutation.isPending}
+                  disabled={
+                    !payFormData.accountId || payFormData.amount <= 0 || payMutation.isPending
+                  }
                   className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {payMutation.isPending && (

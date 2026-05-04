@@ -9,8 +9,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Toaster } from 'react-hot-toast';
-import type { Currency } from '@horus/shared';
-import type { MonthlyExpense } from '@horus/shared';
+import type { Currency, MonthlyExpense } from '@horus/shared';
 import {
   useMonthlyExpenses,
   usePayMonthlyExpense,
@@ -52,7 +51,9 @@ export function MonthlyExpensesPage() {
   const [payingExpense, setPayingExpense] = useState<MonthlyExpense | null>(null);
   const [editingExpense, setEditingExpense] = useState<MonthlyExpense | null>(null);
   const [undoingExpense, setUndoingExpense] = useState<MonthlyExpense | null>(null);
-  const [expandedPendingCategories, setExpandedPendingCategories] = useState<Set<string>>(new Set());
+  const [expandedPendingCategories, setExpandedPendingCategories] = useState<Set<string>>(
+    new Set()
+  );
   const [expandedPaidCategories, setExpandedPaidCategories] = useState<Set<string>>(new Set());
 
   const { data, isLoading } = useMonthlyExpenses(selectedMonth, selectedYear);
@@ -78,8 +79,11 @@ export function MonthlyExpensesPage() {
   });
 
   const expenses = data?.monthlyExpenses || [];
-  const pendingExpenses = expenses.filter((e) => e.status === 'pendiente');
-  const paidExpenses = expenses.filter((e) => e.status === 'pagado');
+  const pendingExpenses = useMemo(
+    () => expenses.filter((e) => e.status === 'pendiente'),
+    [expenses]
+  );
+  const paidExpenses = useMemo(() => expenses.filter((e) => e.status === 'pagado'), [expenses]);
 
   const selectedAccountId = watch('accountId');
   const amount = watch('amount');
@@ -126,7 +130,11 @@ export function MonthlyExpensesPage() {
     } else if (daysUntilDue === 0) {
       return { text: 'Vence hoy', class: 'bg-amber-100 text-amber-700', urgent: true };
     } else if (daysUntilDue <= 3) {
-      return { text: `Vence en ${daysUntilDue}d`, class: 'bg-amber-100 text-amber-700', urgent: false };
+      return {
+        text: `Vence en ${daysUntilDue}d`,
+        class: 'bg-amber-100 text-amber-700',
+        urgent: false,
+      };
     } else {
       return { text: `Vence día ${dueDay}`, class: 'bg-gray-100 text-gray-600', urgent: false };
     }
@@ -176,7 +184,9 @@ export function MonthlyExpensesPage() {
 
   // Auto-expand all pending categories when data changes
   useEffect(() => {
-    setExpandedPendingCategories(new Set(groupedPendingExpenses.map(([categoryName]) => categoryName)));
+    setExpandedPendingCategories(
+      new Set(groupedPendingExpenses.map(([categoryName]) => categoryName))
+    );
   }, [groupedPendingExpenses]);
 
   const goToPreviousMonth = () => {
@@ -381,11 +391,17 @@ export function MonthlyExpensesPage() {
         ) : (
           <div className="space-y-4">
             {groupedPendingExpenses.map(([categoryName, { category, expenses }]) => {
-              const categoryTotal = expenses.reduce((sum, e) => sum + Number(e.previousAmount || 0), 0);
+              const categoryTotal = expenses.reduce(
+                (sum, e) => sum + Number(e.previousAmount || 0),
+                0
+              );
               const isExpanded = expandedPendingCategories.has(categoryName);
 
               return (
-                <div key={categoryName} className="border border-gray-200 rounded-lg overflow-hidden">
+                <div
+                  key={categoryName}
+                  className="border border-gray-200 rounded-lg overflow-hidden"
+                >
                   {/* Category Header */}
                   <button
                     onClick={() => togglePendingCategory(categoryName)}
@@ -395,7 +411,9 @@ export function MonthlyExpensesPage() {
                       <span className="text-2xl">{category?.icon || '📁'}</span>
                       <div className="text-left">
                         <h3 className="font-semibold text-gray-900">{categoryName}</h3>
-                        <p className="text-sm text-gray-600">{expenses.length} gasto{expenses.length !== 1 ? 's' : ''}</p>
+                        <p className="text-sm text-gray-600">
+                          {expenses.length} gasto{expenses.length !== 1 ? 's' : ''}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
@@ -408,7 +426,12 @@ export function MonthlyExpensesPage() {
                         stroke="currentColor"
                         viewBox="0 0 24 24"
                       >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
                       </svg>
                     </div>
                   </button>
@@ -429,9 +452,13 @@ export function MonthlyExpensesPage() {
                               <div className="flex items-center gap-4 flex-1">
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    <h3 className="font-semibold text-gray-900">{expense.concept}</h3>
+                                    <h3 className="font-semibold text-gray-900">
+                                      {expense.concept}
+                                    </h3>
                                     {dueStatus && (
-                                      <span className={`px-2 py-0.5 text-xs font-medium rounded ${dueStatus.class}`}>
+                                      <span
+                                        className={`px-2 py-0.5 text-xs font-medium rounded ${dueStatus.class}`}
+                                      >
                                         {dueStatus.text}
                                       </span>
                                     )}
@@ -496,7 +523,10 @@ export function MonthlyExpensesPage() {
               const isExpanded = expandedPaidCategories.has(categoryName);
 
               return (
-                <div key={categoryName} className="border border-gray-200 rounded-lg overflow-hidden">
+                <div
+                  key={categoryName}
+                  className="border border-gray-200 rounded-lg overflow-hidden"
+                >
                   {/* Category Header */}
                   <button
                     onClick={() => togglePaidCategory(categoryName)}
@@ -506,7 +536,9 @@ export function MonthlyExpensesPage() {
                       <span className="text-2xl">{category?.icon || '📁'}</span>
                       <div className="text-left">
                         <h3 className="font-semibold text-gray-900">{categoryName}</h3>
-                        <p className="text-sm text-gray-600">{expenses.length} gasto{expenses.length !== 1 ? 's' : ''}</p>
+                        <p className="text-sm text-gray-600">
+                          {expenses.length} gasto{expenses.length !== 1 ? 's' : ''}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
@@ -519,7 +551,12 @@ export function MonthlyExpensesPage() {
                         stroke="currentColor"
                         viewBox="0 0 24 24"
                       >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
                       </svg>
                     </div>
                   </button>
@@ -528,7 +565,10 @@ export function MonthlyExpensesPage() {
                   {isExpanded && (
                     <div className="divide-y divide-gray-200">
                       {expenses.map((expense) => (
-                        <div key={expense.id} className="bg-white p-4 hover:bg-gray-50 transition-colors">
+                        <div
+                          key={expense.id}
+                          className="bg-white p-4 hover:bg-gray-50 transition-colors"
+                        >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4 flex-1">
                               <div className="flex-1">
@@ -627,8 +667,12 @@ export function MonthlyExpensesPage() {
                       />
                     </svg>
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-blue-900 mb-1">Observación de la plantilla:</p>
-                      <p className="text-sm text-blue-800 whitespace-pre-wrap">{payingExpense.recurringExpense.notes}</p>
+                      <p className="text-sm font-medium text-blue-900 mb-1">
+                        Observación de la plantilla:
+                      </p>
+                      <p className="text-sm text-blue-800 whitespace-pre-wrap">
+                        {payingExpense.recurringExpense.notes}
+                      </p>
                     </div>
                   </div>
                 </div>

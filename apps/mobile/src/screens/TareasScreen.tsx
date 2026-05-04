@@ -32,6 +32,7 @@ type PriorityFilter = 'all' | Priority;
 type DateFilter = 'all' | 'overdue' | 'today' | 'week' | 'none';
 
 interface TareasScreenProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   navigation: any;
 }
 
@@ -42,7 +43,7 @@ export const TareasScreen: React.FC<TareasScreenProps> = ({ navigation }) => {
   const [togglingTaskId, setTogglingTaskId] = useState<string | null>(null);
 
   // Filters
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('pendiente');
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all');
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
 
@@ -53,6 +54,7 @@ export const TareasScreen: React.FC<TareasScreenProps> = ({ navigation }) => {
   const loadTasks = async () => {
     try {
       setLoading(true);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const filters: any = {};
 
       if (statusFilter !== 'all') {
@@ -90,6 +92,7 @@ export const TareasScreen: React.FC<TareasScreenProps> = ({ navigation }) => {
 
       // Update task in list
       setTasks((prevTasks) => prevTasks.map((task) => (task.id === taskId ? updatedTask : task)));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error('Error toggling task:', error);
       // TODO: Show error toast/alert
@@ -102,15 +105,11 @@ export const TareasScreen: React.FC<TareasScreenProps> = ({ navigation }) => {
   };
 
   const handleTaskPress = (taskId: string) => {
-    // TODO: Navigate to TaskDetailScreen when US-063 is implemented
-    console.log('Navigate to task detail:', taskId);
-    // navigation.navigate('TaskDetail', { taskId });
+    navigation.navigate('TaskDetail', { taskId });
   };
 
   const handleCreateTask = () => {
-    // TODO: Navigate to CreateTaskScreen when US-062 is implemented
-    console.log('Navigate to create task');
-    // navigation.navigate('CreateTask');
+    navigation.navigate('CreateTask');
   };
 
   const renderEmptyState = () => {

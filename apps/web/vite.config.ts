@@ -100,6 +100,12 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+    },
   },
   build: {
     outDir: 'dist',
@@ -128,31 +134,15 @@ export default defineConfig({
         // Simplified code splitting to avoid circular dependencies
         manualChunks: {
           // Core vendor chunk - includes React and related
-          'vendor': [
-            'react',
-            'react-dom',
-            'react-router-dom',
-            'zustand',
-          ],
+          vendor: ['react', 'react-dom', 'react-router-dom', 'zustand'],
           // Data fetching
-          'query': [
-            '@tanstack/react-query',
-          ],
+          query: ['@tanstack/react-query'],
           // Forms and validation
-          'forms': [
-            'react-hook-form',
-            '@hookform/resolvers',
-            'zod',
-          ],
+          forms: ['react-hook-form', '@hookform/resolvers', 'zod'],
           // Charts (large dependency)
-          'charts': [
-            'recharts',
-          ],
+          charts: ['recharts'],
           // Utilities
-          'utils': [
-            'axios',
-            'date-fns',
-          ],
+          utils: ['axios', 'date-fns'],
         },
         // Nombres de archivos con hash para cache busting
         chunkFileNames: 'assets/[name]-[hash].js',

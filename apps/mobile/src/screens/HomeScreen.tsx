@@ -53,7 +53,14 @@ type HomeScreenProps = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   // US-045: Using custom hook with cache strategy (disable refetch on focus to prevent loop)
-  const { data: stats, isLoading, isError, error, refetch, isRefetching } = useGeneralStats({
+  const {
+    data: stats,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isRefetching,
+  } = useGeneralStats({
     refetchOnFocus: false,
   });
   const [showTimeout, setShowTimeout] = React.useState(false);
@@ -77,20 +84,31 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const totalsByCurrency = accountsData?.totalsByCurrency || [];
   const pendingExpenses = monthlyExpensesData?.monthlyExpenses || [];
 
-  // Sprint 5: Fetch upcoming tasks
+  // Sprint 5: Fetch urgent/upcoming tasks — no status filter to include en_progreso
   const { data: tasksData } = useQuery({
     queryKey: ['tasks', 'upcoming'],
-    queryFn: () => getTasks({ status: 'pendiente' }),
-    staleTime: 5 * 60 * 1000,
+    queryFn: () => getTasks(),
+    staleTime: 30 * 1000, // 30s: reflects newly created tasks quickly
+    refetchOnMount: true,
   });
 
-  // Filter and sort upcoming tasks
+  // Filter: active (pendiente/en_progreso) and urgent or with a due date
   const upcomingTasks = React.useMemo(() => {
     if (!tasksData) return [];
     const now = new Date();
     return tasksData
-      .filter((task) => task.dueDate && new Date(task.dueDate) >= now)
-      .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime())
+      .filter((task) => {
+        if (task.status === 'completada' || task.status === 'cancelada') return false;
+        const isOverdue = task.dueDate != null && new Date(task.dueDate) < now;
+        const isHighPriority = task.priority === 'alta';
+        const hasDueDate = task.dueDate != null;
+        return isOverdue || isHighPriority || hasDueDate;
+      })
+      .sort((a, b) => {
+        const aTime = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+        const bTime = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+        return aTime - bTime;
+      })
       .slice(0, 5);
   }, [tasksData]);
 
@@ -110,7 +128,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     if (!tasksData) return 0;
     const now = new Date();
     return tasksData.filter(
-      (task) => task.priority === 'alta' || (task.dueDate && new Date(task.dueDate) < now)
+      (task) =>
+        (task.status === 'pendiente' || task.status === 'en_progreso') &&
+        (task.priority === 'alta' || (task.dueDate != null && new Date(task.dueDate) < now))
     ).length;
   }, [tasksData]);
 
@@ -136,7 +156,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   const handleBestStreakPress = () => {
     if (stats?.habitWithLongestStreak?.id) {
-      navigation.navigate('HabitsTab', { screen: 'HabitStats', params: { habitId: stats.habitWithLongestStreak.id } });
+      navigation.navigate('HabitsTab', {
+        screen: 'HabitStats',
+        params: { habitId: stats.habitWithLongestStreak.id },
+      });
     }
   };
 
@@ -145,8 +168,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     const errorMessage = showTimeout
       ? 'La carga está tomando mucho tiempo. Verifica tu conexión a internet o intenta más tarde.'
       : error instanceof Error
-      ? error.message
-      : 'Error al cargar estadísticas';
+        ? error.message
+        : 'Error al cargar estadísticas';
 
     return (
       <View style={styles.centerContainer}>
@@ -203,9 +226,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       >
         <View style={styles.heroContent}>
           <Text style={styles.greetingText}>{getGreeting()}</Text>
-          <Text style={styles.heroTitle}>
-            {user?.name?.split(' ')[0] || 'Usuario'}
-          </Text>
+          <Text style={styles.heroTitle}>{user?.name?.split(' ')[0] || 'Usuario'}</Text>
           <Text style={styles.heroSubtitle}>
             Aquí tienes un resumen de tu día. Mantén el enfoque y alcanza tus metas.
           </Text>
@@ -214,7 +235,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <View style={styles.quickStats}>
             <View style={styles.statCard}>
               <Text style={styles.statLabel}>Hábitos hoy</Text>
-              <Text style={styles.statValue}>{completedCount}/{totalCount}</Text>
+              <Text style={styles.statValue}>
+                {completedCount}/{totalCount}
+              </Text>
             </View>
             <View style={styles.statCard}>
               <Text style={styles.statLabel}>Racha máxima</Text>
@@ -229,7 +252,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       </LinearGradient>
 
       {/* Card 1: Hoy - Completion Rate */}
-      <StatsCard title="Hábitos de Hoy" onPress={handleTodayCardPress} onPressAll={() => navigation.navigate('HabitsTab', { screen: 'HabitosHoy' })}>
+      <StatsCard
+        title="Hábitos de Hoy"
+        onPress={handleTodayCardPress}
+        onPressAll={() => navigation.navigate('HabitsTab', { screen: 'HabitosHoy' })}
+      >
         <CircularProgress percentage={completionRateToday.percentage} />
         <Text style={styles.completionText}>
           {completionRateToday.completed} de {completionRateToday.total} hábitos completados
@@ -274,7 +301,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       {upcomingTasks.length > 0 && (
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>📋 Próximas Tareas</Text>
+            <Text style={styles.sectionTitle}>📋 Tareas Urgentes</Text>
             <TouchableOpacity onPress={() => navigation.navigate('TasksTab')}>
               <Text style={styles.seeAllText}>Ver todas →</Text>
             </TouchableOpacity>
@@ -292,10 +319,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               <View key={task.id} style={styles.taskCard}>
                 <View style={styles.taskLeft}>
                   <View
-                    style={[
-                      styles.priorityDot,
-                      { backgroundColor: priorityColors[task.priority] },
-                    ]}
+                    style={[styles.priorityDot, { backgroundColor: priorityColors[task.priority] }]}
                   />
                   <View style={styles.taskInfo}>
                     <Text style={styles.taskTitle} numberOfLines={1}>
@@ -305,15 +329,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                       {isToday(dueDate)
                         ? 'Hoy'
                         : isTomorrow(dueDate)
-                        ? 'Mañana'
-                        : format(dueDate, "EEE d 'de' MMM", { locale: es })}
+                          ? 'Mañana'
+                          : format(dueDate, "EEE d 'de' MMM", { locale: es })}
                       {isPast(dueDate) && ' (Vencida)'}
                     </Text>
                   </View>
                 </View>
-                {task.category?.icon && (
-                  <Text style={styles.taskIcon}>{task.category.icon}</Text>
-                )}
+                {task.category?.icon && <Text style={styles.taskIcon}>{task.category.icon}</Text>}
               </View>
             );
           })}
@@ -345,7 +367,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             <Text style={styles.fitnessIcon}>📊</Text>
             <Text style={styles.fitnessLabel}>Historial</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.fitnessCard} onPress={() => navigation.navigate('MoreTab', { screen: 'Stats' })}>
+          <TouchableOpacity
+            style={styles.fitnessCard}
+            onPress={() => navigation.navigate('MoreTab', { screen: 'Stats' })}
+          >
             <Text style={styles.fitnessIcon}>📈</Text>
             <Text style={styles.fitnessLabel}>Estadísticas</Text>
           </TouchableOpacity>
@@ -362,7 +387,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             <Text style={styles.financeCardTitle}>Balance Total</Text>
             {totalsByCurrency.map((total) => (
               <Text key={total.currency} style={styles.balanceText}>
-                {total.currency} {total.totalBalance.toLocaleString('es-AR', {
+                {total.currency}{' '}
+                {Number(total.total ?? 0).toLocaleString('es-AR', {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}
@@ -379,10 +405,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               <Text style={styles.pendingCount}>{pendingExpenses.length}</Text>
             </View>
             <Text style={styles.pendingAmount}>
-              $ {pendingExpenses.reduce((sum, exp) => sum + (exp.previousAmount || 0), 0).toLocaleString('es-AR', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
+              ${' '}
+              {pendingExpenses
+                .reduce((sum, exp) => sum + Number(exp.amount ?? 0), 0)
+                .toLocaleString('es-AR', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
             </Text>
             <Text style={styles.pendingSubtext}>Estimado para este mes</Text>
           </View>
