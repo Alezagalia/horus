@@ -8,11 +8,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { resourcesApi } from '../api/resources.api';
-import type {
-  CreateResourceDto,
-  UpdateResourceDto,
-  ResourceFilters,
-} from '@horus/shared';
+import type { CreateResourceDto, UpdateResourceDto, ResourceFilters } from '@horus/shared';
 
 /**
  * Fetch all resources with optional filters
@@ -60,8 +56,8 @@ export function useCreateResource() {
     mutationFn: (data: CreateResourceDto) => resourcesApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['resources'] });
-      Alert.alert('Éxito', 'Resource creado exitosamente');
     },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {
       Alert.alert('Error', error?.response?.data?.error || 'Error al crear resource');
     },
@@ -80,8 +76,8 @@ export function useUpdateResource() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['resources'] });
       queryClient.invalidateQueries({ queryKey: ['resources', variables.id] });
-      Alert.alert('Éxito', 'Resource actualizado');
     },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {
       Alert.alert('Error', error?.response?.data?.error || 'Error al actualizar resource');
     },
@@ -98,8 +94,8 @@ export function useDeleteResource() {
     mutationFn: (id: string) => resourcesApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['resources'] });
-      Alert.alert('Éxito', 'Resource eliminado');
     },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {
       Alert.alert('Error', error?.response?.data?.error || 'Error al eliminar resource');
     },
@@ -117,6 +113,7 @@ export function useTogglePin() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['resources'] });
     },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {
       Alert.alert('Error', error?.response?.data?.error || 'Error al marcar/desmarcar');
     },

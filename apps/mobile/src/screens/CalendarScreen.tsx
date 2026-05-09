@@ -5,7 +5,7 @@
  * Monthly calendar view with event listing
  */
 
-import { useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -18,24 +18,8 @@ import {
 import { Calendar, DateData } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
 import { EventListItem } from '../components/EventListItem';
-
-interface Event {
-  id: string;
-  title: string;
-  startDateTime: string;
-  endDateTime: string;
-  isAllDay: boolean;
-  location?: string;
-  status: string;
-  category: {
-    id: string;
-    name: string;
-    icon?: string;
-    color?: string;
-  };
-  syncWithGoogle: boolean;
-  googleEventId?: string;
-}
+import { useEvents } from '../hooks/useEvents';
+import type { Event } from '../api/events.api';
 
 interface MarkedDates {
   [date: string]: {
@@ -46,107 +30,29 @@ interface MarkedDates {
   };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function CalendarScreen({ navigation }: any) {
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [currentMonth, setCurrentMonth] = useState(
-    new Date().toISOString().split('T')[0].slice(0, 7)
-  );
-  const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [filterCategory] = useState<string | null>(null);
-  const [filterSource] = useState<'all' | 'local' | 'google'>('all');
-  const [filterStatus] = useState<string | null>(null);
+  const today = new Date().toISOString().split('T')[0];
+  const [selectedDate, setSelectedDate] = useState(today);
+  const [currentMonth, setCurrentMonth] = useState(today.slice(0, 7));
   const [showSyncBanner, setShowSyncBanner] = useState(true);
 
-  // Fetch events for current month
-  const fetchEvents = async (_month: string, refresh = false) => {
-    try {
-      if (refresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-
-      // const [year, monthNum] = month.split('-');
-      // const firstDay = new Date(parseInt(year), parseInt(monthNum) - 1, 1);
-      // const lastDay = new Date(parseInt(year), parseInt(monthNum), 0);
-      // const from = firstDay.toISOString();
-      // const to = lastDay.toISOString();
-
-      // TODO: Replace with actual API call
-      // const response = await fetch(`/api/events?from=${from}&to=${to}`);
-      // const data = await response.json();
-
-      // Mock data for now
-      const mockEvents: Event[] = [
-        {
-          id: '1',
-          title: 'Reunión de equipo',
-          startDateTime: `${selectedDate}T10:00:00Z`,
-          endDateTime: `${selectedDate}T11:00:00Z`,
-          isAllDay: false,
-          location: 'Sala de conferencias',
-          status: 'pendiente',
-          category: {
-            id: '1',
-            name: 'Trabajo',
-            icon: '💼',
-            color: '#3B82F6',
-          },
-          syncWithGoogle: true,
-          googleEventId: 'google-123',
-        },
-        {
-          id: '2',
-          title: 'Cumpleaños de María',
-          startDateTime: `${selectedDate}T00:00:00Z`,
-          endDateTime: `${selectedDate}T23:59:59Z`,
-          isAllDay: true,
-          status: 'pendiente',
-          category: {
-            id: '2',
-            name: 'Personal',
-            icon: '🎂',
-            color: '#EC4899',
-          },
-          syncWithGoogle: false,
-        },
-      ];
-
-      setEvents(mockEvents);
-    } catch (error) {
-      console.error('Error fetching events:', error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchEvents(currentMonth);
+  // Compute date range for the current month
+  const monthRange = useMemo(() => {
+    const [year, month] = currentMonth.split('-').map(Number);
+    const from = new Date(year, month - 1, 1).toISOString();
+    const to = new Date(year, month, 0, 23, 59, 59).toISOString();
+    return { from, to };
   }, [currentMonth]);
 
-  // Handle pull to refresh
-  const onRefresh = async () => {
-    await fetchEvents(currentMonth, true);
-    // TODO: Trigger Google Calendar sync if enabled
-  };
+  const { data: events = [], isLoading, refetch, isRefetching } = useEvents(monthRange);
 
   // Get events for selected date
-  const getEventsForDate = (date: string) => {
+  const getEventsForDate = (date: string): Event[] => {
     return events
       .filter((event) => {
         const eventDate = new Date(event.startDateTime).toISOString().split('T')[0];
-        if (eventDate !== date) return false;
-
-        // Apply filters
-        if (filterCategory && event.category.id !== filterCategory) return false;
-        if (filterSource === 'local' && event.syncWithGoogle) return false;
-        if (filterSource === 'google' && !event.syncWithGoogle) return false;
-        if (filterStatus && event.status !== filterStatus) return false;
-
-        return true;
+        return eventDate === date;
       })
       .sort((a, b) => {
         if (a.isAllDay && !b.isAllDay) return -1;
@@ -159,7 +65,6 @@ export function CalendarScreen({ navigation }: any) {
   const getMarkedDates = (): MarkedDates => {
     const marked: MarkedDates = {};
 
-    // Group events by date
     events.forEach((event) => {
       const eventDate = new Date(event.startDateTime).toISOString().split('T')[0];
 
@@ -167,9 +72,7 @@ export function CalendarScreen({ navigation }: any) {
         marked[eventDate] = { marked: true, dots: [] };
       }
 
-      // Add dot for event category color
-      if (event.category.color && marked[eventDate].dots) {
-        // Limit to 3 dots max
+      if (event.category?.color && marked[eventDate].dots) {
         if (marked[eventDate].dots!.length < 3) {
           marked[eventDate].dots!.push({ color: event.category.color });
         }
@@ -181,10 +84,7 @@ export function CalendarScreen({ navigation }: any) {
       marked[selectedDate].selected = true;
       marked[selectedDate].selectedColor = '#3B82F6';
     } else {
-      marked[selectedDate] = {
-        selected: true,
-        selectedColor: '#3B82F6',
-      };
+      marked[selectedDate] = { selected: true, selectedColor: '#3B82F6' };
     }
 
     return marked;
@@ -208,7 +108,7 @@ export function CalendarScreen({ navigation }: any) {
 
       <ScrollView
         style={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
       >
         {/* Sync Banner */}
         {showSyncBanner && (
@@ -280,7 +180,7 @@ export function CalendarScreen({ navigation }: any) {
         {/* Selected date header */}
         <View style={styles.dateHeader}>
           <Text style={styles.dateHeaderText}>
-            {new Date(selectedDate).toLocaleDateString('es-AR', {
+            {new Date(selectedDate + 'T12:00:00').toLocaleDateString('es-AR', {
               weekday: 'long',
               day: 'numeric',
               month: 'long',
@@ -292,7 +192,7 @@ export function CalendarScreen({ navigation }: any) {
         </View>
 
         {/* Events list */}
-        {loading ? (
+        {isLoading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#3B82F6" />
           </View>
@@ -307,10 +207,7 @@ export function CalendarScreen({ navigation }: any) {
               <EventListItem
                 key={event.id}
                 event={event}
-                onPress={() => {
-                  // TODO: Navigate to EventDetailScreen
-                  console.log('Navigate to event detail:', event.id);
-                }}
+                onPress={() => navigation.navigate('EditEvent', { eventId: event.id })}
               />
             ))}
           </View>
@@ -320,10 +217,7 @@ export function CalendarScreen({ navigation }: any) {
       {/* FAB */}
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => {
-          // TODO: Navigate to CreateEventScreen
-          console.log('Create new event');
-        }}
+        onPress={() => navigation.navigate('CreateEvent', { selectedDate })}
         activeOpacity={0.8}
       >
         <Ionicons name="add" size={28} color="#FFFFFF" />

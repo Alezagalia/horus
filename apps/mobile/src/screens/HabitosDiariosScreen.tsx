@@ -11,7 +11,7 @@
  * - Celebrations and animations (US-034)
  */
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { format } from 'date-fns';
 import {
   View,
@@ -23,6 +23,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useFocusEffect } from '@react-navigation/native';
 import BottomSheet from '@gorhom/bottom-sheet';
 import {
   getHabits,
@@ -107,8 +108,6 @@ export function HabitosDiariosScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   // Fetch all active habits
-  // staleTime: 0 so that manual refetch (pull-to-refresh) always hits the server
-  // regardless of the global 10-minute staleTime configured in QueryClient.
   const {
     data: habits = [],
     isLoading,
@@ -116,8 +115,14 @@ export function HabitosDiariosScreen() {
   } = useQuery({
     queryKey: ['habits', 'today', today],
     queryFn: () => getHabits({ date: today }),
-    staleTime: 0,
   });
+
+  // Refetch when screen gains focus (e.g. navigating back from another tab or screen)
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
 
   const handleRefresh = async () => {
     setRefreshing(true);

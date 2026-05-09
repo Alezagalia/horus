@@ -7,6 +7,7 @@
 import { prisma } from '../lib/prisma.js';
 import { HabitType, Periodicity, TimeOfDay } from '../generated/prisma/client.js';
 import { NotFoundError, BadRequestError } from '../middlewares/error.middleware.js';
+import { parseISODateToNoonUTC } from '../utils/date.utils.js';
 
 export interface CreateHabitData {
   categoryId: string;
@@ -67,22 +68,15 @@ export const habitService = {
 
     if (!date) return habits;
 
-    // Use $queryRaw with direct DATE comparison to avoid DATE vs TIMESTAMP
-    // timezone issues that break Prisma's ORM-level date range queries.
-    type RawRecord = {
-      id: string;
-      habitId: string;
-      completed: boolean;
-      value: number | null;
-      notes: string | null;
-    };
+    // Use parseISODateToNoonUTC to build an exact-match Prisma query for the @db.Date column.
+    // This avoids the UTC-midnight timezone shift that breaks both raw SQL and ORM range queries
+    // when the server timezone differs from UTC.
+    const noonUTC = parseISODateToNoonUTC(date);
 
-    const records = await prisma.$queryRaw<RawRecord[]>`
-      SELECT id, "habitId", completed, value, notes
-      FROM "habit_records"
-      WHERE "userId" = ${userId}
-        AND date = ${date}::date
-    `;
+    const records = await prisma.habitRecord.findMany({
+      where: { userId, date: noonUTC },
+      select: { id: true, habitId: true, completed: true, value: true, notes: true },
+    });
 
     const byHabitId = new Map(records.map((r) => [r.habitId, r]));
 

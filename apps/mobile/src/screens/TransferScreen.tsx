@@ -16,7 +16,9 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createTransfer, type CreateTransferInput } from '../api/transactions.api';
 import { getAccounts } from '../api/accounts.api';
@@ -27,6 +29,8 @@ import { AvailableBalanceDisplay } from '../components/transfers/AvailableBalanc
 import { formatCurrency } from '../utils/currency';
 
 export function TransferScreen() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const navigation = useNavigation<any>();
   const queryClient = useQueryClient();
 
   // Form state
@@ -69,30 +73,15 @@ export function TransferScreen() {
   const transferMutation = useMutation({
     mutationFn: createTransfer,
     onSuccess: () => {
-      // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['financeStats'] });
-
-      // Calculate new balances
-      const newFromBalance = fromAccount!.currentBalance - Number(amount);
-      const newToBalance = toAccount!.currentBalance + Number(amount);
-
-      // TODO: Show success toast with both new balances
-      console.log('✅ Transferencia exitosa!');
-      console.log(`${fromAccount!.name}: ${formatCurrency(newFromBalance, fromAccount!.currency)}`);
-      console.log(`${toAccount!.name}: ${formatCurrency(newToBalance, toAccount!.currency)}`);
-
-      // TODO: Navigate back to AccountsScreen
-      console.log('Navigate back to AccountsScreen');
+      navigation.goBack();
     },
     onError: (error: Error) => {
       const axiosError = error as { response?: { data?: { message?: string } } };
-      console.error(
-        'Error creating transfer:',
-        axiosError.response?.data?.message || error.message
-      );
-      // TODO: Show error toast
+      const message = axiosError.response?.data?.message || 'Error al realizar la transferencia';
+      Alert.alert('Error', message);
     },
   });
 

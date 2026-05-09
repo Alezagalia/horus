@@ -21,13 +21,9 @@ import { getRoutineById, createRoutine, updateRoutine } from '../api/routines.ap
 import type { CreateRoutineDTO } from '@horus/shared';
 import { Toast } from '../components/common/Toast';
 
-interface RoutineFormScreenProps {
-  routineId?: string;
-  // TODO: Add navigation when implemented
-  // navigation: any;
-}
-
-export function RoutineFormScreen({ routineId }: RoutineFormScreenProps) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function RoutineFormScreen({ navigation, route }: any) {
+  const routineId: string | undefined = route?.params?.routineId;
   const isEditMode = !!routineId;
 
   const [name, setName] = useState('');
@@ -57,9 +53,7 @@ export function RoutineFormScreen({ routineId }: RoutineFormScreenProps) {
     mutationFn: createRoutine,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['routines'] });
-      setToast({ message: 'Rutina creada', type: 'success' });
-      // TODO: Navigate back
-      // navigation.goBack();
+      navigation.goBack();
     },
     onError: (error: Error) => {
       const axiosError = error as { response?: { data?: { message?: string } } };
@@ -76,9 +70,7 @@ export function RoutineFormScreen({ routineId }: RoutineFormScreenProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['routines'] });
       queryClient.invalidateQueries({ queryKey: ['routine', routineId] });
-      setToast({ message: 'Rutina actualizada', type: 'success' });
-      // TODO: Navigate back
-      // navigation.goBack();
+      navigation.goBack();
     },
     onError: (error: Error) => {
       const axiosError = error as { response?: { data?: { message?: string } } };
@@ -182,11 +174,7 @@ export function RoutineFormScreen({ routineId }: RoutineFormScreenProps) {
         <View style={styles.actions}>
           <TouchableOpacity
             style={[styles.button, styles.cancelButton]}
-            onPress={() => {
-              // TODO: Navigate back
-              // navigation.goBack();
-              console.log('Cancel');
-            }}
+            onPress={() => navigation.goBack()}
             disabled={isLoading}
           >
             <Text style={styles.cancelButtonText}>Cancelar</Text>

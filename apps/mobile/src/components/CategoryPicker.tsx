@@ -23,9 +23,15 @@ interface CategoryPickerProps {
   value: string;
   onChange: (categoryId: string) => void;
   error?: string;
+  scope?: Scope;
 }
 
-export const CategoryPicker: React.FC<CategoryPickerProps> = ({ value, onChange, error }) => {
+export const CategoryPicker: React.FC<CategoryPickerProps> = ({
+  value,
+  onChange,
+  error,
+  scope = Scope.TAREAS,
+}) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
@@ -45,7 +51,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({ value, onChange,
   const loadCategories = async () => {
     try {
       setLoading(true);
-      const data = await getCategories({ scope: Scope.TAREAS });
+      const data = await getCategories({ scope });
       setCategories(data);
     } catch (error) {
       console.error('Error loading categories:', error);

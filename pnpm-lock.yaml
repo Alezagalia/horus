@@ -15,6 +15,9 @@ patchedDependencies:
   expo-modules-autolinking@2.1.15:
     hash: 751cde7049da6516c4b4abb235de80a8d8d96899b69c1011800e522da365524d
     path: patches/expo-modules-autolinking@2.1.15.patch
+  expo-modules-core@2.5.0:
+    hash: 150aa332ef76b2336e755c86681da27aed84294f433fe06cb16a663eacd71c42
+    path: patches/expo-modules-core@2.5.0.patch
 
 importers:
 
@@ -168,6 +171,9 @@ importers:
       '@react-native-community/datetimepicker':
         specifier: ^8.4.4
         version: 8.4.4(expo@53.0.27(@babel/core@7.28.5)(graphql@15.8.0)(react-native@0.76.5(@babel/core@7.28.5)(@babel/preset-env@7.28.5(@babel/core@7.28.5))(@react-native-community/cli-server-api@12.3.6(encoding@0.1.13))(@types/react@18.3.27)(encoding@0.1.13)(react@18.3.1))(react@18.3.1))(react-native@0.76.5(@babel/core@7.28.5)(@babel/preset-env@7.28.5(@babel/core@7.28.5))(@react-native-community/cli-server-api@12.3.6(encoding@0.1.13))(@types/react@18.3.27)(encoding@0.1.13)(react@18.3.1))(react@18.3.1)
+      '@react-native-picker/picker':
+        specifier: 2.11.1
+        version: 2.11.1(react-native@0.76.5(@babel/core@7.28.5)(@babel/preset-env@7.28.5(@babel/core@7.28.5))(@react-native-community/cli-server-api@12.3.6(encoding@0.1.13))(@types/react@18.3.27)(encoding@0.1.13)(react@18.3.1))(react@18.3.1)
       '@react-navigation/bottom-tabs':
         specifier: ^7.13.0
         version: 7.13.0(@react-navigation/native@7.1.22(react-native@0.76.5(@babel/core@7.28.5)(@babel/preset-env@7.28.5(@babel/core@7.28.5))(@react-native-community/cli-server-api@12.3.6(encoding@0.1.13))(@types/react@18.3.27)(encoding@0.1.13)(react@18.3.1))(react@18.3.1))(react-native-safe-area-context@5.6.2(react-native@0.76.5(@babel/core@7.28.5)(@babel/preset-env@7.28.5(@babel/core@7.28.5))(@react-native-community/cli-server-api@12.3.6(encoding@0.1.13))(@types/react@18.3.27)(encoding@0.1.13)(react@18.3.1))(react@18.3.1))(react-native-screens@4.16.0(react-native@0.76.5(@babel/core@7.28.5)(@babel/preset-env@7.28.5(@babel/core@7.28.5))(@react-native-community/cli-server-api@12.3.6(encoding@0.1.13))(@types/react@18.3.27)(encoding@0.1.13)(react@18.3.1))(react@18.3.1))(react-native@0.76.5(@babel/core@7.28.5)(@babel/preset-env@7.28.5(@babel/core@7.28.5))(@react-native-community/cli-server-api@12.3.6(encoding@0.1.13))(@types/react@18.3.27)(encoding@0.1.13)(react@18.3.1))(react@18.3.1)
@@ -3220,6 +3226,12 @@ packages:
         optional: true
       react-native-windows:
         optional: true
+
+  '@react-native-picker/picker@2.11.1':
+    resolution: {integrity: sha512-ThklnkK4fV3yynnIIRBkxxjxR4IFbdMNJVF6tlLdOJ/zEFUEFUEdXY0KmH0iYzMwY8W4/InWsLiA7AkpAbnexA==}
+    peerDependencies:
+      react: 18.3.1
+      react-native: '*'
 
   '@react-native/assets-registry@0.76.5':
     resolution: {integrity: sha512-MN5dasWo37MirVcKWuysRkRr4BjNc81SXwUtJYstwbn8oEkfnwR9DaqdDTo/hHOnTdhafffLIa2xOOHcjDIGEw==}
@@ -6567,6 +6579,7 @@ packages:
   git-raw-commits@4.0.0:
     resolution: {integrity: sha512-ICsMM1Wk8xSGMowkOmPrzo2Fgmfo4bMHLNX6ytHjajRJUqvHOw/TFapQ+QG75c3X/tTDDhOSRPGC52dDbNM8FQ==}
     engines: {node: '>=16'}
+    deprecated: This package is no longer maintained. For the JavaScript API, please use @conventional-changelog/git-client instead.
     hasBin: true
 
   glob-parent@6.0.2:
@@ -15202,6 +15215,11 @@ snapshots:
     optionalDependencies:
       expo: 53.0.27(@babel/core@7.28.5)(graphql@15.8.0)(react-native@0.76.5(@babel/core@7.28.5)(@babel/preset-env@7.28.5(@babel/core@7.28.5))(@react-native-community/cli-server-api@12.3.6(encoding@0.1.13))(@types/react@18.3.27)(encoding@0.1.13)(react@18.3.1))(react@18.3.1)
 
+  '@react-native-picker/picker@2.11.1(react-native@0.76.5(@babel/core@7.28.5)(@babel/preset-env@7.28.5(@babel/core@7.28.5))(@react-native-community/cli-server-api@12.3.6(encoding@0.1.13))(@types/react@18.3.27)(encoding@0.1.13)(react@18.3.1))(react@18.3.1)':
+    dependencies:
+      react: 18.3.1
+      react-native: 0.76.5(@babel/core@7.28.5)(@babel/preset-env@7.28.5(@babel/core@7.28.5))(@react-native-community/cli-server-api@12.3.6(encoding@0.1.13))(@types/react@18.3.27)(encoding@0.1.13)(react@18.3.1)
+
   '@react-native/assets-registry@0.76.5': {}
 
   '@react-native/babel-plugin-codegen@0.76.5(@babel/preset-env@7.28.5(@babel/core@7.28.5))':
@@ -18630,7 +18648,7 @@ snapshots:
       require-from-string: 2.0.2
       resolve-from: 5.0.0
 
-  expo-modules-core@2.5.0:
+  expo-modules-core@2.5.0(patch_hash=150aa332ef76b2336e755c86681da27aed84294f433fe06cb16a663eacd71c42):
     dependencies:
       invariant: 2.2.4
 
@@ -18680,7 +18698,7 @@ snapshots:
       expo-font: 13.3.2(expo@53.0.27(@babel/core@7.28.5)(graphql@15.8.0)(react-native@0.76.5(@babel/core@7.28.5)(@babel/preset-env@7.28.5(@babel/core@7.28.5))(@react-native-community/cli-server-api@12.3.6(encoding@0.1.13))(@types/react@18.3.27)(encoding@0.1.13)(react@18.3.1))(react@18.3.1))(react@18.3.1)
       expo-keep-awake: 14.1.4(expo@53.0.27(@babel/core@7.28.5)(graphql@15.8.0)(react-native@0.76.5(@babel/core@7.28.5)(@babel/preset-env@7.28.5(@babel/core@7.28.5))(@react-native-community/cli-server-api@12.3.6(encoding@0.1.13))(@types/react@18.3.27)(encoding@0.1.13)(react@18.3.1))(react@18.3.1))(react@18.3.1)
       expo-modules-autolinking: 2.1.15(patch_hash=751cde7049da6516c4b4abb235de80a8d8d96899b69c1011800e522da365524d)
-      expo-modules-core: 2.5.0
+      expo-modules-core: 2.5.0(patch_hash=150aa332ef76b2336e755c86681da27aed84294f433fe06cb16a663eacd71c42)
       react: 18.3.1
       react-native: 0.76.5(@babel/core@7.28.5)(@babel/preset-env@7.28.5(@babel/core@7.28.5))(@react-native-community/cli-server-api@12.3.6(encoding@0.1.13))(@types/react@18.3.27)(encoding@0.1.13)(react@18.3.1)
       react-native-edge-to-edge: 1.6.0(react-native@0.76.5(@babel/core@7.28.5)(@babel/preset-env@7.28.5(@babel/core@7.28.5))(@react-native-community/cli-server-api@12.3.6(encoding@0.1.13))(@types/react@18.3.27)(encoding@0.1.13)(react@18.3.1))(react@18.3.1)

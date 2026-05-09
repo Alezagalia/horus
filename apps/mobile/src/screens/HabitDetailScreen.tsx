@@ -66,7 +66,6 @@ export function HabitDetailScreen({
     mutationFn: deleteHabit,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['habits'] });
-      onDelete?.();
     },
   });
 

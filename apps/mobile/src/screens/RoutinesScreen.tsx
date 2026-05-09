@@ -29,11 +29,8 @@ import { RoutineCard } from '../components/routines/RoutineCard';
 import { EmptyState } from '../components/common/EmptyState';
 import { Toast } from '../components/common/Toast';
 
-// TODO: Import navigation when implemented
-// import { useNavigation } from '@react-navigation/native';
-
-export function RoutinesScreen() {
-  // const navigation = useNavigation();
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function RoutinesScreen({ navigation }: any) {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const queryClient = useQueryClient();
@@ -82,16 +79,11 @@ export function RoutinesScreen() {
   });
 
   const handleRoutinePress = (routine: RoutineWithStats) => {
-    // TODO: Navigate to detail screen
-    // navigation.navigate('RoutineDetail', { id: routine.id });
-    console.log('Navigate to detail:', routine.id);
+    navigation.navigate('RoutineDetail', { routineId: routine.id });
   };
 
   const handleStartRoutine = (routine: RoutineWithStats) => {
-    // TODO: Navigate to execute routine screen
-    // navigation.navigate('ExecuteRoutine', { routineId: routine.id });
-    console.log('Start routine:', routine.id);
-    setToast({ message: `Iniciando "${routine.name}"...`, type: 'success' });
+    navigation.navigate('ExecuteRoutine', { routineId: routine.id });
   };
 
   const handleRoutineLongPress = (routine: RoutineWithStats) => {
@@ -133,9 +125,7 @@ export function RoutinesScreen() {
   };
 
   const handleEdit = (routine: RoutineWithStats) => {
-    // TODO: Navigate to edit screen
-    // navigation.navigate('RoutineForm', { routineId: routine.id });
-    console.log('Edit routine:', routine.id);
+    navigation.navigate('RoutineForm', { routineId: routine.id });
   };
 
   const handleDuplicate = (routine: RoutineWithStats) => {
@@ -166,9 +156,7 @@ export function RoutinesScreen() {
   };
 
   const handleCreateNew = () => {
-    // TODO: Navigate to create screen
-    // navigation.navigate('RoutineForm');
-    console.log('Create new routine');
+    navigation.navigate('RoutineForm');
   };
 
   const renderRoutine = ({ item }: { item: RoutineWithStats }) => (

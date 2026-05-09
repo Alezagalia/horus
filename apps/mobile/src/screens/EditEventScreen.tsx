@@ -20,21 +20,29 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
+import { Scope } from '@horus/shared';
+import { useEvent, useUpdateEvent, useDeleteEvent } from '../hooks/useEvents';
+import { CategoryPicker } from '../components/CategoryPicker';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function EditEventScreen({ navigation, route }: any) {
   const { eventId } = route.params;
+
+  const { data: event, isLoading: loadingEvent, isError } = useEvent(eventId);
+  const { mutate: updateEvent, isPending: isUpdating } = useUpdateEvent();
+  const { mutate: deleteEvent, isPending: isDeleting } = useDeleteEvent();
 
   // Form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
+  const [categoryId, setCategoryId] = useState('');
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date());
   const [isAllDay, setIsAllDay] = useState(false);
   const [syncWithGoogle, setSyncWithGoogle] = useState(false);
   const [status, setStatus] = useState<'pendiente' | 'completado' | 'cancelado'>('pendiente');
-  const [loading, setLoading] = useState(false);
-  const [loadingEvent, setLoadingEvent] = useState(true);
+  const [initialized, setInitialized] = useState(false);
 
   // UI state
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
@@ -43,45 +51,21 @@ export function EditEventScreen({ navigation, route }: any) {
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Populate form once event loads
   useEffect(() => {
-    loadEvent();
-  }, []);
-
-  const loadEvent = async () => {
-    try {
-      // TODO: Replace with actual API call
-      // const response = await fetch(`${API_URL}/events/${eventId}`);
-      // const event = await response.json();
-
-      // Mock event data
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      const mockEvent = {
-        title: 'Reunión de equipo',
-        description: 'Reunión semanal de equipo',
-        location: 'Sala de conferencias',
-        startDateTime: new Date().toISOString(),
-        endDateTime: new Date(Date.now() + 3600000).toISOString(),
-        isAllDay: false,
-        syncWithGoogle: true,
-        status: 'pendiente',
-      };
-
-      setTitle(mockEvent.title);
-      setDescription(mockEvent.description || '');
-      setLocation(mockEvent.location || '');
-      setStartDate(new Date(mockEvent.startDateTime));
-      setEndDate(new Date(mockEvent.endDateTime));
-      setIsAllDay(mockEvent.isAllDay);
-      setSyncWithGoogle(mockEvent.syncWithGoogle);
-      setStatus(mockEvent.status as any);
-    } catch (error) {
-      console.error('Error loading event:', error);
-      setErrors({ load: 'Error al cargar el evento' });
-    } finally {
-      setLoadingEvent(false);
+    if (event && !initialized) {
+      setTitle(event.title);
+      setDescription(event.description || '');
+      setLocation(event.location || '');
+      setCategoryId(event.categoryId);
+      setStartDate(new Date(event.startDateTime));
+      setEndDate(new Date(event.endDateTime));
+      setIsAllDay(event.isAllDay);
+      setSyncWithGoogle(event.syncWithGoogle);
+      setStatus(event.status);
+      setInitialized(true);
     }
-  };
+  }, [event, initialized]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -90,6 +74,10 @@ export function EditEventScreen({ navigation, route }: any) {
       newErrors.title = 'El título es requerido';
     } else if (title.length > 200) {
       newErrors.title = 'El título no puede exceder 200 caracteres';
+    }
+
+    if (!categoryId) {
+      newErrors.categoryId = 'La categoría es requerida';
     }
 
     if (location.length > 200) {
@@ -104,72 +92,51 @@ export function EditEventScreen({ navigation, route }: any) {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async () => {
-    if (!validateForm()) {
-      return;
-    }
+  const handleSubmit = () => {
+    if (!validateForm()) return;
 
-    setLoading(true);
-
-    try {
-      // TODO: Replace with actual API call
-      // const response = await fetch(`${API_URL}/events/${eventId}`, {
-      //   method: 'PUT',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     Authorization: `Bearer ${token}`,
-      //   },
-      //   body: JSON.stringify({
-      //     title,
-      //     description,
-      //     location,
-      //     startDateTime: startDate.toISOString(),
-      //     endDateTime: endDate.toISOString(),
-      //     isAllDay,
-      //     syncWithGoogle,
-      //     status,
-      //   }),
-      // });
-
-      // Mock success
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      navigation.goBack();
-    } catch (error) {
-      console.error('Error updating event:', error);
-      setErrors({ submit: 'Error al actualizar el evento. Intenta nuevamente.' });
-    } finally {
-      setLoading(false);
-    }
+    updateEvent(
+      {
+        id: eventId,
+        data: {
+          title: title.trim(),
+          description: description.trim() || null,
+          location: location.trim() || null,
+          categoryId,
+          startDateTime: startDate.toISOString(),
+          endDateTime: endDate.toISOString(),
+          isAllDay,
+          status,
+        },
+      },
+      {
+        onSuccess: () => {
+          navigation.goBack();
+        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        onError: (error: any) => {
+          const message = error?.response?.data?.message || 'Error al actualizar el evento.';
+          Alert.alert('Error', message);
+        },
+      }
+    );
   };
 
   const handleDelete = () => {
     Alert.alert('Eliminar evento', '¿Estás seguro de que deseas eliminar este evento?', [
-      {
-        text: 'Cancelar',
-        style: 'cancel',
-      },
+      { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Eliminar',
         style: 'destructive',
-        onPress: async () => {
-          try {
-            // TODO: Replace with actual API call
-            // await fetch(`${API_URL}/events/${eventId}`, {
-            //   method: 'DELETE',
-            //   headers: {
-            //     Authorization: `Bearer ${token}`,
-            //   },
-            // });
-
-            // Mock success
-            await new Promise((resolve) => setTimeout(resolve, 500));
-
-            navigation.goBack();
-          } catch (error) {
-            console.error('Error deleting event:', error);
-            Alert.alert('Error', 'No se pudo eliminar el evento');
-          }
+        onPress: () => {
+          deleteEvent(eventId, {
+            onSuccess: () => {
+              navigation.goBack();
+            },
+            onError: () => {
+              Alert.alert('Error', 'No se pudo eliminar el evento');
+            },
+          });
         },
       },
     ]);
@@ -199,16 +166,34 @@ export function EditEventScreen({ navigation, route }: any) {
     );
   }
 
+  if (isError || !event) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+        <Text style={styles.errorMessage}>No se pudo cargar el evento</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Text style={styles.backButtonText}>Volver</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const isBusy = isUpdating || isDeleting;
+
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => navigation.goBack()} disabled={isBusy}>
           <Ionicons name="close" size={24} color="#111827" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Editar Evento</Text>
-        <TouchableOpacity onPress={handleDelete}>
-          <Ionicons name="trash-outline" size={24} color="#EF4444" />
+        <TouchableOpacity onPress={handleDelete} disabled={isBusy}>
+          {isDeleting ? (
+            <ActivityIndicator size="small" color="#EF4444" />
+          ) : (
+            <Ionicons name="trash-outline" size={24} color="#EF4444" />
+          )}
         </TouchableOpacity>
       </View>
 
@@ -226,49 +211,31 @@ export function EditEventScreen({ navigation, route }: any) {
           {errors.title && <Text style={styles.errorText}>{errors.title}</Text>}
         </View>
 
+        {/* Category */}
+        <CategoryPicker
+          value={categoryId}
+          onChange={setCategoryId}
+          error={errors.categoryId}
+          scope={Scope.EVENTOS}
+        />
+
         {/* Status */}
         <View style={styles.field}>
           <Text style={styles.label}>Estado</Text>
           <View style={styles.statusButtons}>
-            <TouchableOpacity
-              style={[styles.statusButton, status === 'pendiente' && styles.statusButtonActive]}
-              onPress={() => setStatus('pendiente')}
-            >
-              <Text
-                style={[
-                  styles.statusButtonText,
-                  status === 'pendiente' && styles.statusButtonTextActive,
-                ]}
+            {(['pendiente', 'completado', 'cancelado'] as const).map((s) => (
+              <TouchableOpacity
+                key={s}
+                style={[styles.statusButton, status === s && styles.statusButtonActive]}
+                onPress={() => setStatus(s)}
               >
-                Pendiente
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.statusButton, status === 'completado' && styles.statusButtonActive]}
-              onPress={() => setStatus('completado')}
-            >
-              <Text
-                style={[
-                  styles.statusButtonText,
-                  status === 'completado' && styles.statusButtonTextActive,
-                ]}
-              >
-                Completado
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.statusButton, status === 'cancelado' && styles.statusButtonActive]}
-              onPress={() => setStatus('cancelado')}
-            >
-              <Text
-                style={[
-                  styles.statusButtonText,
-                  status === 'cancelado' && styles.statusButtonTextActive,
-                ]}
-              >
-                Cancelado
-              </Text>
-            </TouchableOpacity>
+                <Text
+                  style={[styles.statusButtonText, status === s && styles.statusButtonTextActive]}
+                >
+                  {s.charAt(0).toUpperCase() + s.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
 
@@ -419,20 +386,13 @@ export function EditEventScreen({ navigation, route }: any) {
           </View>
         </View>
 
-        {/* Submit Error */}
-        {errors.submit && (
-          <View style={styles.submitError}>
-            <Text style={styles.errorText}>{errors.submit}</Text>
-          </View>
-        )}
-
         {/* Submit Button */}
         <TouchableOpacity
-          style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+          style={[styles.submitButton, isBusy && styles.submitButtonDisabled]}
           onPress={handleSubmit}
-          disabled={loading}
+          disabled={isBusy}
         >
-          {loading ? (
+          {isUpdating ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
             <Text style={styles.submitButtonText}>Guardar Cambios</Text>
@@ -453,6 +413,22 @@ const styles = StyleSheet.create({
   centerContent: {
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  errorMessage: {
+    fontSize: 16,
+    color: '#6B7280',
+    marginTop: 12,
+  },
+  backButton: {
+    marginTop: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    backgroundColor: '#3B82F6',
+    borderRadius: 8,
+  },
+  backButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   header: {
     flexDirection: 'row',
@@ -569,12 +545,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#EF4444',
     marginTop: 4,
-  },
-  submitError: {
-    backgroundColor: '#FEE2E2',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
   },
   submitButton: {
     backgroundColor: '#3B82F6',

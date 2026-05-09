@@ -19,13 +19,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getRoutineById, deleteRoutine } from '../api/routines.api';
 import { Toast } from '../components/common/Toast';
 
-interface RoutineDetailScreenProps {
-  routineId: string;
-  // TODO: Add navigation when implemented
-  // navigation: any;
-}
-
-export function RoutineDetailScreen({ routineId }: RoutineDetailScreenProps) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function RoutineDetailScreen({ navigation, route }: any) {
+  const routineId: string = route?.params?.routineId || '';
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const queryClient = useQueryClient();
@@ -46,9 +42,7 @@ export function RoutineDetailScreen({ routineId }: RoutineDetailScreenProps) {
     mutationFn: deleteRoutine,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['routines'] });
-      setToast({ message: 'Rutina eliminada', type: 'success' });
-      // TODO: Navigate back
-      // navigation.goBack();
+      navigation.goBack();
     },
     onError: (error: Error) => {
       const axiosError = error as { response?: { data?: { message?: string } } };
@@ -61,17 +55,12 @@ export function RoutineDetailScreen({ routineId }: RoutineDetailScreenProps) {
 
   const handleStartRoutine = () => {
     if (!routine) return;
-    // TODO: Navigate to execute routine screen
-    // navigation.navigate('ExecuteRoutine', { routineId: routine.id });
-    console.log('Start routine:', routine.id);
-    setToast({ message: `Iniciando "${routine.name}"...`, type: 'success' });
+    navigation.navigate('ExecuteRoutine', { routineId: routine.id });
   };
 
   const handleEdit = () => {
     if (!routine) return;
-    // TODO: Navigate to edit screen
-    // navigation.navigate('RoutineForm', { routineId: routine.id });
-    console.log('Edit routine:', routine.id);
+    navigation.navigate('RoutineForm', { routineId: routine.id });
   };
 
   const handleDelete = () => {

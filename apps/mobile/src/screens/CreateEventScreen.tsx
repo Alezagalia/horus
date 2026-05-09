@@ -16,22 +16,32 @@ import {
   Switch,
   ActivityIndicator,
   Platform,
+  Alert,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
+import { Scope } from '@horus/shared';
+import { useCreateEvent } from '../hooks/useEvents';
+import { CategoryPicker } from '../components/CategoryPicker';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function CreateEventScreen({ navigation, route }: any) {
   const { selectedDate } = route.params || {};
+
+  const initialDate = selectedDate ? new Date(selectedDate + 'T08:00:00') : new Date();
+  const initialEnd = selectedDate
+    ? new Date(selectedDate + 'T09:00:00')
+    : new Date(Date.now() + 3600000);
 
   // Form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
-  const [startDate, setStartDate] = useState(selectedDate ? new Date(selectedDate) : new Date());
-  const [endDate, setEndDate] = useState(selectedDate ? new Date(selectedDate) : new Date());
+  const [categoryId, setCategoryId] = useState('');
+  const [startDate, setStartDate] = useState(initialDate);
+  const [endDate, setEndDate] = useState(initialEnd);
   const [isAllDay, setIsAllDay] = useState(false);
   const [syncWithGoogle, setSyncWithGoogle] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   // UI state
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
@@ -40,6 +50,8 @@ export function CreateEventScreen({ navigation, route }: any) {
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const { mutate: createEvent, isPending } = useCreateEvent();
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
@@ -47,6 +59,10 @@ export function CreateEventScreen({ navigation, route }: any) {
       newErrors.title = 'El título es requerido';
     } else if (title.length > 200) {
       newErrors.title = 'El título no puede exceder 200 caracteres';
+    }
+
+    if (!categoryId) {
+      newErrors.categoryId = 'La categoría es requerida';
     }
 
     if (location.length > 200) {
@@ -61,44 +77,32 @@ export function CreateEventScreen({ navigation, route }: any) {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async () => {
-    if (!validateForm()) {
-      return;
-    }
+  const handleSubmit = () => {
+    if (!validateForm()) return;
 
-    setLoading(true);
-
-    try {
-      // TODO: Replace with actual API call
-      // const response = await fetch(`${API_URL}/events`, {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     Authorization: `Bearer ${token}`,
-      //   },
-      //   body: JSON.stringify({
-      //     title,
-      //     description,
-      //     location,
-      //     categoryId: 'default-category-id', // TODO: Category selector
-      //     startDateTime: startDate.toISOString(),
-      //     endDateTime: endDate.toISOString(),
-      //     isAllDay,
-      //     syncWithGoogle,
-      //   }),
-      // });
-
-      // Mock success
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Navigate back
-      navigation.goBack();
-    } catch (error) {
-      console.error('Error creating event:', error);
-      setErrors({ submit: 'Error al crear el evento. Intenta nuevamente.' });
-    } finally {
-      setLoading(false);
-    }
+    createEvent(
+      {
+        title: title.trim(),
+        description: description.trim() || undefined,
+        location: location.trim() || undefined,
+        categoryId,
+        startDateTime: startDate.toISOString(),
+        endDateTime: endDate.toISOString(),
+        isAllDay,
+        syncWithGoogle,
+      },
+      {
+        onSuccess: () => {
+          navigation.goBack();
+        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        onError: (error: any) => {
+          const message =
+            error?.response?.data?.message || 'Error al crear el evento. Intenta nuevamente.';
+          Alert.alert('Error', message);
+        },
+      }
+    );
   };
 
   const formatDate = (date: Date) => {
@@ -141,6 +145,14 @@ export function CreateEventScreen({ navigation, route }: any) {
           />
           {errors.title && <Text style={styles.errorText}>{errors.title}</Text>}
         </View>
+
+        {/* Category */}
+        <CategoryPicker
+          value={categoryId}
+          onChange={setCategoryId}
+          error={errors.categoryId}
+          scope={Scope.EVENTOS}
+        />
 
         {/* Description */}
         <View style={styles.field}>
@@ -289,20 +301,13 @@ export function CreateEventScreen({ navigation, route }: any) {
           </View>
         </View>
 
-        {/* Submit Error */}
-        {errors.submit && (
-          <View style={styles.submitError}>
-            <Text style={styles.errorText}>{errors.submit}</Text>
-          </View>
-        )}
-
         {/* Submit Button */}
         <TouchableOpacity
-          style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+          style={[styles.submitButton, isPending && styles.submitButtonDisabled]}
           onPress={handleSubmit}
-          disabled={loading}
+          disabled={isPending}
         >
-          {loading ? (
+          {isPending ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
             <Text style={styles.submitButtonText}>Crear Evento</Text>
@@ -410,12 +415,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#EF4444',
     marginTop: 4,
-  },
-  submitError: {
-    backgroundColor: '#FEE2E2',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
   },
   submitButton: {
     backgroundColor: '#3B82F6',

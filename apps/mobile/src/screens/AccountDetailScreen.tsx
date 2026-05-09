@@ -23,13 +23,11 @@ import { AccountHeader } from '../components/accounts/AccountHeader';
 import { TransactionItem } from '../components/transactions/TransactionItem';
 import { formatMonthYearHeader } from '../utils/date';
 
-interface AccountDetailScreenProps {
-  // TODO: Replace with route params when navigation is implemented
-  accountId?: string;
-}
-
-export function AccountDetailScreen({ accountId = 'test-account-id' }: AccountDetailScreenProps) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function AccountDetailScreen({ navigation, route }: any) {
+  const accountId: string = route?.params?.accountId || '';
   const [filter, setFilter] = useState<'all' | 'ingreso' | 'egreso'>('all');
+  const [refreshing, setRefreshing] = useState(false);
 
   // Fetch account details
   const {
@@ -60,22 +58,21 @@ export function AccountDetailScreen({ accountId = 'test-account-id' }: AccountDe
   });
 
   const handleRefresh = async () => {
+    setRefreshing(true);
     await Promise.all([refetchAccount(), refetchTransactions()]);
+    setRefreshing(false);
   };
 
-  const handleTransactionPress = (transaction: Transaction) => {
-    // TODO: Navigate to transaction detail or edit screen
-    console.log('Transaction pressed:', transaction.id);
+  const handleTransactionPress = (_transaction: Transaction) => {
+    // No edit transaction screen yet
   };
 
   const handleAddTransaction = () => {
-    // TODO: Navigate to CreateTransactionScreen with accountId
-    console.log('Add transaction for account:', accountId);
+    navigation.navigate('CreateTransaction', { accountId });
   };
 
   const handleEditAccount = () => {
-    // TODO: Navigate to EditAccountScreen
-    console.log('Edit account:', accountId);
+    // No edit account screen yet
   };
 
   // Loading state
@@ -112,7 +109,6 @@ export function AccountDetailScreen({ accountId = 'test-account-id' }: AccountDe
   }
 
   const transactions = transactionsData?.transactions || [];
-  const isRefreshing = false; // Controlled by React Query
 
   // Group transactions by month
   const groupedTransactions = groupTransactionsByMonth(transactions);
@@ -199,11 +195,7 @@ export function AccountDetailScreen({ accountId = 'test-account-id' }: AccountDe
         }
         contentContainerStyle={styles.listContent}
         refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={handleRefresh}
-            colors={['#4F46E5']}
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#4F46E5']} />
         }
       />
 

@@ -20,6 +20,7 @@ import { HabitStatsScreen } from '../screens/HabitStatsScreen';
 import { HabitAuditScreenWrapper } from '../screens/HabitAuditScreenWrapper';
 import { TareasScreen } from '../screens/TareasScreen';
 import { CreateTaskScreen } from '../screens/CreateTaskScreen';
+import { EditTaskScreen } from '../screens/EditTaskScreen';
 import { TaskDetailScreen } from '../screens/TaskDetailScreen';
 import { CategoriesScreen } from '../screens/CategoriesScreen';
 import { ExercisesScreen } from '../screens/ExercisesScreen';
@@ -39,6 +40,7 @@ import { SettingsScreen } from '../screens/SettingsScreen';
 import { CalendarScreen } from '../screens/CalendarScreen';
 import { CreateEventScreen } from '../screens/CreateEventScreen';
 import { EditEventScreen } from '../screens/EditEventScreen';
+import { CalendarSyncScreen } from '../screens/CalendarSyncScreen';
 // Finance screens - Sprint 2
 import { FinanceHomeScreen } from '../screens/FinanceHomeScreen';
 import { AccountsScreen } from '../screens/AccountsScreen';
@@ -132,6 +134,11 @@ const TasksStackNavigator = () => (
       component={TaskDetailScreen}
       options={{ title: 'Detalle de Tarea' }}
     />
+    <TasksStack.Screen
+      name="EditTask"
+      component={EditTaskScreen}
+      options={{ title: 'Editar Tarea', presentation: 'modal' }}
+    />
   </TasksStack.Navigator>
 );
 
@@ -188,6 +195,11 @@ const FinanceStackNavigator = () => (
       name="CreateRecurringExpense"
       component={CreateRecurringExpenseScreen}
       options={{ title: 'Nueva Plantilla', presentation: 'modal' }}
+    />
+    <FinanceStack.Screen
+      name="EditRecurringExpense"
+      component={CreateRecurringExpenseScreen}
+      options={{ title: 'Editar Plantilla', presentation: 'modal' }}
     />
     <FinanceStack.Screen
       name="MonthlyExpenses"
@@ -267,17 +279,22 @@ const MoreStackNavigator = () => (
     <MoreStack.Screen
       name="Calendar"
       component={CalendarScreen}
-      options={{ title: 'Calendario' }}
+      options={{ title: 'Calendario', headerShown: false }}
     />
     <MoreStack.Screen
       name="CreateEvent"
       component={CreateEventScreen}
-      options={{ title: 'Nuevo Evento', presentation: 'modal' }}
+      options={{ title: 'Nuevo Evento', presentation: 'modal', headerShown: false }}
     />
     <MoreStack.Screen
       name="EditEvent"
       component={EditEventScreen}
-      options={{ title: 'Editar Evento', presentation: 'modal' }}
+      options={{ title: 'Editar Evento', presentation: 'modal', headerShown: false }}
+    />
+    <MoreStack.Screen
+      name="CalendarSync"
+      component={CalendarSyncScreen}
+      options={{ title: 'Sincronización', headerShown: false }}
     />
   </MoreStack.Navigator>
 );

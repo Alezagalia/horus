@@ -24,7 +24,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 type RootStackParamList = {
   MonthlyExpenses: undefined;
-  PayMonthlyExpense: { expenseId: string };
+  PayExpense: { expenseId: string; expense: MonthlyExpenseInstance };
 };
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MonthlyExpenses'>;
@@ -68,8 +68,7 @@ export function MonthlyExpensesScreen({ navigation }: Props) {
   };
 
   const handleMarkAsPaid = (expense: MonthlyExpenseInstance) => {
-    // Navigate to pay screen
-    navigation.navigate('PayMonthlyExpense', { expenseId: expense.id });
+    navigation.navigate('PayExpense', { expenseId: expense.id, expense });
   };
 
   const handleExpensePress = (expense: MonthlyExpenseInstance) => {

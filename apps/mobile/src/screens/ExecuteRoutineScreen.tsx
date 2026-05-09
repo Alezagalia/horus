@@ -13,10 +13,9 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  Platform,
   SafeAreaView,
 } from 'react-native';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import {
@@ -30,7 +29,7 @@ import { AddSetModal } from '../components/workouts/AddSetModal';
 
 type RootStackParamList = {
   ExecuteRoutine: { routineId: string };
-  WorkoutSummary: { workoutId: string };
+  WorkoutDetail: { workoutId: string };
 };
 
 type ExecuteRoutineScreenRouteProp = RouteProp<RootStackParamList, 'ExecuteRoutine'>;
@@ -56,13 +55,11 @@ export const ExecuteRoutineScreen: React.FC = () => {
   const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [workoutStartTime] = useState<Date>(new Date());
 
-  // Start workout
-  const { isLoading: isStarting } = useQuery({
-    queryKey: ['startWorkout', routineId],
-    queryFn: () => startWorkout(routineId),
+  // Start workout on mount
+  const startMutation = useMutation({
+    mutationFn: () => startWorkout(routineId),
     onSuccess: (data) => {
       setWorkoutData(data);
-      // Initialize exercises state
       const initialState: Record<string, ExerciseState> = {};
       data.routine.exercises.forEach((ex) => {
         initialState[ex.id] = {
@@ -74,11 +71,17 @@ export const ExecuteRoutineScreen: React.FC = () => {
       });
       setExercisesState(initialState);
     },
-    onError: (error: any) => {
+    onError: () => {
       Alert.alert('Error', 'No se pudo iniciar el workout');
       navigation.goBack();
     },
   });
+
+  useEffect(() => {
+    startMutation.mutate();
+  }, []); // intentionally empty deps - run once on mount
+
+  const isStarting = startMutation.isPending;
 
   // Add set mutation
   const addSetMutation = useMutation({
@@ -120,7 +123,7 @@ export const ExecuteRoutineScreen: React.FC = () => {
         {
           text: 'Ver Resumen',
           onPress: () => {
-            navigation.replace('WorkoutSummary', { workoutId: workoutData?.workoutId || '' });
+            navigation.replace('WorkoutDetail', { workoutId: workoutData?.workoutId || '' });
           },
         },
       ]);

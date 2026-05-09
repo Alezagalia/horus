@@ -16,6 +16,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -29,13 +30,10 @@ import { AccountSelector } from '../components/transactions/AccountSelector';
 import { TransactionCategorySelector } from '../components/transactions/TransactionCategorySelector';
 import { TransactionDatePicker } from '../components/transactions/TransactionDatePicker';
 
-interface CreateTransactionScreenProps {
-  // TODO: Replace with route params when navigation is implemented
-  accountId?: string; // Pre-select account if coming from AccountDetailScreen
-}
-
-export function CreateTransactionScreen({ accountId }: CreateTransactionScreenProps) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function CreateTransactionScreen({ navigation, route }: any) {
   const queryClient = useQueryClient();
+  const accountId: string = route?.params?.accountId || '';
 
   // Form state
   const [type, setType] = useState<TransactionType>('egreso');
@@ -65,43 +63,18 @@ export function CreateTransactionScreen({ accountId }: CreateTransactionScreenPr
   // Create transaction mutation
   const createMutation = useMutation({
     mutationFn: createTransaction,
-    onSuccess: (newTransaction) => {
-      // Invalidate queries to refresh data
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['financeStats'] });
-
-      // Find updated account balance
-      const account = accounts.find((a) => a.id === selectedAccountId);
-      const newBalance = account
-        ? calculateNewBalance(account.currentBalance, type, Number(amount))
-        : 0;
-
-      // TODO: Show success toast with new balance
-      console.log(`✅ ${type === 'ingreso' ? 'Ingreso' : 'Egreso'} registrado!`);
-      console.log(`Nuevo saldo: ${newBalance}`);
-
-      // TODO: Navigate back to AccountDetailScreen or previous screen
-      console.log('Navigate back with transaction:', newTransaction.id);
+      navigation.goBack();
     },
     onError: (error: Error) => {
       const axiosError = error as { response?: { data?: { message?: string } } };
-      console.error(
-        'Error creating transaction:',
-        axiosError.response?.data?.message || error.message
-      );
-      // TODO: Show error toast
+      const message = axiosError.response?.data?.message || 'Error al registrar la transacción';
+      Alert.alert('Error', message);
     },
   });
-
-  // Calculate new balance for success message
-  const calculateNewBalance = (
-    currentBalance: number,
-    txType: TransactionType,
-    txAmount: number
-  ): number => {
-    return txType === 'ingreso' ? currentBalance + txAmount : currentBalance - txAmount;
-  };
 
   // Validate form
   const validate = (): boolean => {

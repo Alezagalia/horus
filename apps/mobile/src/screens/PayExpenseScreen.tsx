@@ -36,10 +36,10 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 type RootStackParamList = {
   MonthlyExpenses: undefined;
-  PayMonthlyExpense: { expenseId: string; expense: MonthlyExpenseInstance };
+  PayExpense: { expenseId: string; expense: MonthlyExpenseInstance };
 };
 
-type Props = NativeStackScreenProps<RootStackParamList, 'PayMonthlyExpense'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'PayExpense'>;
 
 const MONTH_NAMES = [
   'Enero',

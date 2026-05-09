@@ -12,7 +12,7 @@
  * - Loading states
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -22,6 +22,7 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Task, TaskStatus, Priority, getTasks, toggleTaskStatus } from '../api/tasks.api';
 import { TaskCard } from '../components/TaskCard';
@@ -50,6 +51,13 @@ export const TareasScreen: React.FC<TareasScreenProps> = ({ navigation }) => {
   useEffect(() => {
     loadTasks();
   }, [statusFilter, priorityFilter, dateFilter]);
+
+  // Reload when screen comes back into focus (e.g. after create/edit/delete)
+  useFocusEffect(
+    useCallback(() => {
+      loadTasks();
+    }, [statusFilter, priorityFilter, dateFilter])
+  );
 
   const loadTasks = async () => {
     try {

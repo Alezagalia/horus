@@ -181,7 +181,6 @@ export function HabitFormScreen({ habitId, onSuccess, onCancel }: HabitFormScree
     mutationFn: createHabit,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['habits'] });
-      Alert.alert('Éxito', 'Hábito creado correctamente');
       onSuccess?.();
     },
     onError: (error: Error) => {
@@ -198,7 +197,6 @@ export function HabitFormScreen({ habitId, onSuccess, onCancel }: HabitFormScree
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['habits'] });
       queryClient.invalidateQueries({ queryKey: ['habit', habitId] });
-      Alert.alert('Éxito', 'Hábito actualizado correctamente');
       onSuccess?.();
     },
     onError: (error: Error) => {

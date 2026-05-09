@@ -16,7 +16,9 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createAccount, type CreateAccountInput } from '../api/accounts.api';
 import {
@@ -29,6 +31,8 @@ import { ColorPicker } from '../components/accounts/ColorPicker';
 import { IconPicker } from '../components/accounts/IconPicker';
 
 export function CreateAccountScreen() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const navigation = useNavigation<any>();
   const queryClient = useQueryClient();
 
   // Form state
@@ -50,14 +54,12 @@ export function CreateAccountScreen() {
     mutationFn: createAccount,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      // TODO: Show success toast
-      // TODO: Navigate back to AccountsScreen
-      console.log('Account created successfully!');
+      navigation.goBack();
     },
     onError: (error: Error) => {
       const axiosError = error as { response?: { data?: { message?: string } } };
-      console.error('Error creating account:', axiosError.response?.data?.message || error.message);
-      // TODO: Show error toast
+      const message = axiosError.response?.data?.message || 'Error al crear la cuenta';
+      Alert.alert('Error', message);
     },
   });
 
