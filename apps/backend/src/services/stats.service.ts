@@ -10,6 +10,7 @@ import { prisma } from '../lib/prisma.js';
 import { Periodicity } from '../generated/prisma/client.js';
 import { debiaRealizarseEnFecha } from './streak.service.js';
 import { NotFoundError } from '../middlewares/error.middleware.js';
+import { normalizeToUTCNoon, isSameDay } from '../utils/date.utils.js';
 
 /**
  * Interface for general stats response
@@ -62,20 +63,17 @@ export interface HabitStats {
 }
 
 /**
- * Helper function to normalize a date to start of day (00:00:00.000)
- */
-function normalizeDate(date: Date): Date {
-  const normalized = new Date(date);
-  normalized.setHours(0, 0, 0, 0);
-  return normalized;
-}
-
-/**
  * Get general statistics for a user
  * Includes today's completion rate, streaks, last 7 days, and stats by category
  */
 export async function getGeneralStats(userId: string): Promise<GeneralStats> {
-  const today = normalizeDate(new Date());
+  const today = normalizeToUTCNoon(new Date());
+  // UTC midnight boundaries to include records stored at any time of day (midnight or noon UTC)
+  const todayUTCMidnight = new Date(
+    Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
+  );
+  const tomorrowUTCMidnight = new Date(todayUTCMidnight.getTime() + 24 * 60 * 60 * 1000);
+  const sevenDaysAgoUTCMidnight = new Date(todayUTCMidnight.getTime() - 6 * 24 * 60 * 60 * 1000);
 
   // Fetch all active habits with their categories and records
   const habits = await prisma.habit.findMany({
@@ -93,8 +91,8 @@ export async function getGeneralStats(userId: string): Promise<GeneralStats> {
       records: {
         where: {
           date: {
-            gte: new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000), // Last 7 days
-            lte: today,
+            gte: sevenDaysAgoUTCMidnight, // start of 7 days ago (midnight UTC)
+            lt: tomorrowUTCMidnight, // start of tomorrow (midnight UTC) — includes all of today
           },
         },
         select: {
@@ -170,9 +168,7 @@ function calculateCompletionRateToday(
 
   // Count how many are completed today
   const completedHabitsToday = habitsForToday.filter((habit) => {
-    const todayRecord = habit.records.find(
-      (record) => normalizeDate(record.date).getTime() === today.getTime()
-    );
+    const todayRecord = habit.records.find((record) => isSameDay(record.date, today));
     return todayRecord?.completed === true;
   }).length;
 
@@ -241,12 +237,13 @@ function getLast7DaysCompletion(
   today: Date
 ): Array<{ date: string; completionRate: number }> {
   const result: Array<{ date: string; completionRate: number }> = [];
+  const todayMidnight = new Date(
+    Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
+  );
 
-  // Iterate backwards from today to 6 days ago
+  // Iterate backwards from today to 6 days ago using UTC midnight as reference
   for (let i = 0; i < 7; i++) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - i);
-    const normalizedDate = normalizeDate(date);
+    const normalizedDate = new Date(todayMidnight.getTime() - i * 24 * 60 * 60 * 1000);
 
     // Filter habits that should be done on this date
     const habitsForDate = habits.filter((habit) =>
@@ -272,9 +269,7 @@ function getLast7DaysCompletion(
 
     // Count completed habits for this date
     const completedForDate = habitsForDate.filter((habit) => {
-      const record = habit.records.find(
-        (r) => normalizeDate(r.date).getTime() === normalizedDate.getTime()
-      );
+      const record = habit.records.find((r) => isSameDay(r.date, normalizedDate));
       return record?.completed === true;
     }).length;
 
@@ -373,9 +368,7 @@ function getStatsByCategory(
 
     // Count completed today
     const completedToday = habitsForToday.filter((habit) => {
-      const todayRecord = habit.records.find(
-        (r) => normalizeDate(r.date).getTime() === today.getTime()
-      );
+      const todayRecord = habit.records.find((r) => isSameDay(r.date, today));
       return todayRecord?.completed === true;
     }).length;
 
@@ -403,7 +396,7 @@ function getStatsByCategory(
  * @returns Detailed stats including streaks, completion rates, and value statistics
  */
 export async function getHabitStats(habitId: string, userId: string): Promise<HabitStats> {
-  const today = normalizeDate(new Date());
+  const today = normalizeToUTCNoon(new Date());
 
   // Fetch habit with all records
   const habit = await prisma.habit.findFirst({
