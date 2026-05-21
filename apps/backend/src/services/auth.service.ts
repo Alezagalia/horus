@@ -20,6 +20,7 @@ export interface UserWithoutPassword {
   id: string;
   email: string;
   name: string;
+  hourlyRate?: unknown;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -91,6 +92,24 @@ export const authService = {
     }
 
     return user;
+  },
+
+  async updateProfile(
+    userId: string,
+    data: { name?: string; hourlyRate?: number | null }
+  ): Promise<UserWithoutPassword> {
+    return prisma.user.update({
+      where: { id: userId },
+      data,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        hourlyRate: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
   },
 
   async updateRefreshToken(userId: string, refreshToken: string | null): Promise<void> {

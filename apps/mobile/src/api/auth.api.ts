@@ -63,6 +63,19 @@ export async function refreshToken(refreshToken: string): Promise<RefreshTokenRe
 }
 
 /**
+ * Update user profile (name, hourlyRate)
+ */
+export async function updateProfile(
+  accessToken: string,
+  data: { name?: string; hourlyRate?: number | null }
+): Promise<User> {
+  const response = await authApi.patch<{ user: User }>('/auth/me', data, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  return response.data.user;
+}
+
+/**
  * Logout (optional - just clears server-side session if any)
  */
 export async function logout(accessToken: string): Promise<void> {

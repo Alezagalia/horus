@@ -5,7 +5,7 @@
  * User profile and app settings management
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,8 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
@@ -25,31 +27,58 @@ type MoreStackParamList = {
 
 type Props = NativeStackScreenProps<MoreStackParamList, 'Settings'>;
 
-export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
-  const { user, logout } = useAuth();
+function toLifeHours(amount: number, hourlyRate: number): string {
+  const hours = amount / hourlyRate;
+  if (hours < 1) return `${(hours * 60).toFixed(0)} min de vida`;
+  return `≈ ${hours.toFixed(1)} h de vida`;
+}
+
+export { toLifeHours };
+
+export const SettingsScreen: React.FC<Props> = ({ navigation: _navigation }) => {
+  const { user, logout, updateProfile } = useAuth();
+  const [hourlyRateInput, setHourlyRateInput] = useState(
+    user?.hourlyRate != null ? String(user.hourlyRate) : ''
+  );
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const handleSaveHourlyRate = async () => {
+    const value = parseFloat(hourlyRateInput);
+    if (hourlyRateInput !== '' && (isNaN(value) || value <= 0)) {
+      Alert.alert('Valor inválido', 'Ingresa un número positivo o deja el campo vacío.');
+      return;
+    }
+    try {
+      setSaving(true);
+      await updateProfile({ hourlyRate: hourlyRateInput === '' ? null : value });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch {
+      Alert.alert('Error', 'No se pudo guardar. Inténtalo de nuevo.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleLogout = () => {
-    Alert.alert(
-      'Cerrar Sesión',
-      '¿Estás seguro que deseas cerrar sesión?',
-      [
-        {
-          text: 'Cancelar',
-          style: 'cancel',
+    Alert.alert('Cerrar Sesión', '¿Estás seguro que deseas cerrar sesión?', [
+      {
+        text: 'Cancelar',
+        style: 'cancel',
+      },
+      {
+        text: 'Cerrar Sesión',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await logout();
+          } catch {
+            Alert.alert('Error', 'No se pudo cerrar sesión. Inténtalo de nuevo.');
+          }
         },
-        {
-          text: 'Cerrar Sesión',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await logout();
-            } catch (error) {
-              Alert.alert('Error', 'No se pudo cerrar sesión. Inténtalo de nuevo.');
-            }
-          },
-        },
-      ]
-    );
+      },
+    ]);
   };
 
   return (
@@ -64,6 +93,41 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
           </View>
           <Text style={styles.userName}>{user?.name || 'Usuario'}</Text>
           <Text style={styles.userEmail}>{user?.email || ''}</Text>
+        </View>
+      </View>
+
+      {/* Hourly Rate Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Valor de tu tiempo</Text>
+        <View style={styles.hourlyCard}>
+          <Text style={styles.hourlyLabel}>Tu valor por hora (en tu moneda principal)</Text>
+          <Text style={styles.hourlySubLabel}>
+            Se usa para mostrar cuántas horas de vida vale cada gasto
+          </Text>
+          <View style={styles.hourlyInputRow}>
+            <TextInput
+              style={styles.hourlyInput}
+              value={hourlyRateInput}
+              onChangeText={(t) => {
+                setHourlyRateInput(t);
+                setSaved(false);
+              }}
+              keyboardType="decimal-pad"
+              placeholder="ej. 500"
+              placeholderTextColor="#9CA3AF"
+            />
+            <TouchableOpacity
+              style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+              onPress={handleSaveHourlyRate}
+              disabled={saving}
+            >
+              {saving ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.saveButtonText}>{saved ? '✓ Guardado' : 'Guardar'}</Text>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -196,9 +260,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
 
       {/* Footer */}
       <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          Hecho con ❤️ por el equipo de Horus
-        </Text>
+        <Text style={styles.footerText}>Hecho con ❤️ por el equipo de Horus</Text>
       </View>
     </ScrollView>
   );
@@ -305,5 +367,58 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: 12,
     color: '#9CA3AF',
+  },
+  hourlyCard: {
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 16,
+    padding: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  hourlyLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  hourlySubLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 12,
+  },
+  hourlyInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  hourlyInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: '#111827',
+  },
+  saveButton: {
+    backgroundColor: '#4F46E5',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    minWidth: 90,
+    alignItems: 'center',
+  },
+  saveButtonDisabled: {
+    backgroundColor: '#A5B4FC',
+  },
+  saveButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });

@@ -12,6 +12,7 @@ interface AuthStore extends AuthState {
   register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
+  updateProfile: (data: { name?: string; hourlyRate?: number | null }) => Promise<void>;
   setUser: (user: User | null) => void;
   setLoading: (isLoading: boolean) => void;
 }
@@ -110,6 +111,11 @@ export const useAuthStore = create<AuthStore>((set) => ({
         isLoading: false,
       });
     }
+  },
+
+  updateProfile: async (data) => {
+    const { user } = await authService.updateProfile(data);
+    set({ user });
   },
 
   setUser: (user) => set({ user }),

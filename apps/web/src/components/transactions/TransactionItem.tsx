@@ -6,6 +6,13 @@
 import { useState } from 'react';
 import type { Transaction } from '@horus/shared';
 import { formatCurrency } from '@/utils/currency';
+import { useAuthStore } from '@/stores/authStore';
+
+function toLifeHours(amount: number, hourlyRate: number): string {
+  const hours = amount / hourlyRate;
+  if (hours < 1) return `${(hours * 60).toFixed(0)} min de vida`;
+  return `≈ ${hours.toFixed(1)} h de vida`;
+}
 
 interface TransactionItemProps {
   transaction: Transaction;
@@ -15,6 +22,8 @@ interface TransactionItemProps {
 
 export function TransactionItem({ transaction, onEdit, onDelete }: TransactionItemProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const { user } = useAuthStore();
+  const hourlyRate = user?.hourlyRate != null ? Number(user.hourlyRate) : null;
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -62,9 +71,16 @@ export function TransactionItem({ transaction, onEdit, onDelete }: TransactionIt
 
       <div className="flex items-center gap-4">
         {/* Amount */}
-        <div className={`text-lg font-semibold ${amountClass}`}>
-          {amountSign}
-          {formatCurrency(transaction.amount, transaction.account?.currency || 'ARS')}
+        <div className="flex flex-col items-end">
+          <div className={`text-lg font-semibold ${amountClass}`}>
+            {amountSign}
+            {formatCurrency(transaction.amount, transaction.account?.currency || 'ARS')}
+          </div>
+          {!isIncome && !transaction.isTransfer && hourlyRate && hourlyRate > 0 && (
+            <span className="text-xs text-gray-400 mt-0.5">
+              {toLifeHours(transaction.amount, hourlyRate)}
+            </span>
+          )}
         </div>
 
         {/* Hover Actions */}

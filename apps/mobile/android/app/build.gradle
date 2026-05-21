@@ -22,10 +22,6 @@ react {
     cliFile = new File(["node", "--print", "require.resolve('@expo/cli', { paths: [require.resolve('expo/package.json')] })"].execute(null, rootDir).text.trim())
     bundleCommand = "export:embed"
 
-    // Pass project root as the last positional arg so @expo/cli resolves the correct
-    // Metro project root (apps/mobile) instead of process.cwd() (monorepo root).
-    extraPackagerArgs = [projectRoot]
-
     /* Folders */
      //   The root of your project, i.e. where "package.json" lives. Default is '../..'
     // root = file("../../")

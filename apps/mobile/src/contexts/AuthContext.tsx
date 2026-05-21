@@ -18,6 +18,7 @@ interface AuthContextType {
   register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
+  updateProfile: (data: { name?: string; hourlyRate?: number | null }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -161,6 +162,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
+  /**
+   * Update user profile (name, hourlyRate)
+   */
+  const updateProfile = useCallback(async (data: { name?: string; hourlyRate?: number | null }) => {
+    const tokens = await storage.getTokens();
+    if (!tokens?.accessToken) throw new Error('Not authenticated');
+    const updated = await authApi.updateProfile(tokens.accessToken, data);
+    setUser(updated);
+  }, []);
+
   // Check authentication on mount
   useEffect(() => {
     checkAuth();
@@ -174,6 +185,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     register,
     logout,
     checkAuth,
+    updateProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -52,8 +52,11 @@ export function MonthlyExpensesScreen({ navigation }: Props) {
 
   // Calculate totals
   const totals = useMemo(() => {
-    const totalPending = pendingExpenses.reduce((sum, e) => sum + (e.previousAmount || 0), 0);
-    const totalPaid = paidExpenses.reduce((sum, e) => sum + e.amount, 0);
+    const totalPending = pendingExpenses.reduce(
+      (sum, e) => sum + parseFloat(String(e.previousAmount || 0)),
+      0
+    );
+    const totalPaid = paidExpenses.reduce((sum, e) => sum + parseFloat(String(e.amount)), 0);
 
     return {
       totalPending,

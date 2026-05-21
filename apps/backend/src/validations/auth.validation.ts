@@ -32,6 +32,13 @@ export const loginSchema = z.object({
 
 export type LoginInput = z.infer<typeof loginSchema>;
 
+export const updateProfileSchema = z.object({
+  name: z.string().min(1).max(100).trim().optional(),
+  hourlyRate: z.number().positive().max(100000).nullable().optional(),
+});
+
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+
 export const refreshTokenSchema = z.object({
   refreshToken: z.string().min(1, 'Refresh token is required'),
 });

@@ -29,6 +29,14 @@ export const authService = {
     return data;
   },
 
+  async updateProfile(data: {
+    name?: string;
+    hourlyRate?: number | null;
+  }): Promise<{ user: User }> {
+    const { data: res } = await axiosInstance.patch<{ user: User }>('/auth/me', data);
+    return res;
+  },
+
   async logout(): Promise<void> {
     await axiosInstance.post('/auth/logout');
   },

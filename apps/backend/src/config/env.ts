@@ -6,12 +6,6 @@ if (process.env.NODE_ENV !== 'production') {
   dotenv.config();
 }
 
-// Debug: log available env vars (without values for security)
-console.log(
-  'Available env vars:',
-  Object.keys(process.env).filter((k) => !k.startsWith('npm_'))
-);
-
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   JWT_SECRET: z.string().min(1, 'JWT_SECRET is required'),
@@ -24,7 +18,15 @@ const envSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GOOGLE_REDIRECT_URI: z.string().optional(),
-  ENCRYPTION_KEY: z.string().optional(), // For encrypting tokens (32 bytes hex)
+  // AES-256-GCM key for token encryption: must be exactly 64 hex chars (32 bytes).
+  // Generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+  // MUST remain the same across deployments — changing it invalidates all stored tokens.
+  ENCRYPTION_KEY: z
+    .string()
+    .min(
+      64,
+      "ENCRYPTION_KEY must be a 64-char hex string (32 bytes). Generate with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
+    ),
   // Microsoft OAuth2 (Sprint 15 - Multi-Calendar)
   MICROSOFT_CLIENT_ID: z.string().optional(),
   MICROSOFT_CLIENT_SECRET: z.string().optional(),

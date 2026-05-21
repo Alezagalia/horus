@@ -1,7 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import { authService } from '../services/auth.service.js';
 import { categoryService } from '../services/category.service.js';
-import { registerSchema, loginSchema, refreshTokenSchema } from '../validations/auth.validation.js';
+import {
+  registerSchema,
+  loginSchema,
+  refreshTokenSchema,
+  updateProfileSchema,
+} from '../validations/auth.validation.js';
 import { BadRequestError, UnauthorizedError } from '../middlewares/error.middleware.js';
 import { prisma } from '../lib/prisma.js';
 
@@ -151,6 +156,20 @@ export const authController = {
       res.status(200).json({
         user,
       });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async updateProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const user = req.user;
+      if (!user) throw new UnauthorizedError('User not found');
+
+      const validatedData = updateProfileSchema.parse(req.body);
+      const updated = await authService.updateProfile(user.id, validatedData);
+
+      res.status(200).json({ user: updated });
     } catch (error) {
       next(error);
     }

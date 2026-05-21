@@ -12,6 +12,7 @@ router.post('/refresh', authLimiter, authController.refresh);
 
 // Protected routes (no extra rate limiting, already authenticated)
 router.get('/me', authMiddleware, authController.me);
+router.patch('/me', authMiddleware, authController.updateProfile);
 router.post('/logout', authMiddleware, authController.logout);
 
 export default router;

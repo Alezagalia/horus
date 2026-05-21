@@ -39,6 +39,7 @@ type FinanceStackParamList = {
   Transfer: undefined;
   RecurringExpenses: undefined;
   MonthlyExpenses: undefined;
+  Budgets: undefined;
 };
 
 type Props = NativeStackScreenProps<FinanceStackParamList, 'FinanceHome'>;
@@ -53,7 +54,11 @@ export const FinanceHomeScreen: React.FC<Props> = ({ navigation }) => {
   });
 
   // Fetch finance stats
-  const { data: stats, isLoading: isLoadingStats, refetch: refetchStats } = useQuery({
+  const {
+    data: stats,
+    isLoading: isLoadingStats,
+    refetch: refetchStats,
+  } = useQuery({
     queryKey: ['financeStats'],
     queryFn: () => getFinanceStats(),
   });
@@ -77,7 +82,10 @@ export const FinanceHomeScreen: React.FC<Props> = ({ navigation }) => {
 
   // Calculate pending expenses total (estimated)
   const pendingTotal = useMemo(() => {
-    return pendingExpenses.reduce((sum, expense) => sum + (expense.previousAmount || 0), 0);
+    return pendingExpenses.reduce(
+      (sum, expense) => sum + parseFloat(String(expense.previousAmount || 0)),
+      0
+    );
   }, [pendingExpenses]);
 
   // Loading state
@@ -267,6 +275,14 @@ export const FinanceHomeScreen: React.FC<Props> = ({ navigation }) => {
           <View style={styles.menuItemLeft}>
             <Ionicons name="calendar-outline" size={24} color="#F59E0B" />
             <Text style={styles.menuItemText}>Gastos Mensuales</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Budgets')}>
+          <View style={styles.menuItemLeft}>
+            <Ionicons name="pie-chart-outline" size={24} color="#14B8A6" />
+            <Text style={styles.menuItemText}>Presupuestos</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
         </TouchableOpacity>

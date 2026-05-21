@@ -32,6 +32,8 @@ import {
   type GetTransactionsParams,
 } from '../api/transactions.api';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useAuth } from '../contexts/AuthContext';
+import { toLifeHours } from './SettingsScreen';
 
 type FinanceStackParamList = {
   Transactions: undefined;
@@ -50,6 +52,9 @@ interface GroupedTransactions {
 }
 
 export const TransactionsScreen: React.FC<Props> = ({ navigation }) => {
+  const { user } = useAuth();
+  const hourlyRate = user?.hourlyRate != null ? Number(user.hourlyRate) : null;
+
   // Date range: default to current month
   const today = new Date();
   const [dateFrom] = useState(format(startOfMonth(today), 'yyyy-MM-dd'));
@@ -169,7 +174,11 @@ export const TransactionsScreen: React.FC<Props> = ({ navigation }) => {
       >
         <View style={styles.transactionLeft}>
           <View style={[styles.iconContainer, { backgroundColor: `${amountColor}15` }]}>
-            <Ionicons name={icon as any} size={24} color={amountColor} />
+            <Ionicons
+              name={icon as React.ComponentProps<typeof Ionicons>['name']}
+              size={24}
+              color={amountColor}
+            />
           </View>
           <View style={styles.transactionInfo}>
             <Text style={styles.transactionConcept}>{transaction.concept}</Text>
@@ -194,6 +203,9 @@ export const TransactionsScreen: React.FC<Props> = ({ navigation }) => {
               maximumFractionDigits: 2,
             })}
           </Text>
+          {!isIncome && !isTransfer && hourlyRate && hourlyRate > 0 && (
+            <Text style={styles.lifeHoursLabel}>{toLifeHours(transaction.amount, hourlyRate)}</Text>
+          )}
         </View>
       </TouchableOpacity>
     );
@@ -347,10 +359,7 @@ export const TransactionsScreen: React.FC<Props> = ({ navigation }) => {
       />
 
       {/* FAB: Create Transaction */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => navigation.navigate('CreateTransaction')}
-      >
+      <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('CreateTransaction')}>
         <Ionicons name="add" size={28} color="#FFFFFF" />
       </TouchableOpacity>
     </View>
@@ -539,6 +548,11 @@ const styles = StyleSheet.create({
   transactionAmount: {
     fontSize: 16,
     fontWeight: '700',
+  },
+  lifeHoursLabel: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 2,
   },
   emptyContainer: {
     alignItems: 'center',

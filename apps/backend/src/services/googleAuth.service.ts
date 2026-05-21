@@ -17,6 +17,14 @@ const GOOGLE_SCOPES = [
 ];
 
 /**
+ * In-memory deduplication of concurrent token refresh requests.
+ * If two requests arrive simultaneously for the same user, only one
+ * HTTP call is made to Google — both callers await the same Promise.
+ * This prevents "invalid_grant" errors caused by rapid double-refresh.
+ */
+const refreshInFlight = new Map<string, Promise<string>>();
+
+/**
  * Creates OAuth2 client
  */
 function getOAuth2Client() {
@@ -78,7 +86,10 @@ export const googleAuthService = {
       const encryptedAccessToken = encrypt(tokens.access_token);
       const encryptedRefreshToken = tokens.refresh_token ? encrypt(tokens.refresh_token) : null;
 
-      const expiryDate = tokens.expiry_date ? new Date(tokens.expiry_date) : null;
+      // Default to 1 hour if Google doesn't return expiry_date (should always return it)
+      const expiryDate = tokens.expiry_date
+        ? new Date(tokens.expiry_date)
+        : new Date(Date.now() + 3600 * 1000);
 
       // Upsert SyncSetting
       await prisma.syncSetting.upsert({
@@ -109,9 +120,31 @@ export const googleAuthService = {
   },
 
   /**
-   * Refreshes access token using refresh token
+   * Refreshes access token using refresh token.
+   * Uses in-memory promise deduplication to prevent concurrent refresh race conditions.
    */
-  async refreshAccessToken(userId: string) {
+  async refreshAccessToken(userId: string): Promise<string> {
+    // If a refresh is already in progress for this user, wait for it instead of
+    // making a second request to Google (which could invalidate the first token).
+    const existing = refreshInFlight.get(userId);
+    if (existing) {
+      return existing;
+    }
+
+    const promise = this._doRefreshAccessToken(userId);
+    refreshInFlight.set(userId, promise);
+
+    try {
+      return await promise;
+    } finally {
+      refreshInFlight.delete(userId);
+    }
+  },
+
+  /**
+   * Internal: performs the actual token refresh against Google's API.
+   */
+  async _doRefreshAccessToken(userId: string): Promise<string> {
     const syncSetting = await prisma.syncSetting.findUnique({
       where: { userId },
     });
@@ -120,15 +153,23 @@ export const googleAuthService = {
       throw new NotFoundError('No refresh token available. Please reconnect Google Calendar.');
     }
 
+    // Guard: if another concurrent request already refreshed the token and it's
+    // still valid (> 5 min), skip the Google round-trip and return the current token.
+    const BUFFER_MS = 5 * 60 * 1000;
+    if (
+      syncSetting.googleAccessToken &&
+      syncSetting.googleTokenExpiresAt &&
+      syncSetting.googleTokenExpiresAt.getTime() - BUFFER_MS > Date.now()
+    ) {
+      return decrypt(syncSetting.googleAccessToken);
+    }
+
     const oauth2Client = getOAuth2Client();
 
     try {
-      // Decrypt refresh token
       const refreshToken = decrypt(syncSetting.googleRefreshToken);
 
-      oauth2Client.setCredentials({
-        refresh_token: refreshToken,
-      });
+      oauth2Client.setCredentials({ refresh_token: refreshToken });
 
       const { credentials } = await oauth2Client.refreshAccessToken();
 
@@ -136,11 +177,11 @@ export const googleAuthService = {
         throw new BadRequestError('Failed to refresh access token');
       }
 
-      // Encrypt new access token
       const encryptedAccessToken = encrypt(credentials.access_token);
-      const expiryDate = credentials.expiry_date ? new Date(credentials.expiry_date) : null;
+      const expiryDate = credentials.expiry_date
+        ? new Date(credentials.expiry_date)
+        : new Date(Date.now() + 3600 * 1000);
 
-      // Update access token in DB
       await prisma.syncSetting.update({
         where: { userId },
         data: {
@@ -154,18 +195,16 @@ export const googleAuthService = {
     } catch (error: any) {
       console.error('Error refreshing access token:', error);
 
-      // Check if error is irrecoverable (token revoked, expired, or invalid)
+      // Only disconnect on true revocation — NOT on generic network errors (400, timeout, etc.)
       const errorMessage = error.message || '';
       const isIrrecoverableError =
         errorMessage.includes('invalid_grant') ||
         errorMessage.includes('Token has been expired or revoked') ||
-        errorMessage.includes('Token has been revoked') ||
-        error.code === 400;
+        errorMessage.includes('Token has been revoked');
 
       if (isIrrecoverableError) {
         console.error(`Irrecoverable token error for user ${userId}. Disconnecting...`);
 
-        // Disconnect Google Calendar sync
         await prisma.syncSetting.update({
           where: { userId },
           data: {
@@ -176,15 +215,9 @@ export const googleAuthService = {
           },
         });
 
-        // Mark all synced events as local only
         await prisma.event.updateMany({
-          where: {
-            userId,
-            syncWithGoogle: true,
-          },
-          data: {
-            syncWithGoogle: false,
-          },
+          where: { userId, syncWithGoogle: true },
+          data: { syncWithGoogle: false },
         });
 
         throw new BadRequestError(
@@ -266,17 +299,19 @@ export const googleAuthService = {
       };
     }
 
-    // Check if token is valid (not expired)
-    const now = new Date();
-    const tokenValid = syncSetting.googleTokenExpiresAt
-      ? syncSetting.googleTokenExpiresAt > now
-      : true; // If no expiry date, assume valid
-
-    // Check if has refresh token
+    // Check if has refresh token (the only thing that truly matters for long-term connectivity)
     const hasRefreshToken = !!syncSetting.googleRefreshToken;
 
-    // Needs reconnect if enabled but no valid refresh token
-    const needsReconnect = syncSetting.googleCalendarEnabled && (!hasRefreshToken || !tokenValid);
+    // Access token validity with 5-minute buffer (same as Microsoft implementation)
+    const now = new Date();
+    const BUFFER_MS = 5 * 60 * 1000;
+    const tokenValid = syncSetting.googleTokenExpiresAt
+      ? syncSetting.googleTokenExpiresAt.getTime() - BUFFER_MS > now.getTime()
+      : false; // If no expiry date stored, force a refresh on next use
+
+    // needsReconnect = true ONLY when there's no refresh token (can't auto-renew).
+    // An expired access token is fine — getAuthenticatedClient() refreshes it automatically.
+    const needsReconnect = syncSetting.googleCalendarEnabled && !hasRefreshToken;
 
     return {
       isConnected: syncSetting.googleCalendarEnabled,
@@ -302,12 +337,13 @@ export const googleAuthService = {
 
     const oauth2Client = getOAuth2Client();
 
-    // Check if token is expired
+    // Refresh proactively if token expires within 5 minutes (same buffer as Microsoft)
     const now = new Date();
+    const BUFFER_MS = 5 * 60 * 1000;
     const expiresAt = syncSetting.googleTokenExpiresAt;
 
-    if (expiresAt && expiresAt <= now) {
-      // Token expired, refresh it
+    if (!expiresAt || expiresAt.getTime() - BUFFER_MS <= now.getTime()) {
+      // Token expired or about to expire — refresh it
       const newAccessToken = await this.refreshAccessToken(userId);
       oauth2Client.setCredentials({ access_token: newAccessToken });
     } else {

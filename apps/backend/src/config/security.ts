@@ -8,6 +8,23 @@ import { Options as RateLimitOptions } from 'express-rate-limit';
 import { env } from './env.js';
 
 /**
+ * Returns true if the origin is a private/LAN IP (192.168.x.x, 10.x.x.x, 172.16-31.x.x).
+ * Used to allow any local network device in development without hardcoding IPs.
+ */
+function isLocalNetworkOrigin(origin: string): boolean {
+  try {
+    const { hostname } = new URL(origin);
+    return (
+      /^192\.168\.\d{1,3}\.\d{1,3}$/.test(hostname) ||
+      /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname) ||
+      /^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/.test(hostname)
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
  * CORS Configuration
  * In production, only allows requests from specified origins
  * In development, allows localhost origins
@@ -47,6 +64,9 @@ export const getCorsOptions = (): CorsOptions => {
       }
 
       if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else if (!isProduction && isLocalNetworkOrigin(origin)) {
+        // Allow any LAN IP (192.168.x.x, 10.x.x.x, 172.16-31.x.x) in development
         callback(null, true);
       } else {
         callback(new Error(`Origin ${origin} not allowed by CORS`), false);
