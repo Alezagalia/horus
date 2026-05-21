@@ -8,6 +8,7 @@
 import { NavLink } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { useState } from 'react';
+import { ProfileModal } from './ProfileModal';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -30,39 +31,73 @@ interface MenuSection {
 const menuSections: MenuSection[] = [
   {
     title: 'Principal',
-    items: [{ name: 'Dashboard', path: '/', icon: '🏠', gradient: 'from-indigo-500 to-purple-500' }],
+    items: [
+      { name: 'Dashboard', path: '/', icon: '🏠', gradient: 'from-indigo-500 to-purple-500' },
+    ],
   },
   {
     title: 'Productividad',
     items: [
       { name: 'Tareas', path: '/tasks', icon: '✅', gradient: 'from-amber-500 to-orange-500' },
       { name: 'Hábitos', path: '/habits', icon: '🎯', gradient: 'from-blue-500 to-cyan-500' },
+      { name: 'Metas', path: '/goals', icon: '🏆', gradient: 'from-amber-500 to-yellow-500' },
       { name: 'Calendario', path: '/calendar', icon: '📅', gradient: 'from-pink-500 to-rose-500' },
-      { name: 'Conocimiento', path: '/resources', icon: '📚', gradient: 'from-violet-500 to-purple-500' },
+      {
+        name: 'Conocimiento',
+        path: '/resources',
+        icon: '📚',
+        gradient: 'from-violet-500 to-purple-500',
+      },
     ],
   },
   {
     title: 'Dinero',
     items: [
       { name: 'Cuentas', path: '/accounts', icon: '💳', gradient: 'from-emerald-500 to-teal-500' },
-      { name: 'Movimientos', path: '/transactions', icon: '💸', gradient: 'from-green-500 to-emerald-500' },
-      { name: 'Gastos Mensuales', path: '/monthly-expenses', icon: '📆', gradient: 'from-indigo-500 to-violet-500' },
+      {
+        name: 'Movimientos',
+        path: '/transactions',
+        icon: '💸',
+        gradient: 'from-green-500 to-emerald-500',
+      },
+      {
+        name: 'Gastos Mensuales',
+        path: '/monthly-expenses',
+        icon: '📆',
+        gradient: 'from-indigo-500 to-violet-500',
+      },
+      { name: 'Presupuestos', path: '/budgets', icon: '🎯', gradient: 'from-teal-500 to-cyan-500' },
     ],
     collapsible: true,
   },
   {
     title: 'Fitness',
     items: [
-      { name: 'Ejercicios', path: '/exercises', icon: '💪', gradient: 'from-orange-500 to-red-500' },
+      {
+        name: 'Ejercicios',
+        path: '/exercises',
+        icon: '💪',
+        gradient: 'from-orange-500 to-red-500',
+      },
       { name: 'Rutinas', path: '/routines', icon: '🏋️', gradient: 'from-fuchsia-500 to-pink-500' },
-      { name: 'Mi Progreso', path: '/workouts', icon: '📈', gradient: 'from-purple-500 to-indigo-500' },
+      {
+        name: 'Mi Progreso',
+        path: '/workouts',
+        icon: '📈',
+        gradient: 'from-purple-500 to-indigo-500',
+      },
     ],
     collapsible: true,
   },
   {
     title: 'Configuración',
     items: [
-      { name: 'Categorías', path: '/categories', icon: '🏷️', gradient: 'from-gray-500 to-slate-500' },
+      {
+        name: 'Categorías',
+        path: '/categories',
+        icon: '🏷️',
+        gradient: 'from-gray-500 to-slate-500',
+      },
     ],
     collapsible: true,
   },
@@ -71,6 +106,7 @@ const menuSections: MenuSection[] = [
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { user, logout } = useAuthStore();
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -136,7 +172,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     stroke="currentColor"
                     viewBox="0 0 24 24"
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
                   </svg>
                 </button>
               ) : (
@@ -203,7 +244,28 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               </p>
               <p className="text-xs text-gray-500 truncate">{user?.email || ''}</p>
             </div>
+            <button
+              onClick={() => setProfileModalOpen(true)}
+              className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-200/60 transition-colors"
+              title="Configuración de perfil"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+              </svg>
+            </button>
           </div>
+          <ProfileModal open={profileModalOpen} onClose={() => setProfileModalOpen(false)} />
 
           <button
             onClick={handleLogout}

@@ -53,11 +53,15 @@ import { RecurringExpensesScreen } from '../screens/RecurringExpensesScreen';
 import { CreateRecurringExpenseScreen } from '../screens/CreateRecurringExpenseScreen';
 import { MonthlyExpensesScreen } from '../screens/MonthlyExpensesScreen';
 import { PayExpenseScreen } from '../screens/PayExpenseScreen';
+import { BudgetsScreen } from '../screens/BudgetsScreen';
+import { GoalsScreen } from '../screens/GoalsScreen';
+import { GoalDetailScreen } from '../screens/GoalDetailScreen';
 
 const Tab = createBottomTabNavigator();
 const HomeStack = createNativeStackNavigator();
 const HabitsStack = createNativeStackNavigator();
 const TasksStack = createNativeStackNavigator();
+const CalendarStack = createNativeStackNavigator();
 const FinanceStack = createNativeStackNavigator();
 const MoreStack = createNativeStackNavigator();
 
@@ -142,6 +146,38 @@ const TasksStackNavigator = () => (
   </TasksStack.Navigator>
 );
 
+// Calendar Stack
+const CalendarStackNavigator = () => (
+  <CalendarStack.Navigator
+    screenOptions={{
+      headerStyle: { backgroundColor: '#2196F3' },
+      headerTintColor: '#fff',
+      headerTitleStyle: { fontWeight: 'bold' },
+    }}
+  >
+    <CalendarStack.Screen
+      name="CalendarMain"
+      component={CalendarScreen}
+      options={{ title: 'Calendario', headerShown: false }}
+    />
+    <CalendarStack.Screen
+      name="CreateEvent"
+      component={CreateEventScreen}
+      options={{ title: 'Nuevo Evento', presentation: 'modal', headerShown: false }}
+    />
+    <CalendarStack.Screen
+      name="EditEvent"
+      component={EditEventScreen}
+      options={{ title: 'Editar Evento', presentation: 'modal', headerShown: false }}
+    />
+    <CalendarStack.Screen
+      name="CalendarSync"
+      component={CalendarSyncScreen}
+      options={{ title: 'Sincronización', headerShown: false }}
+    />
+  </CalendarStack.Navigator>
+);
+
 // Finance Stack - Sprint 2
 const FinanceStackNavigator = () => (
   <FinanceStack.Navigator
@@ -211,6 +247,11 @@ const FinanceStackNavigator = () => (
       component={PayExpenseScreen}
       options={{ title: 'Pagar Gasto', presentation: 'modal' }}
     />
+    <FinanceStack.Screen
+      name="Budgets"
+      component={BudgetsScreen}
+      options={{ title: 'Presupuestos' }}
+    />
   </FinanceStack.Navigator>
 );
 
@@ -271,30 +312,16 @@ const MoreStackNavigator = () => (
       component={ResourceDetailScreen}
       options={{ title: 'Detalle del Recurso' }}
     />
+    <MoreStack.Screen name="Goals" component={GoalsScreen} options={{ title: 'Metas' }} />
+    <MoreStack.Screen
+      name="GoalDetail"
+      component={GoalDetailScreen}
+      options={{ title: 'Detalle de Meta' }}
+    />
     <MoreStack.Screen
       name="Settings"
       component={SettingsScreen}
       options={{ title: 'Configuración' }}
-    />
-    <MoreStack.Screen
-      name="Calendar"
-      component={CalendarScreen}
-      options={{ title: 'Calendario', headerShown: false }}
-    />
-    <MoreStack.Screen
-      name="CreateEvent"
-      component={CreateEventScreen}
-      options={{ title: 'Nuevo Evento', presentation: 'modal', headerShown: false }}
-    />
-    <MoreStack.Screen
-      name="EditEvent"
-      component={EditEventScreen}
-      options={{ title: 'Editar Evento', presentation: 'modal', headerShown: false }}
-    />
-    <MoreStack.Screen
-      name="CalendarSync"
-      component={CalendarSyncScreen}
-      options={{ title: 'Sincronización', headerShown: false }}
     />
   </MoreStack.Navigator>
 );
@@ -334,6 +361,14 @@ export const TabNavigator: React.FC = () => {
         options={{
           title: 'Tareas',
           tabBarIcon: () => <Text>✅</Text>,
+        }}
+      />
+      <Tab.Screen
+        name="CalendarTab"
+        component={CalendarStackNavigator}
+        options={{
+          title: 'Calendario',
+          tabBarIcon: () => <Text>📅</Text>,
         }}
       />
       <Tab.Screen

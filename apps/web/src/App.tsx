@@ -82,6 +82,13 @@ const WorkoutStatsPage = lazy(() =>
 const ResourcesPage = lazy(() =>
   import('@/pages/ResourcesPage').then((m) => ({ default: m.ResourcesPage }))
 );
+const BudgetsPage = lazy(() =>
+  import('@/pages/BudgetsPage').then((m) => ({ default: m.BudgetsPage }))
+);
+const GoalsPage = lazy(() => import('@/pages/GoalsPage').then((m) => ({ default: m.GoalsPage })));
+const GoalDetailPage = lazy(() =>
+  import('@/pages/GoalDetailPage').then((m) => ({ default: m.GoalDetailPage }))
+);
 
 function AppRoutes() {
   return (
@@ -309,6 +316,36 @@ function AppRoutes() {
             <ProtectedRoute>
               <MainLayout>
                 <ResourcesPage />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/budgets"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <BudgetsPage />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/goals"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <GoalsPage />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/goals/:id"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <GoalDetailPage />
               </MainLayout>
             </ProtectedRoute>
           }

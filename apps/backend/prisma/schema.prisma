@@ -15,6 +15,7 @@ enum Scope {
   tareas
   eventos
   gastos
+  metas
   knowledge
 }
 
@@ -56,6 +57,12 @@ enum Priority {
 
 enum TaskStatus {
   pendiente
+  en_progreso
+  completada
+  cancelada
+}
+
+enum GoalStatus {
   en_progreso
   completada
   cancelada
@@ -123,6 +130,7 @@ model User {
   name                 String
   password             String
   refreshToken         String?
+  hourlyRate           Decimal?                 @db.Decimal(10, 2)
   createdAt            DateTime                 @default(now())
   updatedAt            DateTime                 @updatedAt
   categories           Category[]
@@ -144,6 +152,8 @@ model User {
   routines             Routine[]
   workouts             Workout[]
   resources            Resource[]
+  budgets              Budget[]
+  goals                Goal[]
 
   @@index([email])
   @@map("users")
@@ -169,6 +179,8 @@ model Category {
   monthlyExpenseInstances MonthlyExpenseInstance[]
   recurringExpenses       RecurringExpense[]
   resources               Resource[]
+  budgets                 Budget[]
+  goals                   Goal[]
 
   @@unique([userId, name, scope])
   @@index([userId, scope])
@@ -202,6 +214,7 @@ model Habit {
   records             HabitRecord[]
   audits              HabitAudit[]
   notificationSetting NotificationSetting?
+  goalHabits          GoalHabit[]
 
   @@index([userId, isActive])
   @@index([categoryId])
@@ -358,6 +371,7 @@ model Task {
   user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   category       Category            @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   checklistItems TaskChecklistItem[]
+  goalTasks      GoalTask[]
 
   @@index([userId, isActive, status])
   @@index([userId, dueDate])
@@ -1042,6 +1056,113 @@ model WorkoutSet {
 
   @@index([workoutExerciseId])
   @@map("workout_sets")
+}
+
+/// Budget: Plantilla mensual de presupuesto por categoría
+/// F-01 - Presupuestos Mensuales por Categoría
+///
+/// Define cuánto quiere gastar el usuario en una categoría/moneda.
+/// Es una plantilla (sin month/year): aplica a todos los meses.
+/// Multi-moneda separada: compara solo contra egresos de cuentas en esa misma moneda.
+///
+/// Restricciones:
+/// - Un usuario solo puede tener un presupuesto activo por categoría+moneda (unique)
+/// - ON DELETE CASCADE: si se elimina el usuario o categoría, se elimina el presupuesto
+model Budget {
+  id         String   @id @default(uuid())
+  userId     String
+  categoryId String
+  amount     Decimal  @db.Decimal(15, 2)
+  currency   String   @db.VarChar(3)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, categoryId, currency])
+  @@index([userId, isActive])
+  @@map("budgets")
+}
+
+/// Goal: Meta personal con OKRs (F-02)
+///
+/// Permite al usuario definir objetivos con fecha límite, prioridad y estado.
+/// Se vincula a hábitos y tareas existentes para calcular progreso automático.
+///
+/// Progreso = (tareas completadas + hábitos completados en últimos 7 días) / total items vinculados
+model Goal {
+  id          String     @id @default(uuid())
+  userId      String
+  categoryId  String?
+  title       String     @db.VarChar(200)
+  description String?    @db.Text
+  priority    Priority   @default(media)
+  status      GoalStatus @default(en_progreso)
+  targetDate  DateTime?
+  completedAt DateTime?
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  keyResults KeyResult[]
+  goalHabits GoalHabit[]
+  goalTasks  GoalTask[]
+
+  @@index([userId, isActive, status])
+  @@index([userId, targetDate])
+  @@map("goals")
+}
+
+/// KeyResult: Resultado clave (OKR) vinculado a una meta (F-02)
+model KeyResult {
+  id           String   @id @default(uuid())
+  goalId       String
+  title        String   @db.VarChar(200)
+  targetValue  Decimal  @db.Decimal(15, 2)
+  currentValue Decimal  @default(0) @db.Decimal(15, 2)
+  unit         String?  @db.VarChar(50)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  goal Goal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@index([goalId])
+  @@map("key_results")
+}
+
+/// GoalHabit: Relación N:N entre Goal y Habit (F-02)
+model GoalHabit {
+  id        String   @id @default(uuid())
+  goalId    String
+  habitId   String
+  createdAt DateTime @default(now())
+
+  goal  Goal  @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@unique([goalId, habitId])
+  @@index([goalId])
+  @@map("goal_habits")
+}
+
+/// GoalTask: Relación N:N entre Goal y Task (F-02)
+model GoalTask {
+  id        String   @id @default(uuid())
+  goalId    String
+  taskId    String
+  createdAt DateTime @default(now())
+
+  goal Goal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([goalId, taskId])
+  @@index([goalId])
+  @@map("goal_tasks")
 }
 
 /// Resource: Sistema de gestión de conocimiento

@@ -15,3 +15,5 @@ export * from './exercise.types.js';
 export * from './routine.types.js';
 export * from './workout.types.js';
 export * from './resource.types.js';
+export * from './budget.types.js';
+export * from './goal.types.js';
