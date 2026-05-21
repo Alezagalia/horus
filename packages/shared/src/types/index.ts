@@ -17,3 +17,5 @@ export * from './workout.types.js';
 export * from './resource.types.js';
 export * from './budget.types.js';
 export * from './goal.types.js';
+export * from './savings-goal.types.js';
+export * from './weeklyReview.types.js';

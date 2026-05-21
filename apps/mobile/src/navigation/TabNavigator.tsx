@@ -56,6 +56,7 @@ import { PayExpenseScreen } from '../screens/PayExpenseScreen';
 import { BudgetsScreen } from '../screens/BudgetsScreen';
 import { GoalsScreen } from '../screens/GoalsScreen';
 import { GoalDetailScreen } from '../screens/GoalDetailScreen';
+import { WeeklyReviewScreen } from '../screens/WeeklyReviewScreen';
 
 const Tab = createBottomTabNavigator();
 const HomeStack = createNativeStackNavigator();
@@ -317,6 +318,11 @@ const MoreStackNavigator = () => (
       name="GoalDetail"
       component={GoalDetailScreen}
       options={{ title: 'Detalle de Meta' }}
+    />
+    <MoreStack.Screen
+      name="WeeklyReview"
+      component={WeeklyReviewScreen}
+      options={{ title: 'Revisión Semanal' }}
     />
     <MoreStack.Screen
       name="Settings"

@@ -20,6 +20,8 @@ import resourceRoutes from './resource.routes.js';
 import calendarConnectionRoutes from './calendarConnection.routes.js';
 import budgetRoutes from './budget.routes.js';
 import goalRoutes from './goal.routes.js';
+import savingsGoalRoutes from './savings-goal.routes.js';
+import weeklyReviewRoutes from './weeklyReview.routes.js';
 
 const router: IRouter = Router();
 
@@ -44,6 +46,8 @@ router.use('/resources', resourceRoutes);
 router.use('/calendar-connections', calendarConnectionRoutes);
 router.use('/budgets', budgetRoutes);
 router.use('/goals', goalRoutes);
+router.use('/savings-goals', savingsGoalRoutes);
+router.use('/weekly-reviews', weeklyReviewRoutes);
 
 // Health check
 router.get('/health', (_req, res) => {

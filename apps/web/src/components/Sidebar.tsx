@@ -41,6 +41,12 @@ const menuSections: MenuSection[] = [
       { name: 'Tareas', path: '/tasks', icon: '✅', gradient: 'from-amber-500 to-orange-500' },
       { name: 'Hábitos', path: '/habits', icon: '🎯', gradient: 'from-blue-500 to-cyan-500' },
       { name: 'Metas', path: '/goals', icon: '🏆', gradient: 'from-amber-500 to-yellow-500' },
+      {
+        name: 'Revisión Semanal',
+        path: '/weekly-review',
+        icon: '📋',
+        gradient: 'from-violet-500 to-purple-500',
+      },
       { name: 'Calendario', path: '/calendar', icon: '📅', gradient: 'from-pink-500 to-rose-500' },
       {
         name: 'Conocimiento',
@@ -67,6 +73,12 @@ const menuSections: MenuSection[] = [
         gradient: 'from-indigo-500 to-violet-500',
       },
       { name: 'Presupuestos', path: '/budgets', icon: '🎯', gradient: 'from-teal-500 to-cyan-500' },
+      {
+        name: 'Metas de ahorro',
+        path: '/savings-goals',
+        icon: '🐷',
+        gradient: 'from-pink-500 to-rose-500',
+      },
     ],
     collapsible: true,
   },
