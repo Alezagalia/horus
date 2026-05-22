@@ -43,6 +43,13 @@ const envSchema = z.object({
   RATE_LIMIT_WINDOW_MS: z.string().default('900000'), // 15 minutes
   RATE_LIMIT_MAX_REQUESTS: z.string().default('100'), // Max requests per window
   RATE_LIMIT_AUTH_MAX: z.string().default('5'), // Max auth attempts per window
+  // Password reset / transactional email
+  // If RESEND_API_KEY is missing, the email service falls back to logging the
+  // reset link to the console (dev mode). EMAIL_FROM defaults to Resend's
+  // sandbox sender; replace with a verified domain in production.
+  RESEND_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().default('Horus <onboarding@resend.dev>'),
+  FRONTEND_URL: z.string().url().default('http://localhost:5173'),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

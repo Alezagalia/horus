@@ -186,6 +186,7 @@ model User {
   weeklyReviews        WeeklyReview[]
   lifeDebtDecisions    LifeDebtDecision[]
   insights             Insight[]
+  passwordResetTokens  PasswordResetToken[]
 
   @@index([email])
   @@map("users")
@@ -1422,4 +1423,25 @@ model Insight {
   @@unique([userId, kind])
   @@index([userId, dismissedAt, detectedAt(sort: Desc)])
   @@map("insights")
+}
+
+/// PasswordResetToken: token de un solo uso para restablecer contraseña.
+///
+/// Se almacena solo el SHA-256 del token, no el plaintext.
+/// El plaintext se envía por email y nunca se persiste.
+/// Single-use: usedAt se setea al consumirlo y no se puede reusar.
+/// expiresAt típico: 1 hora desde createdAt.
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
 }

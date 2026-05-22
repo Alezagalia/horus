@@ -1,14 +1,18 @@
 import { Request, Response, NextFunction } from 'express';
 import { authService } from '../services/auth.service.js';
 import { categoryService } from '../services/category.service.js';
+import { passwordResetService, PasswordResetError } from '../services/passwordReset.service.js';
 import {
   registerSchema,
   loginSchema,
   refreshTokenSchema,
   updateProfileSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
 } from '../validations/auth.validation.js';
 import { BadRequestError, UnauthorizedError } from '../middlewares/error.middleware.js';
 import { prisma } from '../lib/prisma.js';
+import { logger } from '../lib/logger.js';
 
 export const authController = {
   async register(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -191,6 +195,54 @@ export const authController = {
         message: 'Logged out successfully',
       });
     } catch (error) {
+      next(error);
+    }
+  },
+
+  /**
+   * POST /api/auth/forgot-password
+   * Sends a reset link by email. Always responds 200 to avoid leaking which
+   * emails are registered. Email delivery happens best-effort in the background.
+   */
+  async forgotPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { email } = forgotPasswordSchema.parse(req.body);
+
+      // Fire-and-forget so the response time doesn't reveal whether the email
+      // exists (otherwise a hit takes ~hundreds of ms more than a miss).
+      void passwordResetService
+        .requestReset(email)
+        .catch((err) => logger.error('[auth.forgotPassword] background reset request failed', err));
+
+      res.status(200).json({
+        message: 'Si el email existe, te enviaremos un link para restablecer tu contraseña.',
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  /**
+   * POST /api/auth/reset-password
+   * Consumes a one-time token and updates the user's password.
+   */
+  async resetPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { token, password } = resetPasswordSchema.parse(req.body);
+      await passwordResetService.resetPassword(token, password);
+      res.status(200).json({ message: 'Contraseña actualizada exitosamente' });
+    } catch (error) {
+      if (error instanceof PasswordResetError) {
+        // Map all token errors to a generic 400 to avoid signal about token state.
+        const message =
+          error.reason === 'expired'
+            ? 'El link expiró. Pedí uno nuevo desde el login.'
+            : error.reason === 'used'
+              ? 'Este link ya fue usado. Pedí uno nuevo si lo necesitás.'
+              : 'El link es inválido. Verificá que sea el más reciente.';
+        res.status(400).json({ message });
+        return;
+      }
       next(error);
     }
   },

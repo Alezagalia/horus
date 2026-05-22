@@ -89,7 +89,10 @@ export function LoginPage() {
             </button>
           </div>
 
-          <div className="text-center">
+          <div className="flex flex-col items-center gap-2 text-center">
+            <Link to="/forgot-password" className="text-sm text-indigo-600 hover:text-indigo-500">
+              ¿Olvidaste tu contraseña?
+            </Link>
             <Link to="/register" className="text-sm text-indigo-600 hover:text-indigo-500">
               ¿No tienes cuenta? Crear cuenta
             </Link>

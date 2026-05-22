@@ -40,4 +40,19 @@ export const authService = {
   async logout(): Promise<void> {
     await axiosInstance.post('/auth/logout');
   },
+
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    const { data } = await axiosInstance.post<{ message: string }>('/auth/forgot-password', {
+      email,
+    });
+    return data;
+  },
+
+  async resetPassword(token: string, password: string): Promise<{ message: string }> {
+    const { data } = await axiosInstance.post<{ message: string }>('/auth/reset-password', {
+      token,
+      password,
+    });
+    return data;
+  },
 };
