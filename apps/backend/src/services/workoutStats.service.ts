@@ -124,6 +124,7 @@ export const workoutStatsService = {
     }
 
     // 4. Group sets by workout
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const workoutMap = new Map<string, any[]>();
     for (const set of workoutSets) {
       const workoutId = set.workoutExercise.workout.id;
@@ -148,7 +149,9 @@ export const workoutStatsService = {
     const firstWorkout = Array.from(workoutMap.values())[0];
     const lastWorkout = Array.from(workoutMap.values())[timesExecuted - 1];
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const firstExecutionWeight = Math.max(...firstWorkout.map((s: any) => Number(s.weight)));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const lastExecutionWeight = Math.max(...lastWorkout.map((s: any) => Number(s.weight)));
     const improvement = Math.round((lastExecutionWeight - firstExecutionWeight) * 10) / 10;
     const improvementPercentage =
@@ -187,9 +190,11 @@ export const workoutStatsService = {
       string,
       { maxWeight: number; totalVolume: number; totalSets: number }
     >();
-    for (const [workoutId, sets] of workoutMap.entries()) {
+    for (const [, sets] of workoutMap.entries()) {
       const date = formatDate(sets[0].workoutExercise.workout.startTime);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const maxWeight = Math.max(...sets.map((s: any) => Number(s.weight)));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const volume = sets.reduce((sum: number, s: any) => sum + s.reps * Number(s.weight), 0);
 
       if (chartMap.has(date)) {

@@ -41,7 +41,7 @@ export const getSummary = async (req: Request, res: Response): Promise<void> => 
   try {
     const parsed = getBudgetsSummarySchema.safeParse(req.query);
     if (!parsed.success) {
-      res.status(400).json({ message: 'Error de validación', errors: parsed.error.errors });
+      res.status(400).json({ message: 'Error de validación', errors: parsed.error.issues });
       return;
     }
 
@@ -62,7 +62,7 @@ export const create = async (req: Request, res: Response): Promise<void> => {
   try {
     const parsed = createBudgetSchema.safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({ message: 'Error de validación', errors: parsed.error.errors });
+      res.status(400).json({ message: 'Error de validación', errors: parsed.error.issues });
       return;
     }
 
@@ -82,7 +82,7 @@ export const update = async (req: Request, res: Response): Promise<void> => {
   try {
     const parsed = updateBudgetSchema.safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({ message: 'Error de validación', errors: parsed.error.errors });
+      res.status(400).json({ message: 'Error de validación', errors: parsed.error.issues });
       return;
     }
 

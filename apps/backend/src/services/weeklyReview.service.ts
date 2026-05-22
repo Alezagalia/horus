@@ -56,10 +56,10 @@ export const getWeekStats = async (userId: string, weekStartStr: string) => {
         take: 5,
       }),
       prisma.event.count({
-        where: { userId, status: 'completado', startDate: { gte: weekStart, lte: weekEnd } },
+        where: { userId, status: 'completado', startDateTime: { gte: weekStart, lte: weekEnd } },
       }),
       prisma.event.count({
-        where: { userId, startDate: { gte: weekStart, lte: weekEnd } },
+        where: { userId, startDateTime: { gte: weekStart, lte: weekEnd } },
       }),
     ]);
 

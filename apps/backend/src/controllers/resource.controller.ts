@@ -1,11 +1,7 @@
 import type { Request, Response } from 'express';
 import { resourceService } from '../services/resource.service.js';
 import { resourceSearchService } from '../services/resourceSearch.service.js';
-import {
-  createResourceSchema,
-  updateResourceSchema,
-  resourceFiltersSchema,
-} from '@horus/shared';
+import { createResourceSchema, updateResourceSchema, resourceFiltersSchema } from '@horus/shared';
 
 export class ResourceController {
   /**
@@ -127,7 +123,8 @@ export class ResourceController {
       const { q, limit } = req.query;
 
       if (!q || typeof q !== 'string') {
-        return res.status(400).json({ error: 'Query requerido' });
+        res.status(400).json({ error: 'Query requerido' });
+        return;
       }
 
       const resources = await resourceSearchService.searchResources(

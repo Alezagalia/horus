@@ -53,10 +53,10 @@ export interface UpdateResourceDto {
   content?: string;
   url?: string;
   language?: string;
-  categoryId?: string;
+  categoryId?: string | null;
   tags?: string[];
   isPinned?: boolean;
-  color?: string;
+  color?: string | null;
 }
 
 export interface ResourceFilters {

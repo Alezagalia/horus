@@ -205,10 +205,10 @@ export const accountService = {
     }
 
     // Calculate new currentBalance if initialBalance is being updated
-    let newCurrentBalance = existingAccount.currentBalance;
+    let newCurrentBalance: number = Number(existingAccount.currentBalance);
     if (data.initialBalance !== undefined) {
       const initialBalanceDiff = data.initialBalance - Number(existingAccount.initialBalance);
-      newCurrentBalance = Number(existingAccount.currentBalance) + initialBalanceDiff;
+      newCurrentBalance = newCurrentBalance + initialBalanceDiff;
     }
 
     // Update account

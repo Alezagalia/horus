@@ -444,12 +444,11 @@ export function CalendarPage() {
       {/* Calendar */}
       <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
         <div style={{ height: '700px' }}>
-          {/* @ts-expect-error - react-big-calendar has type compatibility issues with React 18 */}
           <DnDCalendar
             localizer={localizer}
             events={calendarEvents}
-            startAccessor="start"
-            endAccessor="end"
+            startAccessor={(event: object) => (event as { start: Date }).start}
+            endAccessor={(event: object) => (event as { end: Date }).end}
             view={view}
             onView={handleViewChange}
             date={currentDate}

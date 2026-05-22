@@ -62,7 +62,7 @@ export const create = async (req: Request, res: Response): Promise<void> => {
   try {
     const parsed = createSavingsGoalSchema.safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({ message: 'Error de validación', errors: parsed.error.errors });
+      res.status(400).json({ message: 'Error de validación', errors: parsed.error.issues });
       return;
     }
     const userId = req.user!.id;
@@ -81,7 +81,7 @@ export const update = async (req: Request, res: Response): Promise<void> => {
   try {
     const parsed = updateSavingsGoalSchema.safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({ message: 'Error de validación', errors: parsed.error.errors });
+      res.status(400).json({ message: 'Error de validación', errors: parsed.error.issues });
       return;
     }
     const userId = req.user!.id;

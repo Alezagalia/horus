@@ -12,6 +12,9 @@ import { debiaRealizarseEnFecha } from './streak.service.js';
 import { NotFoundError } from '../middlewares/error.middleware.js';
 import { normalizeToUTCNoon, isSameDay } from '../utils/date.utils.js';
 
+// Alias for backward compatibility within this file
+const normalizeDate = normalizeToUTCNoon;
+
 /**
  * Interface for general stats response
  */

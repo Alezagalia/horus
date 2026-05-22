@@ -49,7 +49,7 @@ export const create = async (req: Request, res: Response): Promise<void> => {
   try {
     const parsed = createGoalSchema.safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({ message: 'Error de validación', errors: parsed.error.errors });
+      res.status(400).json({ message: 'Error de validación', errors: parsed.error.issues });
       return;
     }
     const userId = req.user!.id;
@@ -64,7 +64,7 @@ export const update = async (req: Request, res: Response): Promise<void> => {
   try {
     const parsed = updateGoalSchema.safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({ message: 'Error de validación', errors: parsed.error.errors });
+      res.status(400).json({ message: 'Error de validación', errors: parsed.error.issues });
       return;
     }
     const userId = req.user!.id;
@@ -103,7 +103,7 @@ export const createKR = async (req: Request, res: Response): Promise<void> => {
   try {
     const parsed = createKeyResultSchema.safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({ message: 'Error de validación', errors: parsed.error.errors });
+      res.status(400).json({ message: 'Error de validación', errors: parsed.error.issues });
       return;
     }
     const userId = req.user!.id;
@@ -124,7 +124,7 @@ export const updateKR = async (req: Request, res: Response): Promise<void> => {
   try {
     const parsed = updateKeyResultSchema.safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({ message: 'Error de validación', errors: parsed.error.errors });
+      res.status(400).json({ message: 'Error de validación', errors: parsed.error.issues });
       return;
     }
     const userId = req.user!.id;

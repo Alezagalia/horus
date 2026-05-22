@@ -90,7 +90,8 @@ app.use('/api', routes);
 app.get('/{*splat}', (req: Request, res: Response) => {
   // Don't serve index.html for API routes
   if (req.path.startsWith('/api')) {
-    return res.status(404).json({ error: 'Not found' });
+    res.status(404).json({ error: 'Not found' });
+    return;
   }
   res.sendFile(path.join(frontendPath, 'index.html'));
 });

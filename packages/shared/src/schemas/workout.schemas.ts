@@ -13,7 +13,7 @@ export const startWorkoutSchema = z.object({
 export const addSetSchema = z.object({
   reps: z.number().int().positive('Las repeticiones deben ser mayor a 0'),
   weight: z.number().nonnegative('El peso no puede ser negativo'),
-  weightUnit: z.enum(['kg', 'lb']).default('kg'),
+  weightUnit: z.enum(['kg', 'lbs']).default('kg'),
   completed: z.boolean().default(true),
   restTime: z.number().int().positive().nullable().optional(),
   notes: z.string().max(500, 'Las notas no pueden exceder 500 caracteres').nullable().optional(),
@@ -22,7 +22,7 @@ export const addSetSchema = z.object({
 export const updateSetSchema = z.object({
   reps: z.number().int().positive('Las repeticiones deben ser mayor a 0').optional(),
   weight: z.number().nonnegative('El peso no puede ser negativo').optional(),
-  weightUnit: z.enum(['kg', 'lb']).optional(),
+  weightUnit: z.enum(['kg', 'lbs']).optional(),
   completed: z.boolean().optional(),
   restTime: z.number().int().positive().nullable().optional(),
   notes: z.string().max(500, 'Las notas no pueden exceder 500 caracteres').nullable().optional(),

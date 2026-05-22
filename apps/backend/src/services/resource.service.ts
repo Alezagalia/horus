@@ -1,10 +1,5 @@
 import { prisma } from '../lib/prisma.js';
-import type {
-  CreateResourceDto,
-  UpdateResourceDto,
-  ResourceFilters,
-  ResourceType,
-} from '@horus/shared';
+import type { CreateResourceDto, UpdateResourceDto, ResourceFilters } from '@horus/shared';
 
 export class ResourceService {
   /**
@@ -40,6 +35,7 @@ export class ResourceService {
    * Obtener resources del usuario con filtros
    */
   async getResources(userId: string, filters?: ResourceFilters) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const where: any = { userId };
 
     if (filters?.type) {
@@ -71,10 +67,7 @@ export class ResourceService {
       include: {
         category: true,
       },
-      orderBy: [
-        { isPinned: 'desc' },
-        { updatedAt: 'desc' },
-      ],
+      orderBy: [{ isPinned: 'desc' }, { updatedAt: 'desc' }],
     });
 
     return resources;
@@ -176,6 +169,7 @@ export class ResourceService {
    * Generar metadata según el tipo de resource
    */
   private generateMetadata(data: CreateResourceDto) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const metadata: any = {};
 
     switch (data.type) {

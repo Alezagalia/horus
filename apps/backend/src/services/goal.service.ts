@@ -43,7 +43,7 @@ export const listGoals = async (userId: string, status?: string) => {
       keyResults: { where: { isActive: true }, orderBy: { createdAt: 'asc' } },
       goalHabits: {
         include: {
-          habit: { select: { id: true, name: true, icon: true, lastCompletedDate: true } },
+          habit: { select: { id: true, name: true, color: true, lastCompletedDate: true } },
         },
       },
       goalTasks: {
@@ -77,7 +77,7 @@ export const getGoalById = async (goalId: string, userId: string) => {
       goalHabits: {
         include: {
           habit: {
-            select: { id: true, name: true, icon: true, color: true, lastCompletedDate: true },
+            select: { id: true, name: true, color: true, lastCompletedDate: true },
           },
         },
       },
