@@ -98,6 +98,16 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Shared must be compiled before backend/web consume its dist/.
+      - name: Build @horus/shared
+        if: matrix.package != 'shared'
+        run: pnpm --filter @horus/shared build
+
+      # Prisma client lives outside source and is required by backend tsc.
+      - name: Generate Prisma client
+        if: matrix.package == 'backend'
+        run: pnpm --filter @horus/backend db:generate
+
       - name: Build ${{ matrix.package }}
         run: pnpm --filter @horus/${{ matrix.package }} build
         if: matrix.package != 'backend'
@@ -139,6 +149,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build @horus/shared
+        run: pnpm --filter @horus/shared build
+
       - name: Build web app
         run: pnpm --filter @horus/web build
 
@@ -176,6 +189,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Build @horus/shared
+        run: pnpm --filter @horus/shared build
 
       - name: Build web app
         run: pnpm --filter @horus/web build
@@ -222,6 +238,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Build @horus/shared
+        run: pnpm --filter @horus/shared build
 
       - name: Build web app
         run: pnpm --filter @horus/web build
