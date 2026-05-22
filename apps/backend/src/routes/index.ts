@@ -22,6 +22,10 @@ import budgetRoutes from './budget.routes.js';
 import goalRoutes from './goal.routes.js';
 import savingsGoalRoutes from './savings-goal.routes.js';
 import weeklyReviewRoutes from './weeklyReview.routes.js';
+import analyticsRoutes from './analytics.routes.js';
+import timelineRoutes from './timeline.routes.js';
+import lifeDebtRoutes from './lifeDebt.routes.js';
+import insightRoutes from './insight.routes.js';
 
 const router: IRouter = Router();
 
@@ -48,6 +52,10 @@ router.use('/budgets', budgetRoutes);
 router.use('/goals', goalRoutes);
 router.use('/savings-goals', savingsGoalRoutes);
 router.use('/weekly-reviews', weeklyReviewRoutes);
+router.use('/analytics', analyticsRoutes);
+router.use('/timeline', timelineRoutes);
+router.use('/life-debt', lifeDebtRoutes);
+router.use('/insights', insightRoutes);
 
 // Health check
 router.get('/health', (_req, res) => {

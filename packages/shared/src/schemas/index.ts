@@ -9,3 +9,7 @@ export * from './exercise.schemas.js';
 export * from './routine.schemas.js';
 export * from './workout.schemas.js';
 export * from './resource.schemas.js';
+export * from './analytics.schemas.js';
+export * from './timeline.schemas.js';
+export * from './lifeDebt.schemas.js';
+export * from './insight.schemas.js';

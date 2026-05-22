@@ -19,3 +19,7 @@ export * from './budget.types.js';
 export * from './goal.types.js';
 export * from './savings-goal.types.js';
 export * from './weeklyReview.types.js';
+export * from './analytics.types.js';
+export * from './timeline.types.js';
+export * from './lifeDebt.types.js';
+export * from './insight.types.js';

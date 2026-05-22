@@ -108,6 +108,27 @@ enum WeightUnit {
   lbs
 }
 
+/// F-14: Tipo de ítem reconocido por el detector de Deuda de Vida
+enum LifeDebtItemType {
+  task
+  habit
+  recurring_expense
+}
+
+/// F-14: Tipo de decisión que el usuario toma sobre un ítem de Deuda de Vida
+enum LifeDebtDecisionKind {
+  commit    /// Comprometer una fecha concreta
+  delegate  /// Marcar como delegado (el ítem queda activo pero ya no aparece como deuda)
+  delete    /// Eliminar (soft delete) el ítem
+}
+
+/// F-12: Severidad del insight detectado
+enum InsightSeverity {
+  positive  /// patrón favorable
+  neutral   /// patrón informativo
+  negative  /// patrón a corregir
+}
+
 enum MuscleGroup {
   pecho
   espalda
@@ -163,6 +184,8 @@ model User {
   savingsGoals         SavingsGoal[]
   reviewQuestions      ReviewQuestion[]
   weeklyReviews        WeeklyReview[]
+  lifeDebtDecisions    LifeDebtDecision[]
+  insights             Insight[]
 
   @@index([email])
   @@map("users")
@@ -372,10 +395,11 @@ model Task {
   canceledAt    DateTime?
   archivedAt    DateTime?
   cancelReason  String?    @db.VarChar(200)
-  isActive      Boolean    @default(true)
-  orderPosition Int        @default(0)
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  isActive        Boolean  @default(true)
+  orderPosition   Int      @default(0)
+  rescheduleCount Int      @default(0) /// F-14: cada vez que cambia dueDate +1
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   category       Category            @relation(fields: [categoryId], references: [id], onDelete: Restrict)
@@ -387,6 +411,7 @@ model Task {
   @@index([userId, isActive, status])
   @@index([userId, dueDate])
   @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, rescheduleCount])
   @@index([categoryId])
   @@map("tasks")
 }
@@ -710,22 +735,24 @@ model Transaction {
 /// No almacena el monto real, solo el concepto y categoría.
 /// Se usa para generar MonthlyExpenseInstance cada mes.
 model RecurringExpense {
-  id         String   @id @default(uuid())
-  userId     String
-  concept    String   @db.VarChar(200)
-  categoryId String
-  currency   String   @db.VarChar(3)
-  dueDay     Int?     /// Día del mes en que vence (1-31), null si no tiene vencimiento fijo
-  notes      String?  @db.VarChar(500) /// Comentario o nota opcional
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id             String   @id @default(uuid())
+  userId         String
+  concept        String   @db.VarChar(200)
+  categoryId     String
+  currency       String   @db.VarChar(3)
+  dueDay         Int?     /// Día del mes en que vence (1-31), null si no tiene vencimiento fijo
+  notes          String?  @db.VarChar(500) /// Comentario o nota opcional
+  isActive       Boolean  @default(true)
+  lastReviewedAt DateTime @default(now()) /// F-14: marca de última revisión consciente
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   user                    User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   category                Category                 @relation(fields: [categoryId], references: [id])
   monthlyExpenseInstances MonthlyExpenseInstance[]
 
   @@index([userId, isActive])
+  @@index([userId, lastReviewedAt])
   @@map("recurring_expenses")
 }
 
@@ -1328,6 +1355,34 @@ model WeeklyReviewFocusGoal {
   @@map("weekly_review_focus_goals")
 }
 
+/// LifeDebtDecision: decisión que el usuario tomó sobre un ítem de Deuda de Vida (F-14)
+///
+/// itemType + itemId identifican al ítem (tarea o hábito) sobre el que se decide.
+/// - commit:   se compromete una fecha (commitDate); el ítem queda activo y oculto de la deuda
+///             hasta resolvedAt + 30 días o hasta que la nueva fecha también se incumpla.
+/// - delegate: se marca como delegado; oculto de la deuda hasta resolvedAt + 30 días.
+/// - delete:   el ítem se soft-deletea (isActive=false) y desaparece de la deuda.
+///
+/// Los gastos recurrentes NO usan este modelo: tienen el campo lastReviewedAt que se
+/// actualiza con POST /api/life-debt/recurring-expenses/:id/review.
+model LifeDebtDecision {
+  id         String               @id @default(uuid())
+  userId     String
+  itemType   LifeDebtItemType
+  itemId     String
+  decision   LifeDebtDecisionKind
+  commitDate DateTime?
+  reason     String?              @db.VarChar(500)
+  createdAt  DateTime             @default(now())
+  resolvedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, itemType, itemId, createdAt(sort: Desc)])
+  @@index([userId, resolvedAt])
+  @@map("life_debt_decisions")
+}
+
 /// WeeklyReviewFocusTask: Tarea prioritaria para la próxima semana
 model WeeklyReviewFocusTask {
   id       String @id @default(uuid())
@@ -1339,4 +1394,32 @@ model WeeklyReviewFocusTask {
 
   @@unique([reviewId, taskId])
   @@map("weekly_review_focus_tasks")
+}
+
+/// Insight: patrón detectado en los datos del usuario (F-12)
+///
+/// Cada `kind` identifica un detector específico (ej: 'productivity.worst-dow').
+/// El @@unique(userId, kind) permite hacer upsert: cada detector actualiza su
+/// insight existente en cada corrida en vez de duplicar.
+///
+/// `dismissedAt`: cuando el usuario lo descartó. Si dismissedAt está dentro de
+/// los últimos 30 días, el insight queda oculto aunque el patrón siga.
+/// `seenAt`: cuando el usuario lo vio (no implica acuerdo, sólo deja de ser "nuevo").
+model Insight {
+  id          String          @id @default(uuid())
+  userId      String
+  kind        String          @db.VarChar(100)
+  title       String          @db.VarChar(300)
+  description String          @db.Text
+  severity    InsightSeverity @default(neutral)
+  data        Json
+  detectedAt  DateTime        @default(now())
+  seenAt      DateTime?
+  dismissedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, kind])
+  @@index([userId, dismissedAt, detectedAt(sort: Desc)])
+  @@map("insights")
 }

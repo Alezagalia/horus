@@ -33,6 +33,25 @@ const menuSections: MenuSection[] = [
     title: 'Principal',
     items: [
       { name: 'Dashboard', path: '/', icon: '🏠', gradient: 'from-indigo-500 to-purple-500' },
+      { name: 'Reportes', path: '/reports', icon: '📊', gradient: 'from-sky-500 to-indigo-500' },
+      {
+        name: 'Mi Historia',
+        path: '/timeline',
+        icon: '📜',
+        gradient: 'from-amber-500 to-rose-500',
+      },
+      {
+        name: 'Deuda de Vida',
+        path: '/life-debt',
+        icon: '⚠️',
+        gradient: 'from-rose-500 to-orange-500',
+      },
+      {
+        name: 'Insights',
+        path: '/insights',
+        icon: '💡',
+        gradient: 'from-violet-500 to-fuchsia-500',
+      },
     ],
   },
   {

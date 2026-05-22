@@ -10,7 +10,7 @@ import { NotFoundError, BadRequestError } from '../middlewares/error.middleware.
 export interface CreateTaskData {
   categoryId: string;
   title: string;
-  description?: string;
+  description?: string | null;
   priority: Priority;
   dueDate?: string;
 }
@@ -251,6 +251,7 @@ export const taskService = {
       completedAt?: Date | null;
       canceledAt?: Date | null;
       archivedAt?: Date | null;
+      rescheduleCount?: { increment: number };
     } = {};
 
     if (data.title !== undefined) updateData.title = data.title;
@@ -258,7 +259,14 @@ export const taskService = {
     if (data.categoryId !== undefined) updateData.categoryId = data.categoryId;
     if (data.priority !== undefined) updateData.priority = data.priority;
     if (data.dueDate !== undefined) {
-      updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null;
+      const newDueDate = data.dueDate ? new Date(data.dueDate) : null;
+      updateData.dueDate = newDueDate;
+      // F-14: increment rescheduleCount when dueDate actually changes (and is not being cleared).
+      const existingMs = existingTask.dueDate ? existingTask.dueDate.getTime() : null;
+      const newMs = newDueDate ? newDueDate.getTime() : null;
+      if (existingMs !== null && newMs !== null && existingMs !== newMs) {
+        updateData.rescheduleCount = { increment: 1 };
+      }
     }
 
     // Handle status changes with timestamps

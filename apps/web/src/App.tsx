@@ -95,6 +95,18 @@ const SavingsGoalsPage = lazy(() =>
 const WeeklyReviewPage = lazy(() =>
   import('@/pages/WeeklyReviewPage').then((m) => ({ default: m.WeeklyReviewPage }))
 );
+const ReportsPage = lazy(() =>
+  import('@/pages/ReportsPage').then((m) => ({ default: m.ReportsPage }))
+);
+const TimelinePage = lazy(() =>
+  import('@/pages/TimelinePage').then((m) => ({ default: m.TimelinePage }))
+);
+const LifeDebtPage = lazy(() =>
+  import('@/pages/LifeDebtPage').then((m) => ({ default: m.LifeDebtPage }))
+);
+const InsightsPage = lazy(() =>
+  import('@/pages/InsightsPage').then((m) => ({ default: m.InsightsPage }))
+);
 
 function AppRoutes() {
   return (
@@ -372,6 +384,46 @@ function AppRoutes() {
             <ProtectedRoute>
               <MainLayout>
                 <WeeklyReviewPage />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reports"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <ReportsPage />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/timeline"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <TimelinePage />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/life-debt"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <LifeDebtPage />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/insights"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <InsightsPage />
               </MainLayout>
             </ProtectedRoute>
           }
