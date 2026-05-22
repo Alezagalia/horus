@@ -80,10 +80,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-      >
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
           <Text style={styles.logo}>🏛️</Text>
           <Text style={styles.title}>Horus</Text>
@@ -139,10 +136,7 @@ export const LoginScreen: React.FC<Props> = ({ navigation }) => {
           {/* Register Link */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>¿No tienes cuenta? </Text>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('Register')}
-              disabled={isLoading}
-            >
+            <TouchableOpacity onPress={() => navigation.navigate('Register')} disabled={isLoading}>
               <Text style={styles.footerLink}>Regístrate</Text>
             </TouchableOpacity>
           </View>

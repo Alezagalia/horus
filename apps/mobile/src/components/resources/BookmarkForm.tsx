@@ -41,7 +41,11 @@ export function BookmarkForm({ url, onUrlChange }: BookmarkFormProps) {
     <View style={styles.container}>
       <Text style={styles.label}>URL *</Text>
       <TextInput
-        style={[styles.input, isValidUrl && styles.inputValid, url && !isValidUrl && styles.inputInvalid]}
+        style={[
+          styles.input,
+          isValidUrl && styles.inputValid,
+          url && !isValidUrl && styles.inputInvalid,
+        ]}
         value={url}
         onChangeText={validateUrl}
         placeholder="https://ejemplo.com"
@@ -70,9 +74,7 @@ export function BookmarkForm({ url, onUrlChange }: BookmarkFormProps) {
         </View>
       )}
 
-      <Text style={styles.helperText}>
-        Ingresa la URL completa incluyendo https://
-      </Text>
+      <Text style={styles.helperText}>Ingresa la URL completa incluyendo https://</Text>
     </View>
   );
 }

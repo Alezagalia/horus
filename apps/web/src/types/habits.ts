@@ -4,7 +4,15 @@
  */
 
 export type HabitType = 'CHECK' | 'NUMERIC';
-export type TimeOfDay = 'AYUNO' | 'MANANA' | 'MEDIA_MANANA' | 'TARDE' | 'MEDIA_TARDE' | 'NOCHE' | 'ANTES_DORMIR' | 'ANYTIME';
+export type TimeOfDay =
+  | 'AYUNO'
+  | 'MANANA'
+  | 'MEDIA_MANANA'
+  | 'TARDE'
+  | 'MEDIA_TARDE'
+  | 'NOCHE'
+  | 'ANTES_DORMIR'
+  | 'ANYTIME';
 export type Periodicity = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'CUSTOM';
 
 export interface HabitOfDay {

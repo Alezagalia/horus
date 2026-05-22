@@ -63,10 +63,7 @@ export function SnippetEditor({
       {/* Language selector */}
       <View style={styles.header}>
         <Text style={styles.label}>Lenguaje:</Text>
-        <TouchableOpacity
-          style={styles.languageButton}
-          onPress={() => setShowLanguagePicker(true)}
-        >
+        <TouchableOpacity style={styles.languageButton} onPress={() => setShowLanguagePicker(true)}>
           <Text style={styles.languageButtonText}>{selectedLanguageLabel}</Text>
           <Text style={styles.languageButtonIcon}>▼</Text>
         </TouchableOpacity>

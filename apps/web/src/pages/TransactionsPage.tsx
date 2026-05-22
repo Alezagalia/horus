@@ -5,15 +5,31 @@
  */
 
 import { useState, useMemo } from 'react';
-import { format, startOfMonth, endOfMonth, subMonths, isToday, isYesterday, isSameDay } from 'date-fns';
+import {
+  format,
+  startOfMonth,
+  endOfMonth,
+  subMonths,
+  isToday,
+  isYesterday,
+  isSameDay,
+} from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Toaster } from 'react-hot-toast';
 import type { Transaction, TransactionType, GetTransactionsQuery } from '@horus/shared';
-import { useTransactions, useDeleteTransaction, useCreateTransaction, useUpdateTransaction } from '@/hooks/useTransactions';
+import {
+  useTransactions,
+  useDeleteTransaction,
+  useCreateTransaction,
+  useUpdateTransaction,
+} from '@/hooks/useTransactions';
 import { useAccounts } from '@/hooks/useAccounts';
 import { useCategories } from '@/hooks/useCategories';
 import { formatCurrency } from '@/utils/currency';
-import { TransactionFormModal, type TransactionFormData } from '@/components/transactions/TransactionFormModal';
+import {
+  TransactionFormModal,
+  type TransactionFormData,
+} from '@/components/transactions/TransactionFormModal';
 
 type FilterType = 'all' | TransactionType;
 
@@ -129,11 +145,12 @@ export function TransactionsPage() {
         setDateFrom(format(startOfMonth(now), 'yyyy-MM-dd'));
         setDateTo(format(endOfMonth(now), 'yyyy-MM-dd'));
         break;
-      case 'lastMonth':
+      case 'lastMonth': {
         const lastMonth = subMonths(now, 1);
         setDateFrom(format(startOfMonth(lastMonth), 'yyyy-MM-dd'));
         setDateTo(format(endOfMonth(lastMonth), 'yyyy-MM-dd'));
         break;
+      }
       case 'last3Months':
         setDateFrom(format(startOfMonth(subMonths(now, 2)), 'yyyy-MM-dd'));
         setDateTo(format(endOfMonth(now), 'yyyy-MM-dd'));
@@ -233,7 +250,12 @@ export function TransactionsPage() {
               className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
               </svg>
               Ingreso
             </button>
@@ -255,40 +277,79 @@ export function TransactionsPage() {
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-              <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" />
+              <svg
+                className="w-5 h-5 text-green-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M7 11l5-5m0 0l5 5m-5-5v12"
+                />
               </svg>
             </div>
             <div>
               <p className="text-sm text-gray-500">Ingresos</p>
-              <p className="text-xl font-bold text-green-600">+{formatCurrency(totals.income, 'ARS')}</p>
+              <p className="text-xl font-bold text-green-600">
+                +{formatCurrency(totals.income, 'ARS')}
+              </p>
             </div>
           </div>
         </div>
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
-              <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 13l-5 5m0 0l-5-5m5 5V6" />
+              <svg
+                className="w-5 h-5 text-red-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 13l-5 5m0 0l-5-5m5 5V6"
+                />
               </svg>
             </div>
             <div>
               <p className="text-sm text-gray-500">Egresos</p>
-              <p className="text-xl font-bold text-red-600">-{formatCurrency(totals.expenses, 'ARS')}</p>
+              <p className="text-xl font-bold text-red-600">
+                -{formatCurrency(totals.expenses, 'ARS')}
+              </p>
             </div>
           </div>
         </div>
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-full ${totals.balance >= 0 ? 'bg-blue-100' : 'bg-orange-100'} flex items-center justify-center`}>
-              <svg className={`w-5 h-5 ${totals.balance >= 0 ? 'text-blue-600' : 'text-orange-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            <div
+              className={`w-10 h-10 rounded-full ${totals.balance >= 0 ? 'bg-blue-100' : 'bg-orange-100'} flex items-center justify-center`}
+            >
+              <svg
+                className={`w-5 h-5 ${totals.balance >= 0 ? 'text-blue-600' : 'text-orange-600'}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                />
               </svg>
             </div>
             <div>
               <p className="text-sm text-gray-500">Balance</p>
-              <p className={`text-xl font-bold ${totals.balance >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
-                {totals.balance >= 0 ? '+' : ''}{formatCurrency(totals.balance, 'ARS')}
+              <p
+                className={`text-xl font-bold ${totals.balance >= 0 ? 'text-blue-600' : 'text-orange-600'}`}
+              >
+                {totals.balance >= 0 ? '+' : ''}
+                {formatCurrency(totals.balance, 'ARS')}
               </p>
             </div>
           </div>
@@ -346,7 +407,9 @@ export function TransactionsPage() {
             value={filterType}
             onChange={(e) => setFilterType(e.target.value as FilterType)}
             className={`px-3 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-indigo-500 ${
-              filterType !== 'all' ? 'border-indigo-300 bg-indigo-50 text-indigo-700' : 'border-gray-300'
+              filterType !== 'all'
+                ? 'border-indigo-300 bg-indigo-50 text-indigo-700'
+                : 'border-gray-300'
             }`}
           >
             <option value="all">Todos los tipos</option>
@@ -375,7 +438,9 @@ export function TransactionsPage() {
             value={filterCategoryId}
             onChange={(e) => setFilterCategoryId(e.target.value)}
             className={`px-3 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-indigo-500 ${
-              filterCategoryId ? 'border-indigo-300 bg-indigo-50 text-indigo-700' : 'border-gray-300'
+              filterCategoryId
+                ? 'border-indigo-300 bg-indigo-50 text-indigo-700'
+                : 'border-gray-300'
             }`}
           >
             <option value="">Todas las categorías</option>
@@ -401,7 +466,12 @@ export function TransactionsPage() {
               stroke="currentColor"
               viewBox="0 0 24 24"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
             </svg>
           </div>
 
@@ -412,7 +482,12 @@ export function TransactionsPage() {
               className="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
               Limpiar
             </button>
@@ -425,8 +500,18 @@ export function TransactionsPage() {
         {groupedTransactions.length === 0 ? (
           <div className="p-12 text-center">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              <svg
+                className="w-8 h-8 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                />
               </svg>
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">No hay movimientos</h3>
@@ -474,11 +559,14 @@ export function TransactionsPage() {
                         transaction.type === 'ingreso'
                           ? 'bg-green-100'
                           : transaction.isTransfer
-                          ? 'bg-blue-100'
-                          : 'bg-red-100'
+                            ? 'bg-blue-100'
+                            : 'bg-red-100'
                       }`}
                     >
-                      {transaction.isTransfer ? '↔️' : transaction.category?.icon || (transaction.type === 'ingreso' ? '💰' : '💸')}
+                      {transaction.isTransfer
+                        ? '↔️'
+                        : transaction.category?.icon ||
+                          (transaction.type === 'ingreso' ? '💰' : '💸')}
                     </div>
 
                     {/* Content */}
@@ -487,17 +575,23 @@ export function TransactionsPage() {
                         {transaction.concept}
                       </p>
                       <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <span>{transaction.account?.icon} {transaction.account?.name}</span>
+                        <span>
+                          {transaction.account?.icon} {transaction.account?.name}
+                        </span>
                         {transaction.category && (
                           <>
                             <span>•</span>
-                            <span>{transaction.category.icon} {transaction.category.name}</span>
+                            <span>
+                              {transaction.category.icon} {transaction.category.name}
+                            </span>
                           </>
                         )}
                         {transaction.isTransfer && transaction.targetAccount && (
                           <>
                             <span>→</span>
-                            <span>{transaction.targetAccount.icon} {transaction.targetAccount.name}</span>
+                            <span>
+                              {transaction.targetAccount.icon} {transaction.targetAccount.name}
+                            </span>
                           </>
                         )}
                       </div>
@@ -510,8 +604,8 @@ export function TransactionsPage() {
                           transaction.type === 'ingreso'
                             ? 'text-green-600'
                             : transaction.isTransfer
-                            ? 'text-blue-600'
-                            : 'text-red-600'
+                              ? 'text-blue-600'
+                              : 'text-red-600'
                         }`}
                       >
                         {transaction.type === 'ingreso' ? '+' : '-'}
@@ -527,8 +621,18 @@ export function TransactionsPage() {
                       }}
                       className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
                       </svg>
                     </button>
                   </div>
@@ -565,7 +669,8 @@ export function TransactionsPage() {
           <div className="bg-white rounded-xl max-w-md w-full p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Eliminar movimiento</h3>
             <p className="text-gray-600 mb-4">
-              ¿Estás seguro de que deseas eliminar "{deletingTransaction.concept}"? Esta acción no se puede deshacer y afectará el saldo de la cuenta.
+              ¿Estás seguro de que deseas eliminar "{deletingTransaction.concept}"? Esta acción no
+              se puede deshacer y afectará el saldo de la cuenta.
             </p>
             <div className="flex justify-end gap-3">
               <button

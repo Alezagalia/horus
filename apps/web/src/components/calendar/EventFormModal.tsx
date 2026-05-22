@@ -7,8 +7,7 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Scope } from '@horus/shared';
-import type { CalendarEvent, CreateCalendarEventDTO } from '@horus/shared';
+import { Scope, type CalendarEvent, type CreateCalendarEventDTO } from '@horus/shared';
 import { useCategories } from '@/hooks/useCategories';
 
 const formSchema = z

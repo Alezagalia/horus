@@ -18,7 +18,14 @@ interface CardProps {
   noPadding?: boolean;
 }
 
-export function Card({ title, subtitle, children, action, className = '', noPadding = false }: CardProps) {
+export function Card({
+  title,
+  subtitle,
+  children,
+  action,
+  className = '',
+  noPadding = false,
+}: CardProps) {
   return (
     <div className={`glass-card overflow-hidden ${className}`}>
       <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">

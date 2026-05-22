@@ -59,7 +59,9 @@ export function ResourceFilters({ filters, onChange }: ResourceFiltersProps) {
 
         {/* Type filters */}
         <button
-          onClick={() => handleTypeFilter(filters.type === ResourceType.NOTE ? undefined : ResourceType.NOTE)}
+          onClick={() =>
+            handleTypeFilter(filters.type === ResourceType.NOTE ? undefined : ResourceType.NOTE)
+          }
           className={`px-3 py-1 text-sm rounded-full border transition-colors ${
             filters.type === ResourceType.NOTE
               ? 'bg-blue-100 border-blue-300 text-blue-700'
@@ -70,7 +72,11 @@ export function ResourceFilters({ filters, onChange }: ResourceFiltersProps) {
         </button>
 
         <button
-          onClick={() => handleTypeFilter(filters.type === ResourceType.SNIPPET ? undefined : ResourceType.SNIPPET)}
+          onClick={() =>
+            handleTypeFilter(
+              filters.type === ResourceType.SNIPPET ? undefined : ResourceType.SNIPPET
+            )
+          }
           className={`px-3 py-1 text-sm rounded-full border transition-colors ${
             filters.type === ResourceType.SNIPPET
               ? 'bg-green-100 border-green-300 text-green-700'
@@ -81,7 +87,11 @@ export function ResourceFilters({ filters, onChange }: ResourceFiltersProps) {
         </button>
 
         <button
-          onClick={() => handleTypeFilter(filters.type === ResourceType.BOOKMARK ? undefined : ResourceType.BOOKMARK)}
+          onClick={() =>
+            handleTypeFilter(
+              filters.type === ResourceType.BOOKMARK ? undefined : ResourceType.BOOKMARK
+            )
+          }
           className={`px-3 py-1 text-sm rounded-full border transition-colors ${
             filters.type === ResourceType.BOOKMARK
               ? 'bg-orange-100 border-orange-300 text-orange-700'

@@ -101,7 +101,11 @@ export function CreateResourceDialog({ open, onClose, resource }: CreateResource
   if (!open) return null;
 
   const isLoading = createMutation.isPending || updateMutation.isPending;
-  const isButtonDisabled = isLoading || !title || (type !== ResourceType.BOOKMARK && !content) || (type === ResourceType.BOOKMARK && !url);
+  const isButtonDisabled =
+    isLoading ||
+    !title ||
+    (type !== ResourceType.BOOKMARK && !content) ||
+    (type === ResourceType.BOOKMARK && !url);
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -172,18 +176,14 @@ export function CreateResourceDialog({ open, onClose, resource }: CreateResource
             {/* Content based on type */}
             {type === ResourceType.NOTE && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Contenido *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Contenido *</label>
                 <NoteEditor value={content} onChange={setContent} />
               </div>
             )}
 
             {type === ResourceType.SNIPPET && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Código *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Código *</label>
                 <SnippetEditor
                   code={content}
                   language={language}
@@ -201,9 +201,7 @@ export function CreateResourceDialog({ open, onClose, resource }: CreateResource
 
             {/* Tags */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tags
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Tags</label>
               <div className="flex gap-2 mb-2">
                 <input
                   type="text"

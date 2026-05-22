@@ -26,7 +26,9 @@ export const getExercises = async (filters?: ExerciseFilters): Promise<ExerciseW
   if (filters?.muscleGroup) params.append('muscleGroup', filters.muscleGroup);
   if (filters?.search) params.append('search', filters.search);
 
-  const response = await apiClient.get<{ exercises: ExerciseWithUsage[] }>(`/exercises?${params.toString()}`);
+  const response = await apiClient.get<{ exercises: ExerciseWithUsage[] }>(
+    `/exercises?${params.toString()}`
+  );
   return response.data.exercises;
 };
 

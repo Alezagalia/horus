@@ -30,7 +30,15 @@ export interface HabitFromAPI {
   unit?: string;
   periodicity: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'CUSTOM';
   weekDays: number[];
-  timeOfDay: 'AYUNO' | 'MANANA' | 'MEDIA_MANANA' | 'TARDE' | 'MEDIA_TARDE' | 'NOCHE' | 'ANTES_DORMIR' | 'ANYTIME';
+  timeOfDay:
+    | 'AYUNO'
+    | 'MANANA'
+    | 'MEDIA_MANANA'
+    | 'TARDE'
+    | 'MEDIA_TARDE'
+    | 'NOCHE'
+    | 'ANTES_DORMIR'
+    | 'ANYTIME';
   reminderTime?: string;
   color?: string;
   order: number;
@@ -113,7 +121,9 @@ export async function deleteHabit(id: string): Promise<void> {
  * Reactiva un hábito previamente eliminado
  */
 export async function reactivateHabit(id: string, reason?: string): Promise<HabitFromAPI> {
-  const response = await axiosInstance.post<{ habit: HabitFromAPI }>(`/habits/${id}/reactivate`, { reason });
+  const response = await axiosInstance.post<{ habit: HabitFromAPI }>(`/habits/${id}/reactivate`, {
+    reason,
+  });
   return response.data.habit;
 }
 
@@ -123,8 +133,14 @@ export async function reactivateHabit(id: string, reason?: string): Promise<Habi
  * POST /api/habits/:id/records
  * Crea o actualiza un registro de hábito para una fecha específica
  */
-export async function createOrUpdateRecord(habitId: string, data: CreateHabitRecordDTO): Promise<HabitRecord> {
-  const response = await axiosInstance.post<{ record: HabitRecord }>(`/habits/${habitId}/records`, data);
+export async function createOrUpdateRecord(
+  habitId: string,
+  data: CreateHabitRecordDTO
+): Promise<HabitRecord> {
+  const response = await axiosInstance.post<{ record: HabitRecord }>(
+    `/habits/${habitId}/records`,
+    data
+  );
   return response.data.record;
 }
 
@@ -134,9 +150,11 @@ export async function createOrUpdateRecord(habitId: string, data: CreateHabitRec
  */
 export async function getRecordByDate(habitId: string, date: string): Promise<HabitRecord | null> {
   try {
-    const response = await axiosInstance.get<{ record: HabitRecord | null }>(`/habits/${habitId}/records/${date}`);
+    const response = await axiosInstance.get<{ record: HabitRecord | null }>(
+      `/habits/${habitId}/records/${date}`
+    );
     return response.data.record;
-  } catch (error) {
+  } catch {
     // 404 means no record for that date
     return null;
   }
@@ -151,9 +169,12 @@ export async function getRecordsByDateRange(
   startDate: string,
   endDate: string
 ): Promise<HabitRecord[]> {
-  const response = await axiosInstance.get<{ records: HabitRecord[] }>(`/habits/${habitId}/records`, {
-    params: { startDate, endDate },
-  });
+  const response = await axiosInstance.get<{ records: HabitRecord[] }>(
+    `/habits/${habitId}/records`,
+    {
+      params: { startDate, endDate },
+    }
+  );
   return response.data.records;
 }
 
@@ -227,7 +248,15 @@ export async function getHabitDetailedStats(habitId: string): Promise<unknown> {
 
 // ==================== Reorder ====================
 
-export type TimeOfDay = 'AYUNO' | 'MANANA' | 'MEDIA_MANANA' | 'TARDE' | 'MEDIA_TARDE' | 'NOCHE' | 'ANTES_DORMIR' | 'ANYTIME';
+export type TimeOfDay =
+  | 'AYUNO'
+  | 'MANANA'
+  | 'MEDIA_MANANA'
+  | 'TARDE'
+  | 'MEDIA_TARDE'
+  | 'NOCHE'
+  | 'ANTES_DORMIR'
+  | 'ANYTIME';
 
 export interface ReorderHabitsDTO {
   timeOfDay: TimeOfDay;
@@ -238,10 +267,13 @@ export interface ReorderHabitsDTO {
  * PUT /api/habits/reorder
  * Reordena los hábitos dentro de un momento del día específico
  */
-export async function reorderHabits(data: ReorderHabitsDTO): Promise<{ success: boolean; reorderedCount: number }> {
-  const response = await axiosInstance.put<{ message: string; success: boolean; reorderedCount: number }>(
-    '/habits/reorder',
-    data
-  );
+export async function reorderHabits(
+  data: ReorderHabitsDTO
+): Promise<{ success: boolean; reorderedCount: number }> {
+  const response = await axiosInstance.put<{
+    message: string;
+    success: boolean;
+    reorderedCount: number;
+  }>('/habits/reorder', data);
   return response.data;
 }

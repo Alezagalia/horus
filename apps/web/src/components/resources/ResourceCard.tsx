@@ -65,7 +65,9 @@ export function ResourceCard({ resource, onEdit, onDelete, onTogglePin }: Resour
             className="p-1.5 hover:bg-gray-100 rounded transition-colors"
             title={resource.isPinned ? 'Desmarcar' : 'Marcar como favorito'}
           >
-            <Pin className={`w-4 h-4 ${resource.isPinned ? 'text-yellow-500 fill-current' : 'text-gray-600'}`} />
+            <Pin
+              className={`w-4 h-4 ${resource.isPinned ? 'text-yellow-500 fill-current' : 'text-gray-600'}`}
+            />
           </button>
           <button
             onClick={onEdit}
@@ -96,22 +98,24 @@ export function ResourceCard({ resource, onEdit, onDelete, onTogglePin }: Resour
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
-                table: ({node, ...props}) => (
-                  <table className="min-w-full divide-y divide-gray-300 border border-gray-300 rounded-lg overflow-hidden text-xs" {...props} />
+                table: ({ node: _node, ...props }) => (
+                  <table
+                    className="min-w-full divide-y divide-gray-300 border border-gray-300 rounded-lg overflow-hidden text-xs"
+                    {...props}
+                  />
                 ),
-                thead: ({node, ...props}) => (
-                  <thead className="bg-gray-100" {...props} />
+                thead: ({ node: _node, ...props }) => <thead className="bg-gray-100" {...props} />,
+                th: ({ node: _node, ...props }) => (
+                  <th
+                    className="px-2 py-1 text-left font-semibold text-gray-900 border border-gray-300"
+                    {...props}
+                  />
                 ),
-                th: ({node, ...props}) => (
-                  <th className="px-2 py-1 text-left font-semibold text-gray-900 border border-gray-300" {...props} />
-                ),
-                tbody: ({node, ...props}) => (
+                tbody: ({ node: _node, ...props }) => (
                   <tbody className="divide-y divide-gray-200" {...props} />
                 ),
-                tr: ({node, ...props}) => (
-                  <tr className="hover:bg-gray-50" {...props} />
-                ),
-                td: ({node, ...props}) => (
+                tr: ({ node: _node, ...props }) => <tr className="hover:bg-gray-50" {...props} />,
+                td: ({ node: _node, ...props }) => (
                   <td className="px-2 py-1 text-gray-700 border border-gray-300" {...props} />
                 ),
               }}
@@ -159,10 +163,7 @@ export function ResourceCard({ resource, onEdit, onDelete, onTogglePin }: Resour
       {resource.tags.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {resource.tags.slice(0, 3).map((tag) => (
-            <span
-              key={tag}
-              className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded-full"
-            >
+            <span key={tag} className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded-full">
               #{tag}
             </span>
           ))}

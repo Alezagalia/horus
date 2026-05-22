@@ -5,8 +5,13 @@
 
 import { useState, useMemo } from 'react';
 import { Toaster } from 'react-hot-toast';
-import { Scope, SCOPE_LABELS, SCOPE_ICONS, type CreateCategoryDTO } from '@horus/shared';
-import type { Category } from '@horus/shared';
+import {
+  Scope,
+  SCOPE_LABELS,
+  SCOPE_ICONS,
+  type CreateCategoryDTO,
+  type Category,
+} from '@horus/shared';
 import { CategoryCard } from '@/components/categories/CategoryCard';
 import { CategoryModal } from '@/components/categories/CategoryModal';
 import {

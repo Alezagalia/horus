@@ -7,7 +7,7 @@
 
 // Sprint 1: Use centralized axios instance with auth interceptors
 import { apiClient } from '../lib/axios';
-import type { WorkoutListItem, WorkoutListResponse, WorkoutDetailResponse } from '@horus/shared';
+import type { WorkoutListResponse, WorkoutDetailResponse } from '@horus/shared';
 
 export interface StartWorkoutResponse {
   workoutId: string;

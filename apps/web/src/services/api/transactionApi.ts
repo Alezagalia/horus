@@ -50,7 +50,10 @@ export async function getTransactionById(id: string): Promise<Transaction> {
  * Create a new transaction
  */
 export async function createTransaction(data: CreateTransactionDTO): Promise<Transaction> {
-  const response = await axiosInstance.post<{ transaction: Transaction; account: unknown }>('/transactions', data);
+  const response = await axiosInstance.post<{ transaction: Transaction; account: unknown }>(
+    '/transactions',
+    data
+  );
   // Backend returns { transaction: {...}, account: {...} }
   return response.data.transaction;
 }
@@ -62,7 +65,10 @@ export async function updateTransaction(
   id: string,
   data: UpdateTransactionDTO
 ): Promise<Transaction> {
-  const response = await axiosInstance.put<{ transaction: Transaction; account: unknown }>(`/transactions/${id}`, data);
+  const response = await axiosInstance.put<{ transaction: Transaction; account: unknown }>(
+    `/transactions/${id}`,
+    data
+  );
   // Backend returns { transaction: {...}, account: {...} }
   return response.data.transaction;
 }

@@ -32,7 +32,9 @@ import type {
 
 export function TasksPage() {
   // Obtener categorías reales de la API (filtradas por scope tareas)
-  const { data: categories = [], isLoading: categoriesLoading } = useCategories({ scope: 'tareas' });
+  const { data: categories = [], isLoading: categoriesLoading } = useCategories({
+    scope: 'tareas',
+  });
 
   // State para filtros
   const [statusFilter, setStatusFilter] = useState<TaskFilterStatus>('all');
@@ -73,9 +75,10 @@ export function TasksPage() {
           if (!a.dueDate) return 1;
           if (!b.dueDate) return -1;
           return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-        case 'priority':
+        case 'priority': {
           const priorityOrder = { alta: 0, media: 1, baja: 2 };
           return priorityOrder[a.priority] - priorityOrder[b.priority];
+        }
         case 'createdAt':
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         default:

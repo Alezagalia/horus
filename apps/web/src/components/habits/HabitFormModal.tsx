@@ -62,7 +62,6 @@ export function HabitFormModal({
     mode: 'onChange',
   });
 
-
   const watchType = watch('type');
   const watchPeriodicity = watch('periodicity');
   const watchWeekDays = watch('weekDays');
@@ -126,7 +125,10 @@ export function HabitFormModal({
         color: 'Color',
       };
       const fieldLabel = fieldLabels[field] || field;
-      toast.error(`${fieldLabel}: ${error?.message || 'Valor inválido'}`, { icon: '⚠️', duration: 5000 });
+      toast.error(`${fieldLabel}: ${error?.message || 'Valor inválido'}`, {
+        icon: '⚠️',
+        duration: 5000,
+      });
     }
   };
 
@@ -148,7 +150,10 @@ export function HabitFormModal({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Overlay */}
-      <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity z-40" onClick={onClose} />
+      <div
+        className="fixed inset-0 bg-black bg-opacity-50 transition-opacity z-40"
+        onClick={onClose}
+      />
 
       {/* Modal */}
       <div className="relative z-50 flex min-h-full items-center justify-center p-2">
@@ -174,7 +179,7 @@ export function HabitFormModal({
           </div>
 
           {/* Form */}
-          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          {}
           <form
             onSubmit={(e) => {
               onFormSubmitAttempt(e);
@@ -195,10 +200,15 @@ export function HabitFormModal({
                   className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   placeholder="Ej: Meditar"
                 />
-                {errors.name && <p className="mt-0.5 text-xs text-red-600">{errors.name.message}</p>}
+                {errors.name && (
+                  <p className="mt-0.5 text-xs text-red-600">{errors.name.message}</p>
+                )}
               </div>
               <div>
-                <label htmlFor="categoryId" className="block text-xs font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="categoryId"
+                  className="block text-xs font-medium text-gray-700 mb-1"
+                >
                   Categoría *
                 </label>
                 <select
@@ -261,12 +271,17 @@ export function HabitFormModal({
                     <span className="text-xs">Num</span>
                   </label>
                 </div>
-                {errors.type && <p className="mt-0.5 text-xs text-red-600">{errors.type.message}</p>}
+                {errors.type && (
+                  <p className="mt-0.5 text-xs text-red-600">{errors.type.message}</p>
+                )}
               </div>
 
               {/* Periodicity */}
               <div>
-                <label htmlFor="periodicity" className="block text-xs font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="periodicity"
+                  className="block text-xs font-medium text-gray-700 mb-1"
+                >
                   Periodicidad *
                 </label>
                 <select
@@ -313,7 +328,10 @@ export function HabitFormModal({
             {watchType === 'NUMERIC' && (
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="targetValue" className="block text-xs font-medium text-gray-700 mb-1">
+                  <label
+                    htmlFor="targetValue"
+                    className="block text-xs font-medium text-gray-700 mb-1"
+                  >
                     Objetivo *
                   </label>
                   <input
@@ -348,9 +366,7 @@ export function HabitFormModal({
             {/* Week Days (only for WEEKLY or CUSTOM) */}
             {(watchPeriodicity === 'WEEKLY' || watchPeriodicity === 'CUSTOM') && (
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Días *
-                </label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Días *</label>
                 <div className="flex gap-1">
                   {weekDayOptions.map((day) => (
                     <button

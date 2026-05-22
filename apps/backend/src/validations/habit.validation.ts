@@ -7,7 +7,16 @@ import { z } from 'zod';
 
 export const habitTypeEnum = z.enum(['CHECK', 'NUMERIC']);
 export const periodicityEnum = z.enum(['DAILY', 'WEEKLY', 'MONTHLY', 'CUSTOM']);
-export const timeOfDayEnum = z.enum(['AYUNO', 'MANANA', 'MEDIA_MANANA', 'TARDE', 'MEDIA_TARDE', 'NOCHE', 'ANTES_DORMIR', 'ANYTIME']);
+export const timeOfDayEnum = z.enum([
+  'AYUNO',
+  'MANANA',
+  'MEDIA_MANANA',
+  'TARDE',
+  'MEDIA_TARDE',
+  'NOCHE',
+  'ANTES_DORMIR',
+  'ANYTIME',
+]);
 
 export const createHabitSchema = z
   .object({
@@ -93,7 +102,10 @@ export const updateHabitSchema = z
 
 export const getHabitsQuerySchema = z.object({
   categoryId: z.string().uuid().optional(),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), // YYYY-MM-DD
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(), // YYYY-MM-DD
 });
 
 /**

@@ -80,12 +80,12 @@ export function GoogleCalendarSyncModal({ isOpen, onClose }: GoogleCalendarSyncM
               refetch();
             }, 500);
           }
-        } catch (error) {
+        } catch {
           // COOP policy might block popup.closed check - ignore and continue
-          console.log('Cannot check popup status (COOP policy)');
+          console.warn('Cannot check popup status (COOP policy)');
         }
       }, 500);
-    } catch (error) {
+    } catch {
       setIsConnecting(false);
     }
   };

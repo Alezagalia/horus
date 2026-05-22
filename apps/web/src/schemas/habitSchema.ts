@@ -17,21 +17,28 @@ export const habitSchema = z
     type: z.enum(['CHECK', 'NUMERIC'], {
       required_error: 'El tipo es obligatorio',
     }),
-    targetValue: z
-      .number()
-      .positive('El valor objetivo debe ser positivo')
-      .optional(),
+    targetValue: z.number().positive('El valor objetivo debe ser positivo').optional(),
     unit: z.string().max(50, 'La unidad no puede exceder 50 caracteres').default(''),
     periodicity: z.enum(['DAILY', 'WEEKLY', 'MONTHLY', 'CUSTOM'], {
       required_error: 'La periodicidad es obligatoria',
     }),
     weekDays: z.array(z.number().min(0).max(6)).default([]),
-    timeOfDay: z.enum(['AYUNO', 'MANANA', 'MEDIA_MANANA', 'TARDE', 'MEDIA_TARDE', 'NOCHE', 'ANTES_DORMIR', 'ANYTIME'], {
-      required_error: 'El momento del día es obligatorio',
-    }),
-    color: z
-      .string()
-      .optional(),
+    timeOfDay: z.enum(
+      [
+        'AYUNO',
+        'MANANA',
+        'MEDIA_MANANA',
+        'TARDE',
+        'MEDIA_TARDE',
+        'NOCHE',
+        'ANTES_DORMIR',
+        'ANYTIME',
+      ],
+      {
+        required_error: 'El momento del día es obligatorio',
+      }
+    ),
+    color: z.string().optional(),
   })
   .superRefine((data, ctx) => {
     // If type is NUMERIC, targetValue is required

@@ -27,7 +27,11 @@ export function HabitCard({
   const [numericValue, setNumericValue] = useState(habit.value || 0);
 
   const handleToggleComplete = () => {
-    console.log('handleToggleComplete called', { disabled, hasOnToggleComplete: !!onToggleComplete, habitId: habit.id });
+    console.log('handleToggleComplete called', {
+      disabled,
+      hasOnToggleComplete: !!onToggleComplete,
+      habitId: habit.id,
+    });
     if (disabled || !onToggleComplete) {
       console.log('Toggle blocked:', { disabled, onToggleComplete: !!onToggleComplete });
       return;
@@ -49,7 +53,12 @@ export function HabitCard({
     onUpdateValue(habit.id, validValue);
 
     // Check if completed target
-    if (habit.targetValue && validValue >= habit.targetValue && !habit.completed && onToggleComplete) {
+    if (
+      habit.targetValue &&
+      validValue >= habit.targetValue &&
+      !habit.completed &&
+      onToggleComplete
+    ) {
       onToggleComplete(habit.id);
       toast.success(`¡${habit.name} completado!`, {
         icon: '🎯',

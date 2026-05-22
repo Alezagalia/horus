@@ -21,7 +21,6 @@ import {
   getTaskById,
   toggleTaskStatus,
   TaskWithChecklist,
-  ChecklistItem as ChecklistItemType,
   createChecklistItem,
   updateChecklistItem,
   deleteChecklistItem,

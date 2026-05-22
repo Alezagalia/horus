@@ -129,7 +129,7 @@ export function RoutineFormPage() {
     const data = {
       name: name.trim(),
       description: description.trim() || null,
-      exercises: exercises.map(({ tempId, ...ex }) => ex),
+      exercises: exercises.map(({ tempId: _tempId, ...ex }) => ex),
     };
 
     if (isEditing) {

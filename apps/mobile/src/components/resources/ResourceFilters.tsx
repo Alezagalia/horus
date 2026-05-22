@@ -5,14 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import {
-  View,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Text,
-  ScrollView,
-} from 'react-native';
+import { View, TextInput, TouchableOpacity, StyleSheet, Text, ScrollView } from 'react-native';
 import { ResourceType, ResourceFilters as IResourceFilters } from '@horus/shared';
 
 interface ResourceFiltersProps {
@@ -113,11 +106,7 @@ export function ResourceFilters({ filters, onFiltersChange }: ResourceFiltersPro
           onPress={handlePinnedFilter}
         >
           <Text style={styles.chipIcon}>📌</Text>
-          <Text
-            style={[styles.chipText, filters.isPinned && styles.chipTextActive]}
-          >
-            Fijados
-          </Text>
+          <Text style={[styles.chipText, filters.isPinned && styles.chipTextActive]}>Fijados</Text>
         </TouchableOpacity>
 
         {/* Clear all */}

@@ -19,11 +19,7 @@ import {
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ResourceType } from '@horus/shared';
-import {
-  useResource,
-  useDeleteResource,
-  useTogglePin,
-} from '../hooks/useResources';
+import { useResource, useDeleteResource, useTogglePin } from '../hooks/useResources';
 import Markdown from 'react-native-markdown-display';
 
 type NavigationProp = NativeStackNavigationProp<any>;
@@ -63,24 +59,20 @@ export function ResourceDetailScreen() {
   const handleDelete = () => {
     if (!resource) return;
 
-    Alert.alert(
-      'Eliminar Resource',
-      `¿Estás seguro de que quieres eliminar "${resource.title}"?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: () => {
-            deleteMutation.mutate(resourceId, {
-              onSuccess: () => {
-                navigation.goBack();
-              },
-            });
-          },
+    Alert.alert('Eliminar Resource', `¿Estás seguro de que quieres eliminar "${resource.title}"?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: () => {
+          deleteMutation.mutate(resourceId, {
+            onSuccess: () => {
+              navigation.goBack();
+            },
+          });
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleTogglePin = () => {
@@ -163,10 +155,7 @@ export function ResourceDetailScreen() {
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.errorText}>Resource no encontrado</Text>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backButtonText}>Volver</Text>
         </TouchableOpacity>
       </View>
@@ -223,9 +212,7 @@ export function ResourceDetailScreen() {
       {/* Header Actions */}
       <View style={styles.headerActions}>
         <TouchableOpacity style={styles.iconButton} onPress={handleTogglePin}>
-          <Text style={styles.iconButtonText}>
-            {resource.isPinned ? '📌' : '📍'}
-          </Text>
+          <Text style={styles.iconButtonText}>{resource.isPinned ? '📌' : '📍'}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.iconButton} onPress={handleShare}>
           <Text style={styles.iconButtonText}>↗️</Text>
@@ -236,10 +223,7 @@ export function ResourceDetailScreen() {
         <TouchableOpacity style={styles.iconButton} onPress={handleEdit}>
           <Text style={styles.iconButtonText}>✏️</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.iconButton, styles.deleteButton]}
-          onPress={handleDelete}
-        >
+        <TouchableOpacity style={[styles.iconButton, styles.deleteButton]} onPress={handleDelete}>
           <Text style={styles.iconButtonText}>🗑️</Text>
         </TouchableOpacity>
       </View>
@@ -258,13 +242,9 @@ export function ResourceDetailScreen() {
 
           {/* Metadata */}
           <View style={styles.metadata}>
-            <Text style={styles.metadataText}>
-              Creado: {formatDate(resource.createdAt)}
-            </Text>
+            <Text style={styles.metadataText}>Creado: {formatDate(resource.createdAt)}</Text>
             {resource.updatedAt !== resource.createdAt && (
-              <Text style={styles.metadataText}>
-                Actualizado: {formatDate(resource.updatedAt)}
-              </Text>
+              <Text style={styles.metadataText}>Actualizado: {formatDate(resource.updatedAt)}</Text>
             )}
           </View>
         </View>

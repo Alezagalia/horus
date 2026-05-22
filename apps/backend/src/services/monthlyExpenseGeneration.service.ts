@@ -136,7 +136,7 @@ export async function generateMonthlyExpensesForUser(
   const recurringExpenses = await prisma.recurringExpense.findMany({
     where: {
       userId,
-      isActive: true
+      isActive: true,
     },
   });
 

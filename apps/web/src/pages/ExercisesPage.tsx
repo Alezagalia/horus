@@ -5,8 +5,7 @@
 
 import { useState, useMemo } from 'react';
 import { Toaster } from 'react-hot-toast';
-import { type MuscleGroup, type CreateExerciseDTO } from '@horus/shared';
-import type { ExerciseWithStats } from '@horus/shared';
+import { type MuscleGroup, type CreateExerciseDTO, type ExerciseWithStats } from '@horus/shared';
 import {
   useExercises,
   useCreateExercise,

@@ -10,7 +10,13 @@ import { SearchBar } from '@/components/habits/SearchBar';
 import { CategoryFilter } from '@/components/habits/CategoryFilter';
 import { HabitListItem } from '@/components/habits/HabitListItem';
 import { HabitFormModal } from '@/components/habits/HabitFormModal';
-import { useHabits, useCreateHabit, useUpdateHabit, useDeleteHabit, transformHabitFromAPI } from '@/hooks/useHabits';
+import {
+  useHabits,
+  useCreateHabit,
+  useUpdateHabit,
+  useDeleteHabit,
+  transformHabitFromAPI,
+} from '@/hooks/useHabits';
 import { useCategories } from '@/hooks/useCategories';
 import { Scope } from '@horus/shared';
 import type { Habit, HabitFormData } from '@/types/habits';
@@ -20,7 +26,9 @@ type SortOption = 'name' | 'streak' | 'createdAt';
 export function HabitsPage() {
   // API queries
   const { data: habitsFromAPI, isLoading: isLoadingHabits, error: habitsError } = useHabits();
-  const { data: categoriesFromAPI, isLoading: isLoadingCategories } = useCategories({ scope: Scope.HABITOS });
+  const { data: categoriesFromAPI, isLoading: isLoadingCategories } = useCategories({
+    scope: Scope.HABITOS,
+  });
 
   // Mutations
   const createHabitMutation = useCreateHabit();

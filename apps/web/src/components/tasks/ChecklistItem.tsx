@@ -30,9 +30,7 @@ export function ChecklistItem({ id, text, initialCompleted, onToggle }: Checklis
         type="button"
         onClick={handleClick}
         className={`flex-shrink-0 w-5 h-5 rounded border-2 transition-all ${
-          isCompleted
-            ? 'bg-green-500 border-green-500'
-            : 'border-gray-300 hover:border-green-500'
+          isCompleted ? 'bg-green-500 border-green-500' : 'border-gray-300 hover:border-green-500'
         } flex items-center justify-center`}
       >
         {isCompleted && (

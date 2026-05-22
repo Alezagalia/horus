@@ -37,7 +37,10 @@ export function NoteEditor({ value, onChange, placeholder }: NoteEditorProps) {
         ref={editorRef}
         markdown={value || ''}
         onChange={onChange}
-        placeholder={placeholder || 'Escribe tu nota aquí... Usa la barra de herramientas para formatear texto, insertar tablas y más.'}
+        placeholder={
+          placeholder ||
+          'Escribe tu nota aquí... Usa la barra de herramientas para formatear texto, insertar tablas y más.'
+        }
         contentEditableClassName="prose prose-sm max-w-none min-h-96 p-4 focus:outline-none"
         plugins={[
           // Plugins de contenido
@@ -67,8 +70,8 @@ export function NoteEditor({ value, onChange, placeholder }: NoteEditorProps) {
                 <Separator />
                 <InsertThematicBreak />
               </div>
-            )
-          })
+            ),
+          }),
         ]}
       />
     </div>

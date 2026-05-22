@@ -1,10 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { resourceApi } from '../services/api/resourceApi';
-import type {
-  CreateResourceDto,
-  UpdateResourceDto,
-  ResourceFilters,
-} from '@horus/shared';
+import type { CreateResourceDto, UpdateResourceDto, ResourceFilters } from '@horus/shared';
 import { toast } from 'react-hot-toast';
 
 export function useResources(filters?: ResourceFilters) {

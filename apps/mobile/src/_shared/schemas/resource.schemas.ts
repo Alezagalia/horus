@@ -11,7 +11,10 @@ export const createResourceSchema = z
     language: z.string().max(50).optional(),
     categoryId: z.string().uuid().optional(),
     tags: z.array(z.string()).default([]),
-    color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Color hexadecimal inválido').optional(),
+    color: z
+      .string()
+      .regex(/^#[0-9A-Fa-f]{6}$/, 'Color hexadecimal inválido')
+      .optional(),
   })
   .refine(
     (data) => {
@@ -62,7 +65,11 @@ export const updateResourceSchema = z.object({
   categoryId: z.string().uuid().optional().nullable(),
   tags: z.array(z.string()).optional(),
   isPinned: z.boolean().optional(),
-  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional().nullable(),
+  color: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/)
+    .optional()
+    .nullable(),
 });
 
 export const resourceFiltersSchema = z.object({

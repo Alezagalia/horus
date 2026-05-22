@@ -20,7 +20,7 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
-import { getTaskById, updateTask, deleteTask, Task } from '../api/tasks.api';
+import { getTaskById, updateTask, deleteTask } from '../api/tasks.api';
 import { PriorityPicker } from '../components/PriorityPicker';
 import { CategoryPicker } from '../components/CategoryPicker';
 import { StatusPicker } from '../components/StatusPicker';

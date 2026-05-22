@@ -182,9 +182,7 @@ export function CreateResourceScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.cancelButton}>Cancelar</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          {isEditMode ? 'Editar Resource' : 'Nuevo Resource'}
-        </Text>
+        <Text style={styles.headerTitle}>{isEditMode ? 'Editar Resource' : 'Nuevo Resource'}</Text>
         <TouchableOpacity
           onPress={handleSubmit}
           disabled={createMutation.isPending || updateMutation.isPending}
@@ -204,19 +202,11 @@ export function CreateResourceScreen() {
               {TYPE_OPTIONS.map((option) => (
                 <TouchableOpacity
                   key={option.value}
-                  style={[
-                    styles.typeOption,
-                    type === option.value && styles.typeOptionActive,
-                  ]}
+                  style={[styles.typeOption, type === option.value && styles.typeOptionActive]}
                   onPress={() => setType(option.value)}
                 >
                   <Text style={styles.typeIcon}>{option.icon}</Text>
-                  <Text
-                    style={[
-                      styles.typeLabel,
-                      type === option.value && styles.typeLabelActive,
-                    ]}
-                  >
+                  <Text style={[styles.typeLabel, type === option.value && styles.typeLabelActive]}>
                     {option.label}
                   </Text>
                 </TouchableOpacity>
@@ -298,10 +288,7 @@ export function CreateResourceScreen() {
         {/* Color */}
         <View style={styles.section}>
           <Text style={styles.label}>Color (opcional)</Text>
-          <TouchableOpacity
-            style={styles.colorButton}
-            onPress={() => setShowColorPicker(true)}
-          >
+          <TouchableOpacity style={styles.colorButton} onPress={() => setShowColorPicker(true)}>
             {color ? (
               <View style={[styles.colorPreview, { backgroundColor: color }]} />
             ) : (

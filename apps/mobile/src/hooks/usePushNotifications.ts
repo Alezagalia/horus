@@ -99,7 +99,6 @@ export function usePushNotifications(): UsePushNotificationsReturn {
       notificationListener.current?.remove();
       responseListener.current?.remove();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /**
@@ -111,7 +110,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
         case 'habit_reminder':
           if (data.habitId) {
             // Navegar a la screen de hábitos con highlight
-            // @ts-ignore - Navigation types are dynamic
+            // @ts-expect-error - Navigation types are dynamic
             navigation.navigate('Habits', {
               screen: 'HabitsList',
               params: {
@@ -123,7 +122,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
 
         case 'task_reminder':
           if (data.taskId) {
-            // @ts-ignore - Navigation types are dynamic
+            // @ts-expect-error - Navigation types are dynamic
             navigation.navigate('Tasks', {
               highlightTaskId: data.taskId,
             });
@@ -132,7 +131,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
 
         case 'event_reminder':
           if (data.eventId) {
-            // @ts-ignore - Navigation types are dynamic
+            // @ts-expect-error - Navigation types are dynamic
             navigation.navigate('MoreTab', {
               screen: 'Calendar',
               params: { highlightEventId: data.eventId },
@@ -142,7 +141,7 @@ export function usePushNotifications(): UsePushNotificationsReturn {
 
         default:
           // Navegar a home por defecto
-          // @ts-ignore - Navigation types are dynamic
+          // @ts-expect-error - Navigation types are dynamic
           navigation.navigate('Home');
           break;
       }

@@ -16,7 +16,13 @@ interface StatsCardProps {
   style?: ViewStyle;
 }
 
-export const StatsCard: React.FC<StatsCardProps> = ({ title, children, onPress, onPressAll, style }) => {
+export const StatsCard: React.FC<StatsCardProps> = ({
+  title,
+  children,
+  onPress,
+  onPressAll,
+  style,
+}) => {
   const Card = onPress ? TouchableOpacity : View;
 
   return (

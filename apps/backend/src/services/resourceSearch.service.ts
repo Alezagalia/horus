@@ -18,10 +18,7 @@ export class ResourceSearchService {
       include: {
         category: true,
       },
-      orderBy: [
-        { isPinned: 'desc' },
-        { updatedAt: 'desc' },
-      ],
+      orderBy: [{ isPinned: 'desc' }, { updatedAt: 'desc' }],
       take: limit,
     });
 
@@ -40,10 +37,7 @@ export class ResourceSearchService {
       include: {
         category: true,
       },
-      orderBy: [
-        { isPinned: 'desc' },
-        { updatedAt: 'desc' },
-      ],
+      orderBy: [{ isPinned: 'desc' }, { updatedAt: 'desc' }],
     });
 
     return resources;

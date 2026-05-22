@@ -129,7 +129,8 @@ export function useUpdateHabit() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<HabitFormData> }) => updateHabit(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Partial<HabitFormData> }) =>
+      updateHabit(id, data),
     onSuccess: (updatedHabit) => {
       queryClient.invalidateQueries({ queryKey: habitKeys.lists() });
       queryClient.invalidateQueries({ queryKey: habitKeys.detail(updatedHabit.id) });
@@ -196,7 +197,10 @@ export function useToggleHabitComplete() {
       console.log('useToggleHabitComplete onSuccess', record);
       // Invalidar y refetch queries relacionadas inmediatamente
       queryClient.invalidateQueries({ queryKey: habitKeys.lists(), refetchType: 'all' });
-      queryClient.invalidateQueries({ queryKey: habitKeys.records(record.habitId), refetchType: 'all' });
+      queryClient.invalidateQueries({
+        queryKey: habitKeys.records(record.habitId),
+        refetchType: 'all',
+      });
       queryClient.invalidateQueries({ queryKey: habitKeys.stats(), refetchType: 'all' });
 
       if (record.completed) {
@@ -217,8 +221,15 @@ export function useUpdateHabitProgress() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ habitId, date, increment }: { habitId: string; date: string; increment: number }) =>
-      updateProgress(habitId, date, increment),
+    mutationFn: ({
+      habitId,
+      date,
+      increment,
+    }: {
+      habitId: string;
+      date: string;
+      increment: number;
+    }) => updateProgress(habitId, date, increment),
     onSuccess: (result, { habitId }) => {
       queryClient.invalidateQueries({ queryKey: habitKeys.lists() });
       queryClient.invalidateQueries({ queryKey: habitKeys.records(habitId) });

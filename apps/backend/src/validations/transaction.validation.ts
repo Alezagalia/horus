@@ -89,17 +89,15 @@ export const getTransactionsQuerySchema = z.object({
   from: z
     .string()
     .optional()
-    .refine(
-      (val) => !val || !isNaN(Date.parse(val)),
-      { message: 'from must be a valid date (YYYY-MM-DD or ISO 8601)' }
-    ),
+    .refine((val) => !val || !isNaN(Date.parse(val)), {
+      message: 'from must be a valid date (YYYY-MM-DD or ISO 8601)',
+    }),
   to: z
     .string()
     .optional()
-    .refine(
-      (val) => !val || !isNaN(Date.parse(val)),
-      { message: 'to must be a valid date (YYYY-MM-DD or ISO 8601)' }
-    ),
+    .refine((val) => !val || !isNaN(Date.parse(val)), {
+      message: 'to must be a valid date (YYYY-MM-DD or ISO 8601)',
+    }),
   limit: z
     .string()
     .optional()

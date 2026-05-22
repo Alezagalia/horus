@@ -7,8 +7,14 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import type { Account, AccountType, Currency } from '@horus/shared';
-import { ACCOUNT_TYPE_LABELS, ACCOUNT_TYPE_ICONS, ACCOUNT_TYPE_COLORS } from '@horus/shared';
+import {
+  ACCOUNT_TYPE_LABELS,
+  ACCOUNT_TYPE_ICONS,
+  ACCOUNT_TYPE_COLORS,
+  type Account,
+  type AccountType,
+  type Currency,
+} from '@horus/shared';
 
 const CURRENCIES: Currency[] = ['ARS', 'USD', 'EUR', 'BRL'];
 

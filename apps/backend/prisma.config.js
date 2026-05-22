@@ -1,4 +1,4 @@
-/* eslint-disable no-undef */
+/* eslint-disable no-undef, @typescript-eslint/no-require-imports */
 // JavaScript version of prisma.config.ts for production use
 // Load .env file for local development
 require('dotenv/config');

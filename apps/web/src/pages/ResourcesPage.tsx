@@ -100,7 +100,8 @@ export function ResourcesPage() {
       {!isLoading && resources && resources.length > 0 && (
         <>
           <div className="mb-4 text-sm text-gray-600">
-            {resources.length} {resources.length === 1 ? 'recurso encontrado' : 'recursos encontrados'}
+            {resources.length}{' '}
+            {resources.length === 1 ? 'recurso encontrado' : 'recursos encontrados'}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {resources.map((resource) => (

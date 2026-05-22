@@ -249,9 +249,7 @@ export function RecurringExpenseFormModal({
               <p className="mt-1 text-xs text-gray-500">
                 Opcional: Agrega notas o detalles sobre este gasto recurrente
               </p>
-              {errors.notes && (
-                <p className="mt-1 text-sm text-red-600">{errors.notes.message}</p>
-              )}
+              {errors.notes && <p className="mt-1 text-sm text-red-600">{errors.notes.message}</p>}
             </div>
 
             {/* Actions */}

@@ -4,8 +4,7 @@
  */
 
 import { useState } from 'react';
-import type { Account } from '@horus/shared';
-import { ACCOUNT_TYPE_LABELS } from '@horus/shared';
+import { ACCOUNT_TYPE_LABELS, type Account } from '@horus/shared';
 import { formatCurrency } from '@/utils/currency';
 
 interface AccountCardProps {

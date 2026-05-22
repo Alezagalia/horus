@@ -10,7 +10,10 @@ import type { Account, CreateAccountDTO, UpdateAccountDTO, FinanceStats } from '
  * Get all accounts
  */
 export async function getAccounts(): Promise<Account[]> {
-  const response = await axiosInstance.get<{ accounts: Account[]; totalBalanceByCurrency: Record<string, number> }>('/accounts');
+  const response = await axiosInstance.get<{
+    accounts: Account[];
+    totalBalanceByCurrency: Record<string, number>;
+  }>('/accounts');
   // Backend returns { accounts: [], totalBalanceByCurrency: {} }
   return response.data.accounts || [];
 }

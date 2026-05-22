@@ -5,14 +5,7 @@
  */
 
 import { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import Markdown from 'react-native-markdown-display';
 
 interface NoteEditorProps {
@@ -32,17 +25,13 @@ export function NoteEditor({ value, onChange, placeholder }: NoteEditorProps) {
           style={[styles.tab, !showPreview && styles.tabActive]}
           onPress={() => setShowPreview(false)}
         >
-          <Text style={[styles.tabText, !showPreview && styles.tabTextActive]}>
-            ✏️ Editar
-          </Text>
+          <Text style={[styles.tabText, !showPreview && styles.tabTextActive]}>✏️ Editar</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, showPreview && styles.tabActive]}
           onPress={() => setShowPreview(true)}
         >
-          <Text style={[styles.tabText, showPreview && styles.tabTextActive]}>
-            👁️ Vista Previa
-          </Text>
+          <Text style={[styles.tabText, showPreview && styles.tabTextActive]}>👁️ Vista Previa</Text>
         </TouchableOpacity>
       </View>
 

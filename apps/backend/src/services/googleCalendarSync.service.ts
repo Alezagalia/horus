@@ -642,7 +642,8 @@ export const googleCalendarSyncService = {
         },
       });
 
-      const conflictMsg = stats.conflicts > 0 ? `, ${stats.conflicts} conflictos (versión local más reciente)` : '';
+      const conflictMsg =
+        stats.conflicts > 0 ? `, ${stats.conflicts} conflictos (versión local más reciente)` : '';
       return {
         success: true,
         message: `Sincronización completada: ${stats.created} creados, ${stats.updated} actualizados${conflictMsg}`,

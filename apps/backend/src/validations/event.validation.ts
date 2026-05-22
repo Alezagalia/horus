@@ -43,7 +43,7 @@ export const createEventSchema = z
         // Validate rrule format
         RRule.fromString(data.rrule);
         return true;
-      } catch (error) {
+      } catch {
         return false;
       }
     },

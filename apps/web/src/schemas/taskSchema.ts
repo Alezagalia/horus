@@ -17,12 +17,14 @@ export const taskSchema = z.object({
   }),
   dueDate: z.string().optional(),
   categoryId: z.string().min(1, 'La categoría es obligatoria'),
-  checklist: z.array(
-    z.object({
-      text: z.string(), // Permitir vacíos, se filtrarán en el submit
-      completed: z.boolean(),
-    })
-  ).default([]),
+  checklist: z
+    .array(
+      z.object({
+        text: z.string(), // Permitir vacíos, se filtrarán en el submit
+        completed: z.boolean(),
+      })
+    )
+    .default([]),
 });
 
 export type TaskFormSchema = z.infer<typeof taskSchema>;

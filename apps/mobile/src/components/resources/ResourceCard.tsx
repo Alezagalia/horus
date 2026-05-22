@@ -5,14 +5,7 @@
  */
 
 import { memo } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Animated,
-  Linking,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, Linking } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { Resource, ResourceType } from '@horus/shared';
 import Markdown from 'react-native-markdown-display';
@@ -90,9 +83,7 @@ export const ResourceCard = memo(
         case ResourceType.NOTE:
           return resource.content ? (
             <View style={styles.notePreview}>
-              <Markdown style={markdownStyles}>
-                {resource.content.slice(0, 200)}
-              </Markdown>
+              <Markdown style={markdownStyles}>{resource.content.slice(0, 200)}</Markdown>
             </View>
           ) : null;
 

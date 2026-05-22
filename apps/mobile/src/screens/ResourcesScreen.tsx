@@ -19,11 +19,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ResourceCard } from '../components/resources/ResourceCard';
 import { ResourceFilters } from '../components/resources/ResourceFilters';
-import {
-  useResources,
-  useDeleteResource,
-  useTogglePin,
-} from '../hooks/useResources';
+import { useResources, useDeleteResource, useTogglePin } from '../hooks/useResources';
 import type { Resource, ResourceFilters as IResourceFilters } from '@horus/shared';
 
 type NavigationProp = NativeStackNavigationProp<any>;
@@ -45,18 +41,14 @@ export function ResourcesScreen() {
   };
 
   const handleDelete = (resource: Resource) => {
-    Alert.alert(
-      'Eliminar Resource',
-      `¿Estás seguro de que quieres eliminar "${resource.title}"?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: () => deleteMutation.mutate(resource.id),
-        },
-      ]
-    );
+    Alert.alert('Eliminar Resource', `¿Estás seguro de que quieres eliminar "${resource.title}"?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: () => deleteMutation.mutate(resource.id),
+      },
+    ]);
   };
 
   const handleTogglePin = (resource: Resource) => {
@@ -67,9 +59,7 @@ export function ResourcesScreen() {
     <View style={styles.emptyContainer}>
       <Text style={styles.emptyIcon}>📚</Text>
       <Text style={styles.emptyTitle}>
-        {filters.type || filters.isPinned
-          ? 'No se encontraron recursos'
-          : 'No hay recursos aún'}
+        {filters.type || filters.isPinned ? 'No se encontraron recursos' : 'No hay recursos aún'}
       </Text>
       <Text style={styles.emptySubtitle}>
         {filters.type || filters.isPinned
@@ -125,11 +115,7 @@ export function ResourcesScreen() {
             resources.length === 0 ? styles.emptyListContainer : styles.listContent
           }
           refreshControl={
-            <RefreshControl
-              refreshing={isLoading}
-              onRefresh={refetch}
-              colors={['#2196F3']}
-            />
+            <RefreshControl refreshing={isLoading} onRefresh={refetch} colors={['#2196F3']} />
           }
         />
       )}

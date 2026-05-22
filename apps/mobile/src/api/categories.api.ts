@@ -21,7 +21,9 @@ export const getCategories = async (filters?: CategoryFilters): Promise<Category
   const params = new URLSearchParams();
   if (filters?.scope) params.append('scope', filters.scope);
 
-  const response = await apiClient.get<{ categories: Category[] }>(`/categories?${params.toString()}`);
+  const response = await apiClient.get<{ categories: Category[] }>(
+    `/categories?${params.toString()}`
+  );
   return response.data.categories;
 };
 
