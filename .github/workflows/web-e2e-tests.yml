@@ -42,6 +42,9 @@ jobs:
       - name: Install Playwright Browsers
         run: pnpm --filter @horus/web exec playwright install --with-deps ${{ matrix.browser }}
 
+      - name: Build @horus/shared
+        run: pnpm --filter @horus/shared build
+
       - name: Build web app
         run: pnpm --filter @horus/web build
 
