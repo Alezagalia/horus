@@ -56,3 +56,6 @@ apps/backend/prisma/*.db-journal
 # Misc
 *.tsbuildinfo
 .turbo/
+
+# Local Node toolchain
+.node-portable/
