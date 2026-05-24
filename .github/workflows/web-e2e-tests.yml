@@ -5,12 +5,14 @@ on:
     branches: [main, develop]
     paths:
       - 'apps/web/**'
+      - 'apps/backend/**'
       - 'packages/shared/**'
       - '.github/workflows/web-e2e-tests.yml'
   pull_request:
     branches: [main, develop]
     paths:
       - 'apps/web/**'
+      - 'apps/backend/**'
       - 'packages/shared/**'
       - '.github/workflows/web-e2e-tests.yml'
   workflow_dispatch:
@@ -25,6 +27,32 @@ jobs:
       fail-fast: false
       matrix:
         browser: [chromium, firefox, webkit]
+
+    # Spin up a Postgres for the backend to talk to. Plays the same role as
+    # Railway's DB in production, but ephemeral per-job.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: horus
+          POSTGRES_PASSWORD: horus
+          POSTGRES_DB: horus_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://horus:horus@localhost:5432/horus_test?schema=public
+      # CI-only throwaway secrets — never reused outside this ephemeral run.
+      JWT_SECRET: ci-jwt-secret-must-be-long-enough-to-pass-zod-validation-32chars
+      JWT_REFRESH_SECRET: ci-refresh-secret-also-long-enough-to-pass-zod-validation-32
+      ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      NODE_ENV: test
+      PORT: '3000'
 
     steps:
       - name: Checkout code
@@ -42,19 +70,45 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Install Playwright Browsers
-        run: pnpm --filter @horus/web exec playwright install --with-deps ${{ matrix.browser }}
-
       - name: Build @horus/shared
         run: pnpm --filter @horus/shared build
 
-      - name: Build web app
-        run: pnpm --filter @horus/web build
+      - name: Generate Prisma client
+        run: pnpm --filter @horus/backend db:generate
+
+      - name: Apply migrations to ephemeral Postgres
+        run: pnpm --filter @horus/backend exec prisma migrate deploy
+
+      - name: Install Playwright Browsers
+        run: pnpm --filter @horus/web exec playwright install --with-deps ${{ matrix.browser }}
+
+      # Run the backend in the background. tsx skips the compile step so the
+      # E2E job doesn't depend on backend `tsc` being clean.
+      - name: Start backend in background
+        run: |
+          pnpm --filter @horus/backend exec tsx src/index.ts > backend.log 2>&1 &
+          echo $! > backend.pid
+
+      - name: Wait for backend to be ready
+        run: npx --yes wait-on http://localhost:3000/api/health --timeout 90000 --interval 1000
 
       - name: Run Playwright tests
         run: pnpm --filter @horus/web test:e2e:${{ matrix.browser }}
         env:
           CI: true
+
+      - name: Show backend log on failure
+        if: failure()
+        run: |
+          echo "===== backend.log (last 200 lines) ====="
+          tail -n 200 backend.log || true
+
+      - name: Stop backend
+        if: always()
+        run: |
+          if [ -f backend.pid ]; then
+            kill "$(cat backend.pid)" 2>/dev/null || true
+          fi
 
       - name: Upload test results
         if: failure()
@@ -86,7 +140,10 @@ jobs:
 
       - name: Publish HTML Report
         uses: peaceiris/actions-gh-pages@v3
-        if: github.ref == 'refs/heads/main'
+        # Only attempt when chromium artifact exists (i.e. at least chromium failed
+        # so playwright-report was uploaded). Otherwise the action errors with
+        # "no such file or directory".
+        if: github.ref == 'refs/heads/main' && hashFiles('all-reports/playwright-results-chromium/**/*') != ''
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./all-reports/playwright-results-chromium
