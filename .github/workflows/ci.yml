@@ -119,9 +119,8 @@ jobs:
   # ============================================
   # E2E TESTS (references to existing workflows)
   # ============================================
-  # Note: E2E tests run in separate workflows:
+  # Note: E2E tests run in a separate workflow:
   # - .github/workflows/web-e2e-tests.yml (Playwright)
-  # - .github/workflows/mobile-e2e-tests.yml (Detox)
 
   # ============================================
   # LIGHTHOUSE CI

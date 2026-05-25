@@ -82,11 +82,7 @@ export default tseslint.config(
       '**/prisma.config.ts',
       '**/vitest.config.ts',
       '**/vite.config.ts',
-      '**/babel.config.js',
-      '**/metro.config.js',
       '**/playwright.config.ts',
-      '**/.detoxrc.js',
-      'apps/mobile/e2e/**',
       'apps/web/e2e/**',
     ],
   }
