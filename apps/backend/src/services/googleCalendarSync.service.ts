@@ -486,18 +486,18 @@ export const googleCalendarSyncService = {
         orderBy: 'startTime',
       };
 
-      if (since) {
-        // Incremental sync: only get events updated after last sync
-        params.updatedMin = since.toISOString();
-      } else {
-        // Full sync: get all events from 1 year ago to 1 year in the future
-        const oneYearAgo = new Date();
-        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-        const oneYearAhead = new Date();
-        oneYearAhead.setFullYear(oneYearAhead.getFullYear() + 1);
+      // Always apply -1 month / +3 months window
+      const timeMin = new Date();
+      timeMin.setMonth(timeMin.getMonth() - 1);
+      const timeMax = new Date();
+      timeMax.setMonth(timeMax.getMonth() + 3);
 
-        params.timeMin = oneYearAgo.toISOString();
-        params.timeMax = oneYearAhead.toISOString();
+      params.timeMin = timeMin.toISOString();
+      params.timeMax = timeMax.toISOString();
+
+      if (since) {
+        // Incremental: also limit to events modified since last sync
+        params.updatedMin = since.toISOString();
       }
 
       const response = await calendar.events.list(params);

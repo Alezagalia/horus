@@ -115,3 +115,31 @@ export function useSyncGoogleCalendar() {
     },
   });
 }
+
+/**
+ * Sync from Google Calendar (silent — no success toast, used for auto-sync on page load)
+ */
+export function useSilentSyncGoogleCalendar() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: syncGoogleCalendar,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: calendarEventKeys.all });
+      queryClient.invalidateQueries({ queryKey: googleCalendarKeys.status() });
+    },
+    onError: (error: any) => {
+      const isAuthError =
+        error.response?.status === 401 ||
+        error.response?.status === 400 ||
+        error.message?.includes('expired') ||
+        error.message?.includes('reconnect');
+
+      if (isAuthError) {
+        toast.error('Tu conexión con Google Calendar ha expirado. Por favor reconecta tu cuenta.');
+        queryClient.invalidateQueries({ queryKey: googleCalendarKeys.status() });
+      }
+      // Other errors: silent (don't interrupt user experience)
+    },
+  });
+}

@@ -3,7 +3,7 @@
  * Sprint 13 - US-117
  */
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Calendar, momentLocalizer, View, SlotInfo } from 'react-big-calendar';
 import withDragAndDrop, { EventInteractionArgs } from 'react-big-calendar/lib/addons/dragAndDrop';
 import moment from 'moment';
@@ -22,7 +22,11 @@ import {
   useDeleteCalendarEvent,
 } from '@/hooks/useCalendarEvents';
 import { useTasks } from '@/hooks/useTasks';
-import { useGoogleCalendarStatus } from '@/hooks/useGoogleCalendar';
+import {
+  useGoogleCalendarStatus,
+  useSilentSyncGoogleCalendar,
+  useSyncGoogleCalendar,
+} from '@/hooks/useGoogleCalendar';
 import type { Task } from '@/types/tasks';
 import { startOfMonth, endOfMonth } from 'date-fns';
 
@@ -81,12 +85,24 @@ export function CalendarPage() {
   // Fetch Google Calendar status
   const { data: googleStatus } = useGoogleCalendarStatus();
 
+  // Auto-sync on mount if Google Calendar is connected
+  const autoSyncMutation = useSilentSyncGoogleCalendar();
+  const hasSyncedRef = useRef(false);
+
+  useEffect(() => {
+    if (!hasSyncedRef.current && googleStatus?.isConnected && !googleStatus?.needsReconnect) {
+      hasSyncedRef.current = true;
+      autoSyncMutation.mutate();
+    }
+  }, [googleStatus]);
+
   const isLoading = isLoadingEvents || isLoadingTasks;
 
   // Mutations
   const createEventMutation = useCreateCalendarEvent();
   const updateEventMutation = useUpdateCalendarEvent();
   const deleteEventMutation = useDeleteCalendarEvent();
+  const syncGoogleMutation = useSyncGoogleCalendar();
 
   // Transform events and tasks for react-big-calendar
   const calendarEvents = useMemo(() => {
@@ -356,6 +372,29 @@ export function CalendarPage() {
                 />
               </svg>
             </button>
+            {googleStatus?.isConnected && !googleStatus?.needsReconnect && (
+              <button
+                onClick={() => syncGoogleMutation.mutate()}
+                disabled={syncGoogleMutation.isPending}
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                title="Sincronizar Google Calendar"
+              >
+                <svg
+                  className={`w-4 h-4 ${syncGoogleMutation.isPending ? 'animate-spin' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+                {syncGoogleMutation.isPending ? 'Sincronizando...' : 'Sincronizar'}
+              </button>
+            )}
             <button
               onClick={handleToday}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
