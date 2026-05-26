@@ -63,10 +63,10 @@ const TIME_LABELS: Record<string, string> = {
   ANYTIME: 'Cualquier momento',
 };
 
-const PRIORITY_OPTIONS = [
-  { value: 1, label: 'Alta' },
-  { value: 2, label: 'Media' },
-  { value: 3, label: 'Baja' },
+const PRIORITY_OPTIONS: Array<{ value: 'alta' | 'media' | 'baja'; label: string }> = [
+  { value: 'alta', label: 'Alta' },
+  { value: 'media', label: 'Media' },
+  { value: 'baja', label: 'Baja' },
 ];
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -247,9 +247,9 @@ function TaskCard({
         <View
           style={[
             styles.taskPriorityDot,
-            task.priority === 1
+            task.priority === 'alta'
               ? { backgroundColor: Colors.vivid }
-              : task.priority === 2
+              : task.priority === 'media'
                 ? { backgroundColor: Colors.ceilDark, opacity: 0.6 }
                 : { backgroundColor: Colors.muted, opacity: 0.3 },
           ]}
@@ -364,13 +364,13 @@ function HabitView({
 
 function TaskFormModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const [title, setTitle] = useState('');
-  const [priority, setPriority] = useState<number | null>(null);
+  const [priority, setPriority] = useState<'alta' | 'media' | 'baja' | null>(null);
   const createTask = useCreateTask();
 
   const handleCreate = () => {
     const trimmed = title.trim();
     if (!trimmed) return;
-    const dto: CreateTaskDTO = { title: trimmed, priority };
+    const dto: CreateTaskDTO = { title: trimmed, ...(priority ? { priority } : {}) };
     createTask.mutate(dto, {
       onSuccess: () => {
         setTitle('');

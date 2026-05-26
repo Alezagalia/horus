@@ -1,14 +1,14 @@
 import { axiosInstance } from '../axios';
 
 export type TaskStatus = 'pendiente' | 'en_progreso' | 'completada' | 'cancelada';
-export type TaskPriority = 'alta' | 'media' | 'baja' | null;
+export type TaskPriority = 'alta' | 'media' | 'baja';
 
 export interface Task {
   id: string;
   title: string;
   description?: string;
   status: TaskStatus;
-  priority: number | null;
+  priority: TaskPriority | null;
   dueDate?: string;
   categoryId?: string;
   categoryName?: string;
@@ -22,7 +22,7 @@ export interface Task {
 export interface CreateTaskDTO {
   title: string;
   description?: string;
-  priority?: number | null;
+  priority?: TaskPriority;
   dueDate?: string;
   categoryId?: string;
 }

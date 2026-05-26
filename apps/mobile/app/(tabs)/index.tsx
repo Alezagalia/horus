@@ -122,7 +122,11 @@ function HeroCard({
       <View style={styles.heroInfo}>
         <Text style={styles.heroSub}>Tu día</Text>
         <Text style={styles.heroMain}>
-          {done === total && total > 0 ? '¡Todos listos! 🎉' : `${done} de ${total} hábitos listos`}
+          {total === 0
+            ? 'Sin hábitos para hoy'
+            : done === total
+              ? '¡Todos listos! 🎉'
+              : `${done} de ${total} hábitos listos`}
         </Text>
         {longestStreak > 0 && (
           <Text style={styles.heroStreak}>🔥 Racha máx · {longestStreak} días</Text>
@@ -230,7 +234,7 @@ function TaskCheckRow({
 }) {
   const done = task.status === 'completada';
   const priorityColor =
-    task.priority === 1 ? '#EF4444' : task.priority === 2 ? '#F97316' : Colors.muted;
+    task.priority === 'alta' ? '#EF4444' : task.priority === 'media' ? '#F97316' : Colors.muted;
 
   return (
     <TouchableOpacity
@@ -250,7 +254,7 @@ function TaskCheckRow({
       )}
 
       <Text style={styles.habitIcon}>
-        {task.priority === 1 ? '🔴' : task.priority === 2 ? '🟡' : '⚪'}
+        {task.priority === 'alta' ? '🔴' : task.priority === 'media' ? '🟡' : '⚪'}
       </Text>
 
       <Text style={[styles.habitName, done && styles.habitNameDone]} numberOfLines={1}>

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { Tabs, router } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import { BottomTabBar } from '@/components/layout/BottomTabBar';
@@ -20,6 +20,14 @@ export default function TabsLayout() {
     }
   }, [isAuthenticated, isLoading]);
 
+  if (isLoading) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color={Colors.vivid} />
+      </View>
+    );
+  }
+
   return (
     <Tabs
       screenOptions={{ headerShown: false, tabBarStyle: { display: 'none' } }}
@@ -36,3 +44,12 @@ export default function TabsLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  loading: {
+    flex: 1,
+    backgroundColor: Colors.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
