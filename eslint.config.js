@@ -84,6 +84,7 @@ export default tseslint.config(
       '**/vite.config.ts',
       '**/playwright.config.ts',
       'apps/web/e2e/**',
+      'apps/mobile/**',
     ],
   }
 );

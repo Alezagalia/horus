@@ -1,0 +1,160 @@
+import { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
+import { useAuthStore } from '@/store/authStore';
+import { Colors, Typography, Spacing, Radius, Shadows, Gradients } from '@/tokens';
+
+export default function RegisterScreen() {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const register = useAuthStore((s) => s.register);
+
+  const handleRegister = async () => {
+    if (!name.trim() || !email.trim() || !password.trim()) {
+      Alert.alert('Campos requeridos', 'Completá todos los campos.');
+      return;
+    }
+    if (password.length < 8) {
+      Alert.alert('Contraseña muy corta', 'Debe tener al menos 8 caracteres.');
+      return;
+    }
+    setLoading(true);
+    try {
+      await register({ name: name.trim(), email: email.trim().toLowerCase(), password });
+      router.replace('/(tabs)');
+    } catch (err: any) {
+      Alert.alert('Error al registrarse', err?.response?.data?.message ?? 'Intentá nuevamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <LinearGradient colors={[Colors.bgTop, Colors.bgMid, Colors.bgBottom]} style={styles.gradient}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+          <View style={styles.header}>
+            <LinearGradient colors={Gradients.hero} style={styles.logo}>
+              <Text style={styles.logoText}>H</Text>
+            </LinearGradient>
+            <Text style={[styles.title, Typography.displayMd]}>Crear cuenta</Text>
+            <Text style={[styles.subtitle, Typography.body]}>Empezá tu productividad hoy</Text>
+          </View>
+
+          <View style={styles.form}>
+            {(['Nombre', 'Email', 'Contraseña'] as const).map((field) => (
+              <View key={field}>
+                <Text style={[styles.label, Typography.bodyStrong]}>{field}</Text>
+                <TextInput
+                  style={styles.input}
+                  value={field === 'Nombre' ? name : field === 'Email' ? email : password}
+                  onChangeText={
+                    field === 'Nombre' ? setName : field === 'Email' ? setEmail : setPassword
+                  }
+                  keyboardType={field === 'Email' ? 'email-address' : 'default'}
+                  autoCapitalize={field === 'Nombre' ? 'words' : 'none'}
+                  secureTextEntry={field === 'Contraseña'}
+                  placeholder={
+                    field === 'Nombre'
+                      ? 'Tu nombre'
+                      : field === 'Email'
+                        ? 'tu@email.com'
+                        : '••••••••'
+                  }
+                  placeholderTextColor={Colors.muted}
+                />
+              </View>
+            ))}
+
+            <TouchableOpacity
+              style={[styles.ctaButton, Shadows.cta, { marginTop: 20 }]}
+              onPress={handleRegister}
+              disabled={loading}
+              activeOpacity={0.85}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.ctaText}>Crear cuenta</Text>
+              )}
+            </TouchableOpacity>
+
+            <View style={styles.loginRow}>
+              <Text style={[{ color: Colors.muted }, Typography.body]}>¿Ya tenés cuenta? </Text>
+              <TouchableOpacity onPress={() => router.back()}>
+                <Text style={[{ color: Colors.vivid, fontWeight: '600' }, Typography.body]}>
+                  Iniciá sesión
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </LinearGradient>
+  );
+}
+
+const styles = StyleSheet.create({
+  gradient: { flex: 1 },
+  container: {
+    paddingHorizontal: Spacing.screenX,
+    paddingVertical: 60,
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+  header: { alignItems: 'center', marginBottom: 32 },
+  logo: {
+    width: 64,
+    height: 64,
+    borderRadius: Radius['2xl'],
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  logoText: { fontSize: 32, fontWeight: '700', color: '#fff', fontFamily: 'Inter_700Bold' },
+  title: { color: Colors.deep, fontFamily: 'Inter_700Bold', marginBottom: 4 },
+  subtitle: { color: Colors.muted, fontFamily: 'Inter_500Medium' },
+  form: {
+    backgroundColor: Colors.surfaceSolid,
+    borderRadius: Radius['3xl'],
+    padding: Spacing['2xl'],
+    ...Shadows.card,
+  },
+  label: { color: Colors.ink, fontFamily: 'Inter_600SemiBold', marginBottom: 6, marginTop: 12 },
+  input: {
+    borderWidth: 1,
+    borderColor: Colors.line,
+    borderRadius: Radius.md,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: Colors.ink,
+    fontFamily: 'Inter_400Regular',
+    backgroundColor: Colors.bgTop,
+  },
+  ctaButton: {
+    backgroundColor: Colors.vivid,
+    borderRadius: Radius.pill,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  ctaText: { color: '#fff', fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  loginRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 20 },
+});
