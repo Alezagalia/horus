@@ -26,6 +26,11 @@ import analyticsRoutes from './analytics.routes.js';
 import timelineRoutes from './timeline.routes.js';
 import lifeDebtRoutes from './lifeDebt.routes.js';
 import insightRoutes from './insight.routes.js';
+import foodRoutes from './food.routes.js';
+import recipeRoutes from './recipe.routes.js';
+import mealPlanRoutes from './mealPlan.routes.js';
+import nutritionLogRoutes from './nutritionLog.routes.js';
+import shoppingListRoutes from './shoppingList.routes.js';
 
 const router: IRouter = Router();
 
@@ -56,6 +61,11 @@ router.use('/analytics', analyticsRoutes);
 router.use('/timeline', timelineRoutes);
 router.use('/life-debt', lifeDebtRoutes);
 router.use('/insights', insightRoutes);
+router.use('/foods', foodRoutes);
+router.use('/recipes', recipeRoutes);
+router.use('/meal-plans', mealPlanRoutes);
+router.use('/nutrition-logs', nutritionLogRoutes);
+router.use('/shopping-lists', shoppingListRoutes);
 
 // Health check
 router.get('/health', (_req, res) => {

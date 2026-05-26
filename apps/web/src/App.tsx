@@ -113,6 +113,9 @@ const LifeDebtPage = lazy(() =>
 const InsightsPage = lazy(() =>
   import('@/pages/InsightsPage').then((m) => ({ default: m.InsightsPage }))
 );
+const NutritionPage = lazy(() =>
+  import('@/pages/NutritionPage').then((m) => ({ default: m.NutritionPage }))
+);
 
 function AppRoutes() {
   return (
@@ -432,6 +435,16 @@ function AppRoutes() {
             <ProtectedRoute>
               <MainLayout>
                 <InsightsPage />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/nutrition"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <NutritionPage />
               </MainLayout>
             </ProtectedRoute>
           }

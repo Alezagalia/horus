@@ -17,6 +17,7 @@ enum Scope {
   gastos
   metas
   knowledge
+  nutricion
 }
 
 enum HabitType {
@@ -108,6 +109,14 @@ enum WeightUnit {
   lbs
 }
 
+enum MealTime {
+  BREAKFAST
+  MORNING_SNACK
+  LUNCH
+  AFTERNOON_SNACK
+  DINNER
+}
+
 /// F-14: Tipo de ítem reconocido por el detector de Deuda de Vida
 enum LifeDebtItemType {
   task
@@ -187,6 +196,11 @@ model User {
   lifeDebtDecisions    LifeDebtDecision[]
   insights             Insight[]
   passwordResetTokens  PasswordResetToken[]
+  foods                Food[]
+  recipes              Recipe[]
+  mealPlans            MealPlan[]
+  nutritionLogs        NutritionLog[]
+  shoppingLists        ShoppingList[]
 
   @@index([email])
   @@map("users")
@@ -716,10 +730,11 @@ model Transaction {
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
-  account       Account  @relation("AccountTransactions", fields: [accountId], references: [id], onDelete: Restrict)
-  targetAccount Account? @relation("TargetAccountTransactions", fields: [targetAccountId], references: [id], onDelete: Restrict)
-  category      Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account       Account       @relation("AccountTransactions", fields: [accountId], references: [id], onDelete: Restrict)
+  targetAccount Account?      @relation("TargetAccountTransactions", fields: [targetAccountId], references: [id], onDelete: Restrict)
+  category      Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shoppingList  ShoppingList?
 
   @@index([accountId, date])
   @@index([userId, date])
@@ -1444,4 +1459,190 @@ model PasswordResetToken {
   @@index([userId, createdAt(sort: Desc)])
   @@index([expiresAt])
   @@map("password_reset_tokens")
+}
+
+// ─── F-17 Nutrición ──────────────────────────────────────────────────────────
+
+/// Food: Catálogo privado de alimentos por usuario (F-17 Sprint 1)
+model Food {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String   @db.VarChar(150)
+  brand     String?  @db.VarChar(100)
+  calories  Decimal  @db.Decimal(8, 2)
+  protein   Decimal  @db.Decimal(8, 2)
+  carbs     Decimal  @db.Decimal(8, 2)
+  fat       Decimal  @db.Decimal(8, 2)
+  fiber     Decimal? @db.Decimal(8, 2)
+  unit      String   @default("g") @db.VarChar(20)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipeIngredients RecipeIngredient[]
+  mealEntryItems    MealEntryItem[]
+  nutritionLogItems NutritionLogItem[]
+  shoppingListItems ShoppingListItem[]
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("foods")
+}
+
+/// Recipe: Recetas personales del usuario con ingredientes (F-17 Sprint 1)
+model Recipe {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String   @db.VarChar(150)
+  description String?  @db.Text
+  servings    Int      @default(1)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ingredients RecipeIngredient[]
+  mealItems   MealEntryItem[]
+
+  @@index([userId])
+  @@map("recipes")
+}
+
+/// RecipeIngredient: Ingredientes de una receta (F-17 Sprint 1)
+model RecipeIngredient {
+  id       String  @id @default(uuid())
+  recipeId String
+  foodId   String
+  grams    Decimal @db.Decimal(8, 2)
+  notes    String? @db.VarChar(200)
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  food   Food   @relation(fields: [foodId], references: [id], onDelete: Restrict)
+
+  @@unique([recipeId, foodId])
+  @@index([recipeId])
+  @@map("recipe_ingredients")
+}
+
+/// MealPlan: Plan semanal de alimentación (F-17 Sprint 2)
+model MealPlan {
+  id        String   @id @default(uuid())
+  userId    String
+  weekStart DateTime @db.Date
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries       MealEntry[]
+  shoppingLists ShoppingList[]
+
+  @@unique([userId, weekStart])
+  @@index([userId])
+  @@map("meal_plans")
+}
+
+/// MealEntry: Comida planificada para un día y momento del día (F-17 Sprint 2)
+model MealEntry {
+  id         String   @id @default(uuid())
+  mealPlanId String
+  day        DateTime @db.Date
+  mealTime   MealTime
+  notes      String?  @db.VarChar(300)
+
+  mealPlan MealPlan       @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  items    MealEntryItem[]
+
+  @@index([mealPlanId])
+  @@map("meal_entries")
+}
+
+/// MealEntryItem: Alimento o receta dentro de una comida planificada (F-17 Sprint 2)
+model MealEntryItem {
+  id          String   @id @default(uuid())
+  mealEntryId String
+  foodId      String?
+  recipeId    String?
+  grams       Decimal  @db.Decimal(8, 2)
+  servings    Decimal? @db.Decimal(6, 2)
+
+  mealEntry MealEntry @relation(fields: [mealEntryId], references: [id], onDelete: Cascade)
+  food      Food?     @relation(fields: [foodId], references: [id], onDelete: SetNull)
+  recipe    Recipe?   @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+
+  @@index([mealEntryId])
+  @@map("meal_entry_items")
+}
+
+/// NutritionLog: Registro diario de alimentación real (F-17 Sprint 3)
+model NutritionLog {
+  id        String   @id @default(uuid())
+  userId    String
+  date      DateTime @db.Date
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items NutritionLogItem[]
+
+  @@unique([userId, date])
+  @@index([userId, date])
+  @@map("nutrition_logs")
+}
+
+/// NutritionLogItem: Ítem de alimento en el registro diario (F-17 Sprint 3)
+model NutritionLogItem {
+  id             String   @id @default(uuid())
+  nutritionLogId String
+  foodId         String?
+  mealTime       MealTime
+  grams          Decimal  @db.Decimal(8, 2)
+  servings       Decimal? @db.Decimal(6, 2)
+  notes          String?  @db.VarChar(200)
+
+  nutritionLog NutritionLog @relation(fields: [nutritionLogId], references: [id], onDelete: Cascade)
+  food         Food?        @relation(fields: [foodId], references: [id], onDelete: SetNull)
+
+  @@index([nutritionLogId])
+  @@map("nutrition_log_items")
+}
+
+/// ShoppingList: Lista de compras (puede generarse desde MealPlan) (F-17 Sprint 3)
+model ShoppingList {
+  id            String    @id @default(uuid())
+  userId        String
+  mealPlanId    String?
+  name          String    @db.VarChar(150)
+  transactionId String?   @unique
+  generatedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mealPlan    MealPlan?          @relation(fields: [mealPlanId], references: [id], onDelete: SetNull)
+  items       ShoppingListItem[]
+  transaction Transaction?       @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@map("shopping_lists")
+}
+
+/// ShoppingListItem: Ítem en una lista de compras (F-17 Sprint 3)
+model ShoppingListItem {
+  id             String  @id @default(uuid())
+  shoppingListId String
+  foodId         String?
+  name           String  @db.VarChar(150)
+  quantity       Decimal @db.Decimal(10, 2)
+  unit           String  @db.VarChar(20)
+  checked        Boolean @default(false)
+  notes          String? @db.VarChar(200)
+
+  shoppingList ShoppingList @relation(fields: [shoppingListId], references: [id], onDelete: Cascade)
+  food         Food?        @relation(fields: [foodId], references: [id], onDelete: SetNull)
+
+  @@index([shoppingListId])
+  @@map("shopping_list_items")
 }

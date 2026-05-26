@@ -102,7 +102,7 @@ const menuSections: MenuSection[] = [
     collapsible: true,
   },
   {
-    title: 'Fitness',
+    title: 'Salud',
     items: [
       {
         name: 'Ejercicios',
@@ -116,6 +116,12 @@ const menuSections: MenuSection[] = [
         path: '/workouts',
         icon: '📈',
         gradient: 'from-purple-500 to-indigo-500',
+      },
+      {
+        name: 'Nutrición',
+        path: '/nutrition',
+        icon: '🥗',
+        gradient: 'from-green-500 to-emerald-500',
       },
     ],
     collapsible: true,

@@ -7,9 +7,13 @@
   "scripts": {
     "dev:backend": "pnpm --filter @horus/backend dev",
     "dev:web": "pnpm --filter @horus/web dev",
+    "dev:mobile": "pnpm --filter @horus/mobile dev",
     "build:backend": "pnpm --filter @horus/backend build",
     "build:web": "pnpm --filter @horus/web build",
     "build:shared": "pnpm --filter @horus/shared build",
+    "build:mobile:dev": "pnpm --filter @horus/mobile build:dev",
+    "build:mobile:preview": "pnpm --filter @horus/mobile build:preview",
+    "build:mobile:production": "pnpm --filter @horus/mobile build:production",
     "build": "pnpm build:shared && pnpm build:backend && pnpm build:web",
     "test:backend": "pnpm --filter @horus/backend test",
     "test:web": "pnpm --filter @horus/web test",
