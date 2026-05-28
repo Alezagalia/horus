@@ -206,7 +206,22 @@
       "Bash(EXPO_PUBLIC_API_URL=\"https://horus-production-4629.up.railway.app/api\" JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" ./gradlew :app:createBundleReleaseJsAndAssets:*)",
       "Bash(EXPO_PUBLIC_API_URL=\"https://horus-production-4629.up.railway.app/api\" node C:\\\\Desarrollo\\\\Horus2\\\\node_modules\\\\@expo\\\\cli\\\\build\\\\bin\\\\cli:*)",
       "Bash(mkdir:*)",
-      "Bash(adb:*)"
+      "Bash(adb:*)",
+      "WebFetch(domain:www.monefy.com)",
+      "Bash(gh run:*)",
+      "Bash(CI=1 pnpm expo:*)",
+      "Bash(xargs -I{} taskkill //F //PID {})",
+      "Bash(EXPO_PUBLIC_API_URL=https://horus-production-4629.up.railway.app/api pnpm expo:*)",
+      "Bash(EXPO_PUBLIC_API_URL=https://horus-production-4629.up.railway.app/api ./gradlew assembleRelease:*)",
+      "Bash(./gradlew:*)",
+      "Bash(rm:*)",
+      "Bash(cmd:*)",
+      "Bash(/c/Windows/System32/cmd.exe:*)",
+      "Bash(EXPO_PUBLIC_API_URL=https://horus-production-4629.up.railway.app/api GRADLE_USER_HOME=/tmp/gradle_home JAVA_HOME=\"/c/Program Files/Android/Android Studio/jbr\" ./gradlew assembleRelease:*)",
+      "Bash(EXPO_PUBLIC_API_URL=https://horus-production-4629.up.railway.app/api GRADLE_USER_HOME=/tmp/gradle_home JAVA_HOME=\"/c/Program Files/Android/Android Studio/jbr\" NODE_ENV=production ./gradlew assembleRelease:*)",
+      "Bash(EXPO_PROJECT_ROOT=\"C:/Desarrollo/Horus2/apps/mobile\" GRADLE_USER_HOME=\"/tmp/gradle_home\" ./gradlew assembleRelease:*)",
+      "Bash(GRADLE_USER_HOME=\"/tmp/gradle_home\" ./gradlew app:createBundleReleaseJsAndAssets:*)",
+      "Bash(GRADLE_USER_HOME=\"/tmp/gradle_home\" ./gradlew assembleRelease:*)"
     ],
     "deny": [],
     "ask": []
