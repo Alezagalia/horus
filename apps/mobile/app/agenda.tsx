@@ -1084,6 +1084,19 @@ export default function AgendaScreen() {
           onRefresh={refetch}
           refreshing={isLoading}
           contentContainerStyle={styles.listContent}
+          onScrollToIndexFailed={() => {
+            setTimeout(() => {
+              const key = format(selectedDate, 'yyyy-MM-dd');
+              const idx = sections.findIndex((s) => s.dateKey === key);
+              if (idx >= 0 && listRef.current) {
+                listRef.current.scrollToLocation({
+                  sectionIndex: idx,
+                  itemIndex: 0,
+                  animated: true,
+                });
+              }
+            }, 300);
+          }}
           renderSectionHeader={({ section }) => (
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionHeaderText}>

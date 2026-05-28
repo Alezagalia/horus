@@ -1,17 +1,34 @@
 import { axiosInstance } from '../axios';
+import type {
+  RecurringExpense,
+  CreateRecurringExpenseDTO,
+  UpdateRecurringExpenseDTO,
+} from '@horus/shared';
 
-export interface RecurringExpense {
-  id: string;
-  name: string;
-  amount: number;
-  isActive: boolean;
-}
+export type { RecurringExpense };
 
 export const recurringExpenseApi = {
-  listActive: async (): Promise<RecurringExpense[]> => {
+  list: async (activeOnly?: boolean): Promise<RecurringExpense[]> => {
     const { data } = await axiosInstance.get('/recurring-expenses', {
-      params: { activeOnly: true },
+      params: activeOnly !== undefined ? { activeOnly } : undefined,
     });
-    return data.recurringExpenses ?? data ?? [];
+    return data.recurringExpenses ?? [];
+  },
+
+  // Backward-compat alias used by useRecurringExpensesCount
+  listActive: async (): Promise<RecurringExpense[]> => recurringExpenseApi.list(true),
+
+  create: async (dto: CreateRecurringExpenseDTO): Promise<RecurringExpense> => {
+    const { data } = await axiosInstance.post('/recurring-expenses', dto);
+    return data.recurringExpense ?? data;
+  },
+
+  update: async (id: string, dto: UpdateRecurringExpenseDTO): Promise<RecurringExpense> => {
+    const { data } = await axiosInstance.put(`/recurring-expenses/${id}`, dto);
+    return data.recurringExpense ?? data;
+  },
+
+  remove: async (id: string): Promise<void> => {
+    await axiosInstance.delete(`/recurring-expenses/${id}`);
   },
 };

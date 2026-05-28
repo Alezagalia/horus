@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Circle, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { CheckCircle2, Circle, Trash2, Pencil } from 'lucide-react-native';
 import { format, isToday, isPast, isTomorrow, parseISO, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
@@ -22,20 +22,31 @@ import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
 import { Button } from '@/components/ui/Button';
 import { ProgressRing } from '@/components/ui/ProgressRing';
+import { HabitFormModal } from '@/components/habits/HabitFormModal';
 import { Colors, Typography, Spacing, Radius, Shadows, Gradients } from '@/tokens';
-import { useHabits, useHabitStats, useToggleHabitComplete, habitKeys } from '@/hooks/useHabits';
+import {
+  useHabits,
+  useHabitStats,
+  useToggleHabitComplete,
+  useDeleteHabit,
+  useNumericHabitProgress,
+  habitKeys,
+} from '@/hooks/useHabits';
 import {
   useTasks,
   useToggleTaskComplete,
   useCreateTask,
+  useUpdateTask,
   useDeleteTask,
+  useTaskCategories,
   taskKeys,
 } from '@/hooks/useTasks';
-import { useGoals, goalKeys } from '@/hooks/useGoals';
+import { useGoals, useCreateGoal, useUpdateGoal, useDeleteGoal, goalKeys } from '@/hooks/useGoals';
 import type { Habit } from '@/services/api/habitApi';
 import type { Task, CreateTaskDTO } from '@/services/api/taskApi';
-import type { GoalWithProgress } from '@horus/shared';
+import type { GoalWithProgress, CreateGoalDTO, UpdateGoalDTO, GoalPriority } from '@horus/shared';
 import { LinearGradient } from 'expo-linear-gradient';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
@@ -149,11 +160,15 @@ function GoalCard({ goal }: { goal: GoalWithProgress }) {
 function HabitRow({
   habit,
   onToggle,
+  onEdit,
+  onDelete,
   toggling,
   isLast,
 }: {
   habit: Habit;
   onToggle: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
   toggling: boolean;
   isLast?: boolean;
 }) {
@@ -161,19 +176,22 @@ function HabitRow({
   const icon = habit.category?.icon ?? '·';
 
   return (
-    <TouchableOpacity
-      style={[styles.habitRow, !isLast && styles.rowDivider]}
-      onPress={onToggle}
-      disabled={toggling}
-      activeOpacity={0.65}
-    >
-      {toggling ? (
-        <ActivityIndicator size="small" color={Colors.vivid} style={styles.habitCheck} />
-      ) : (
-        <View style={[styles.habitCheck, done && styles.habitCheckDone]}>
-          {done && <View style={styles.habitCheckInner} />}
-        </View>
-      )}
+    <View style={[styles.habitRow, !isLast && styles.rowDivider]}>
+      <TouchableOpacity
+        onPress={onToggle}
+        disabled={toggling}
+        activeOpacity={0.65}
+        hitSlop={6}
+        style={styles.habitCheckWrap}
+      >
+        {toggling ? (
+          <ActivityIndicator size="small" color={Colors.vivid} style={styles.habitCheck} />
+        ) : (
+          <View style={[styles.habitCheck, done && styles.habitCheckDone]}>
+            {done && <View style={styles.habitCheckInner} />}
+          </View>
+        )}
+      </TouchableOpacity>
       <Text style={styles.habitIcon}>{icon}</Text>
       <Text style={[styles.habitName, done && styles.habitNameDone]} numberOfLines={1}>
         {habit.name}
@@ -184,7 +202,22 @@ function HabitRow({
           <Text style={styles.streakNum}>{habit.currentStreak}</Text>
         </View>
       )}
-    </TouchableOpacity>
+      <TouchableOpacity onPress={onEdit} hitSlop={8} style={styles.habitActionBtn}>
+        <Pencil size={14} color={Colors.muted} strokeWidth={1.5} />
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() =>
+          Alert.alert('Eliminar', `¿Eliminar "${habit.name}"?`, [
+            { text: 'Cancelar', style: 'cancel' },
+            { text: 'Eliminar', style: 'destructive', onPress: onDelete },
+          ])
+        }
+        hitSlop={8}
+        style={styles.habitActionBtn}
+      >
+        <Trash2 size={14} color={Colors.muted} strokeWidth={1.5} />
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -193,11 +226,13 @@ function HabitRow({
 function TaskCard({
   task,
   onToggle,
+  onEdit,
   onDelete,
   toggling,
 }: {
   task: Task;
   onToggle: () => void;
+  onEdit: () => void;
   onDelete: () => void;
   toggling: boolean;
 }) {
@@ -242,7 +277,7 @@ function TaskCard({
         )}
       </View>
 
-      {/* Priority dot + delete */}
+      {/* Priority dot + edit + delete */}
       <View style={styles.taskRight}>
         <View
           style={[
@@ -254,6 +289,9 @@ function TaskCard({
                 : { backgroundColor: Colors.muted, opacity: 0.3 },
           ]}
         />
+        <TouchableOpacity onPress={onEdit} hitSlop={8} style={styles.deleteBtn}>
+          <Pencil size={14} color={Colors.muted} strokeWidth={1.5} />
+        </TouchableOpacity>
         <TouchableOpacity
           onPress={() =>
             Alert.alert('Eliminar', `¿Eliminar "${task.title}"?`, [
@@ -273,7 +311,15 @@ function TaskCard({
 
 // ─── Goal list item ───────────────────────────────────────────────────────────
 
-function GoalListItem({ goal }: { goal: GoalWithProgress }) {
+function GoalListItem({
+  goal,
+  onEdit,
+  onDelete,
+}: {
+  goal: GoalWithProgress;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
   const pct = Math.round((goal.progress ?? 0) * 100);
   const priorityColor =
     goal.priority === 'alta' ? '#EF4444' : goal.priority === 'media' ? '#F97316' : Colors.muted;
@@ -286,6 +332,21 @@ function GoalListItem({ goal }: { goal: GoalWithProgress }) {
           {goal.title}
         </Text>
         <Text style={styles.goalListPct}>{pct}%</Text>
+        <TouchableOpacity onPress={onEdit} hitSlop={8} style={styles.deleteBtn}>
+          <Pencil size={14} color={Colors.muted} strokeWidth={1.5} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() =>
+            Alert.alert('Eliminar', `¿Eliminar "${goal.title}"?`, [
+              { text: 'Cancelar', style: 'cancel' },
+              { text: 'Eliminar', style: 'destructive', onPress: onDelete },
+            ])
+          }
+          hitSlop={8}
+          style={styles.deleteBtn}
+        >
+          <Trash2 size={14} color={Colors.muted} strokeWidth={1.5} />
+        </TouchableOpacity>
       </View>
       <View style={styles.goalBar}>
         <View style={[styles.goalBarFill, { width: `${pct}%` }]} />
@@ -305,11 +366,17 @@ function HabitView({
   habits,
   stats,
   onToggle,
+  onEdit,
+  onDelete,
+  onNew,
   toggling,
 }: {
   habits: Habit[];
   stats: { today: { total: number; completed: number; percentage: number } } | undefined;
   onToggle: (h: Habit) => void;
+  onEdit: (h: Habit) => void;
+  onDelete: (id: string) => void;
+  onNew: () => void;
   toggling: (id: string) => boolean;
 }) {
   const pct = stats?.today.percentage ?? 0;
@@ -319,7 +386,7 @@ function HabitView({
 
   return (
     <>
-      {/* Stats mini bar */}
+      {/* Stats mini bar + new button */}
       <View style={styles.habitStats}>
         <ProgressRing progress={pct} size={52} strokeWidth={6} theme="dark" />
         <View style={{ flex: 1 }}>
@@ -332,6 +399,9 @@ function HabitView({
             {total > 0 ? `${Math.round(pct * 100)}% del día` : 'Empieza tu día'}
           </Text>
         </View>
+        <TouchableOpacity onPress={onNew} activeOpacity={0.7}>
+          <Text style={styles.sectionLink}>+ Nuevo</Text>
+        </TouchableOpacity>
       </View>
 
       {groups.length === 0 ? (
@@ -348,6 +418,8 @@ function HabitView({
                   key={h.id}
                   habit={h}
                   onToggle={() => onToggle(h)}
+                  onEdit={() => onEdit(h)}
+                  onDelete={() => onDelete(h.id)}
                   toggling={toggling(h.id)}
                   isLast={i === group.habits.length - 1}
                 />
@@ -362,30 +434,76 @@ function HabitView({
 
 // ─── Task form modal ──────────────────────────────────────────────────────────
 
-function TaskFormModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+function TaskFormModal({
+  visible,
+  onClose,
+  task,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  task?: Task;
+}) {
+  const isEdit = !!task;
+
   const [title, setTitle] = useState('');
   const [priority, setPriority] = useState<'alta' | 'media' | 'baja' | null>(null);
-  const createTask = useCreateTask();
+  const [dueDate, setDueDate] = useState<Date | null>(null);
+  const [categoryId, setCategoryId] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
-  const handleCreate = () => {
-    const trimmed = title.trim();
-    if (!trimmed) return;
-    const dto: CreateTaskDTO = { title: trimmed, ...(priority ? { priority } : {}) };
-    createTask.mutate(dto, {
-      onSuccess: () => {
-        setTitle('');
-        setPriority(null);
-        onClose();
-      },
-      onError: () => Alert.alert('Error', 'No se pudo crear la tarea'),
-    });
+  const createTask = useCreateTask();
+  const updateTask = useUpdateTask();
+  const { data: categories = [] } = useTaskCategories();
+
+  // Pre-load when editing
+  useEffect(() => {
+    if (task) {
+      setTitle(task.title);
+      setPriority(task.priority ?? null);
+      setDueDate(task.dueDate ? new Date(task.dueDate) : null);
+      setCategoryId(task.categoryId ?? '');
+    }
+  }, [task]);
+
+  const reset = () => {
+    setTitle('');
+    setPriority(null);
+    setDueDate(null);
+    setCategoryId('');
+    setShowDatePicker(false);
   };
 
   const handleClose = () => {
-    setTitle('');
-    setPriority(null);
+    reset();
     onClose();
   };
+
+  const handleSubmit = () => {
+    const trimmed = title.trim();
+    if (!trimmed) return;
+    const dto: CreateTaskDTO = {
+      title: trimmed,
+      ...(priority ? { priority } : {}),
+      ...(dueDate ? { dueDate: dueDate.toISOString() } : {}),
+      ...(categoryId ? { categoryId } : {}),
+    };
+    if (isEdit && task) {
+      updateTask.mutate(
+        { id: task.id, dto },
+        {
+          onSuccess: handleClose,
+          onError: () => Alert.alert('Error', 'No se pudo actualizar la tarea'),
+        }
+      );
+    } else {
+      createTask.mutate(dto, {
+        onSuccess: handleClose,
+        onError: () => Alert.alert('Error', 'No se pudo crear la tarea'),
+      });
+    }
+  };
+
+  const isPending = createTask.isPending || updateTask.isPending;
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
@@ -396,7 +514,7 @@ function TaskFormModal({ visible, onClose }: { visible: boolean; onClose: () => 
       >
         <View style={styles.sheet}>
           <View style={styles.sheetHandle} />
-          <Text style={styles.sheetTitle}>Nueva tarea</Text>
+          <Text style={styles.sheetTitle}>{isEdit ? 'Editar tarea' : 'Nueva tarea'}</Text>
 
           <TextInput
             style={styles.input}
@@ -404,9 +522,9 @@ function TaskFormModal({ visible, onClose }: { visible: boolean; onClose: () => 
             onChangeText={setTitle}
             placeholder="¿Qué hay que hacer?"
             placeholderTextColor={Colors.muted}
-            autoFocus
+            autoFocus={!isEdit}
             returnKeyType="done"
-            onSubmitEditing={handleCreate}
+            onSubmitEditing={handleSubmit}
           />
 
           <Text style={styles.priorityLabel}>Prioridad</Text>
@@ -421,12 +539,142 @@ function TaskFormModal({ visible, onClose }: { visible: boolean; onClose: () => 
             ))}
           </View>
 
+          {/* Due date */}
+          <Text style={styles.priorityLabel}>Fecha límite</Text>
+          <View style={styles.dueDateRow}>
+            <TouchableOpacity
+              style={[styles.dueDateBtn, dueDate && styles.dueDateBtnActive]}
+              onPress={() => setShowDatePicker(true)}
+            >
+              <Text style={[styles.dueDateBtnLabel, dueDate && styles.dueDateBtnLabelActive]}>
+                {dueDate ? format(dueDate, "d 'de' MMMM", { locale: es }) : 'Sin fecha'}
+              </Text>
+            </TouchableOpacity>
+            {dueDate && (
+              <TouchableOpacity
+                onPress={() => setDueDate(null)}
+                hitSlop={8}
+                style={styles.dueDateClear}
+              >
+                <Text style={styles.dueDateClearLabel}>✕</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Categories */}
+          {categories.length > 0 && (
+            <>
+              <Text style={styles.priorityLabel}>Categoría</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={[styles.priorityChips, { marginBottom: Spacing.xl }]}
+              >
+                <Chip
+                  label="Sin categoría"
+                  active={!categoryId}
+                  onPress={() => setCategoryId('')}
+                />
+                {categories.map((cat) => (
+                  <Chip
+                    key={cat.id}
+                    label={`${cat.icon ?? ''} ${cat.name}`.trim()}
+                    active={categoryId === cat.id}
+                    onPress={() => setCategoryId(cat.id)}
+                  />
+                ))}
+              </ScrollView>
+            </>
+          )}
+
           <Button
-            label="Crear tarea"
-            onPress={handleCreate}
-            loading={createTask.isPending}
-            disabled={!title.trim()}
+            label={isEdit ? 'Guardar' : 'Crear tarea'}
+            onPress={handleSubmit}
+            loading={isPending}
+            disabled={!title.trim() || isPending}
             style={styles.createTaskBtn}
+          />
+        </View>
+      </KeyboardAvoidingView>
+
+      {showDatePicker && (
+        <DateTimePicker
+          value={dueDate ?? new Date()}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'inline' : 'default'}
+          minimumDate={new Date()}
+          onChange={(_event, date) => {
+            if (Platform.OS === 'android') setShowDatePicker(false);
+            if (date) setDueDate(date);
+          }}
+        />
+      )}
+    </Modal>
+  );
+}
+
+// ─── Numeric input sheet ──────────────────────────────────────────────────────
+
+function NumericSheet({ habit, onClose }: { habit: Habit | null; onClose: () => void }) {
+  const [value, setValue] = useState('');
+  const logProgress = useNumericHabitProgress();
+
+  const handleSubmit = () => {
+    if (!habit) return;
+    const num = parseFloat(value);
+    if (!value || isNaN(num) || num <= 0) {
+      Alert.alert('Error', 'Ingresa un valor válido mayor a 0');
+      return;
+    }
+    logProgress.mutate(
+      { habitId: habit.id, date: TODAY, value: num },
+      {
+        onSuccess: () => {
+          setValue('');
+          onClose();
+        },
+        onError: () => Alert.alert('Error', 'No se pudo registrar el progreso'),
+      }
+    );
+  };
+
+  const handleClose = () => {
+    setValue('');
+    onClose();
+  };
+
+  return (
+    <Modal visible={!!habit} transparent animationType="slide" onRequestClose={handleClose}>
+      <Pressable style={styles.overlay} onPress={handleClose} />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.modalContainer}
+      >
+        <View style={styles.sheet}>
+          <View style={styles.sheetHandle} />
+          <Text style={styles.sheetTitle}>Registrar — {habit?.name}</Text>
+          {habit?.targetValue != null && (
+            <Text style={styles.numericSubtitle}>
+              Objetivo: {habit.targetValue} {habit.unit ?? ''}
+            </Text>
+          )}
+          <TextInput
+            style={[styles.input, styles.numericInput]}
+            value={value}
+            onChangeText={setValue}
+            placeholder="0"
+            placeholderTextColor={Colors.muted}
+            keyboardType="numeric"
+            autoFocus
+            returnKeyType="done"
+            onSubmitEditing={handleSubmit}
+            textAlign="center"
+          />
+          <Button
+            label="Registrar"
+            onPress={handleSubmit}
+            loading={logProgress.isPending}
+            disabled={!value || logProgress.isPending}
           />
         </View>
       </KeyboardAvoidingView>
@@ -440,7 +688,13 @@ type Tab = 'tareas' | 'habitos' | 'metas';
 
 export default function FocoScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('tareas');
-  const [showCreate, setShowCreate] = useState(false);
+  const [showCreateTask, setShowCreateTask] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | undefined>(undefined);
+  const [showHabitModal, setShowHabitModal] = useState(false);
+  const [editingHabit, setEditingHabit] = useState<Habit | undefined>(undefined);
+  const [numericHabit, setNumericHabit] = useState<Habit | null>(null);
+  const [showGoalModal, setShowGoalModal] = useState(false);
+  const [editingGoal, setEditingGoal] = useState<GoalWithProgress | undefined>(undefined);
   const queryClient = useQueryClient();
 
   const { data: habits = [], isLoading: hLoading } = useHabits();
@@ -449,8 +703,10 @@ export default function FocoScreen() {
   const { data: goals = [], isLoading: gLoading } = useGoals('en_progreso');
 
   const toggleHabit = useToggleHabitComplete();
+  const deleteHabit = useDeleteHabit();
   const toggleTask = useToggleTaskComplete();
   const deleteTask = useDeleteTask();
+  const deleteGoal = useDeleteGoal();
 
   const todayHabits = habits.filter(isHabitDueToday);
   const pendingTasks = tasks.filter((t) => t.status === 'pendiente' || t.status === 'en_progreso');
@@ -470,10 +726,26 @@ export default function FocoScreen() {
 
   const handleToggleHabit = (habit: Habit) => {
     const done = isCompletedToday(habit);
+    // For NUMERIC uncompleted habits → open value sheet
+    if (habit.type === 'NUMERIC' && !done) {
+      setNumericHabit(habit);
+      return;
+    }
     toggleHabit.mutate(
       { habitId: habit.id, date: TODAY, completed: !done },
       { onError: () => Alert.alert('Error', 'No se pudo actualizar el hábito') }
     );
+  };
+
+  const handleEditHabit = (habit: Habit) => {
+    setEditingHabit(habit);
+    setShowHabitModal(true);
+  };
+
+  const handleDeleteHabit = (id: string) => {
+    deleteHabit.mutate(id, {
+      onError: () => Alert.alert('Error', 'No se pudo eliminar el hábito'),
+    });
   };
 
   const handleToggleTask = (task: Task) => {
@@ -485,6 +757,17 @@ export default function FocoScreen() {
   const handleDeleteTask = (taskId: string) => {
     deleteTask.mutate(taskId, {
       onError: () => Alert.alert('Error', 'No se pudo eliminar la tarea'),
+    });
+  };
+
+  const handleEditGoal = (goal: GoalWithProgress) => {
+    setEditingGoal(goal);
+    setShowGoalModal(true);
+  };
+
+  const handleDeleteGoal = (id: string) => {
+    deleteGoal.mutate(id, {
+      onError: () => Alert.alert('Error', 'No se pudo eliminar la meta'),
     });
   };
 
@@ -538,7 +821,7 @@ export default function FocoScreen() {
             {/* Por hacer header */}
             <View style={styles.sectionRow}>
               <Text style={styles.sectionTitle}>Por hacer</Text>
-              <TouchableOpacity onPress={() => setShowCreate(true)} activeOpacity={0.7}>
+              <TouchableOpacity onPress={() => setShowCreateTask(true)} activeOpacity={0.7}>
                 <Text style={styles.sectionLink}>+ Nueva</Text>
               </TouchableOpacity>
             </View>
@@ -555,6 +838,10 @@ export default function FocoScreen() {
                     key={t.id}
                     task={t}
                     onToggle={() => handleToggleTask(t)}
+                    onEdit={() => {
+                      setEditingTask(t);
+                      setShowCreateTask(true);
+                    }}
                     onDelete={() => handleDeleteTask(t.id)}
                     toggling={
                       (toggleTask.isPending && toggleTask.variables === t.id) ||
@@ -575,6 +862,10 @@ export default function FocoScreen() {
                       key={t.id}
                       task={t}
                       onToggle={() => handleToggleTask(t)}
+                      onEdit={() => {
+                        setEditingTask(t);
+                        setShowCreateTask(true);
+                      }}
                       onDelete={() => handleDeleteTask(t.id)}
                       toggling={toggleTask.isPending && toggleTask.variables === t.id}
                     />
@@ -589,24 +880,235 @@ export default function FocoScreen() {
             habits={todayHabits}
             stats={stats}
             onToggle={handleToggleHabit}
+            onEdit={handleEditHabit}
+            onDelete={handleDeleteHabit}
+            onNew={() => {
+              setEditingHabit(undefined);
+              setShowHabitModal(true);
+            }}
             toggling={(id) => toggleHabit.isPending && toggleHabit.variables?.habitId === id}
           />
-        ) : // ─── METAS ────────────────────────────────────────
-        goals.length === 0 ? (
-          <Card solid style={styles.emptyCard}>
-            <Text style={styles.emptyText}>No hay metas activas</Text>
-          </Card>
         ) : (
-          <View style={styles.taskList}>
-            {goals.map((g) => (
-              <GoalListItem key={g.id} goal={g} />
-            ))}
-          </View>
+          // ─── METAS ────────────────────────────────────────
+          <>
+            <View style={styles.sectionRow}>
+              <Text style={styles.sectionTitle}>Metas activas</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setEditingGoal(undefined);
+                  setShowGoalModal(true);
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.sectionLink}>+ Nueva</Text>
+              </TouchableOpacity>
+            </View>
+            {goals.length === 0 ? (
+              <Card solid style={styles.emptyCard}>
+                <Text style={styles.emptyText}>No hay metas activas</Text>
+              </Card>
+            ) : (
+              <View style={styles.taskList}>
+                {goals.map((g) => (
+                  <GoalListItem
+                    key={g.id}
+                    goal={g}
+                    onEdit={() => handleEditGoal(g)}
+                    onDelete={() => handleDeleteGoal(g.id)}
+                  />
+                ))}
+              </View>
+            )}
+          </>
         )}
       </ScreenContainer>
 
-      <TaskFormModal visible={showCreate} onClose={() => setShowCreate(false)} />
+      <TaskFormModal
+        visible={showCreateTask}
+        onClose={() => {
+          setShowCreateTask(false);
+          setEditingTask(undefined);
+        }}
+        task={editingTask}
+      />
+      <HabitFormModal
+        visible={showHabitModal}
+        onClose={() => {
+          setShowHabitModal(false);
+          setEditingHabit(undefined);
+        }}
+        habit={editingHabit}
+      />
+      <NumericSheet habit={numericHabit} onClose={() => setNumericHabit(null)} />
+      <GoalFormModal
+        visible={showGoalModal}
+        onClose={() => {
+          setShowGoalModal(false);
+          setEditingGoal(undefined);
+        }}
+        goal={editingGoal}
+      />
     </>
+  );
+}
+
+// ─── Goal form modal ──────────────────────────────────────────────────────────
+
+function GoalFormModal({
+  visible,
+  onClose,
+  goal,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  goal?: GoalWithProgress;
+}) {
+  const isEdit = !!goal;
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [priority, setPriority] = useState<GoalPriority>('media');
+  const [targetDate, setTargetDate] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const createGoal = useCreateGoal();
+  const updateGoal = useUpdateGoal();
+  const isBusy = createGoal.isPending || updateGoal.isPending;
+
+  useEffect(() => {
+    if (visible) {
+      if (goal) {
+        setTitle(goal.title);
+        setDescription(goal.description ?? '');
+        setPriority(goal.priority);
+        setTargetDate(goal.targetDate ? parseISO(goal.targetDate) : null);
+      } else {
+        setTitle('');
+        setDescription('');
+        setPriority('media');
+        setTargetDate(null);
+      }
+    }
+  }, [visible, goal]);
+
+  const handleSubmit = () => {
+    const trimmed = title.trim();
+    if (!trimmed) {
+      Alert.alert('Error', 'El nombre de la meta es requerido');
+      return;
+    }
+    const dto: CreateGoalDTO & UpdateGoalDTO = {
+      title: trimmed,
+      description: description.trim() || undefined,
+      priority,
+      targetDate: targetDate ? format(targetDate, 'yyyy-MM-dd') : undefined,
+    };
+    if (isEdit) {
+      updateGoal.mutate(
+        { id: goal.id, dto },
+        {
+          onSuccess: onClose,
+          onError: () => Alert.alert('Error', 'No se pudo actualizar la meta'),
+        }
+      );
+    } else {
+      createGoal.mutate(dto as CreateGoalDTO, {
+        onSuccess: onClose,
+        onError: () => Alert.alert('Error', 'No se pudo crear la meta'),
+      });
+    }
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <Pressable style={styles.modalOverlay} onPress={onClose} />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.modalSheet}
+      >
+        <View style={styles.sheetHandle} />
+        <Text style={styles.sheetTitle}>{isEdit ? 'Editar meta' : 'Nueva meta'}</Text>
+
+        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          {/* Title */}
+          <Text style={styles.priorityLabel}>Nombre *</Text>
+          <TextInput
+            style={styles.input}
+            value={title}
+            onChangeText={setTitle}
+            placeholder="Ej. Correr 5km seguidos"
+            placeholderTextColor={Colors.muted}
+            autoFocus
+            returnKeyType="next"
+          />
+
+          {/* Description */}
+          <Text style={styles.priorityLabel}>Descripción</Text>
+          <TextInput
+            style={[styles.input, { minHeight: 64, textAlignVertical: 'top' }]}
+            value={description}
+            onChangeText={setDescription}
+            placeholder="Opcional"
+            placeholderTextColor={Colors.muted}
+            multiline
+            returnKeyType="default"
+          />
+
+          {/* Priority */}
+          <Text style={styles.priorityLabel}>Prioridad</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.priorityChips}
+          >
+            {PRIORITY_OPTIONS.map((opt) => (
+              <Chip
+                key={opt.value}
+                label={opt.label}
+                active={priority === opt.value}
+                onPress={() => setPriority(opt.value)}
+              />
+            ))}
+          </ScrollView>
+
+          {/* Target date */}
+          <Text style={styles.priorityLabel}>Fecha objetivo</Text>
+          <View style={styles.dueDateRow}>
+            <TouchableOpacity
+              style={[styles.dueDateBtn, targetDate && styles.dueDateBtnActive]}
+              onPress={() => setShowDatePicker(true)}
+            >
+              <Text style={[styles.dueDateBtnLabel, targetDate && styles.dueDateBtnLabelActive]}>
+                {targetDate ? format(targetDate, "d 'de' MMMM yyyy", { locale: es }) : 'Sin fecha'}
+              </Text>
+            </TouchableOpacity>
+            {targetDate && (
+              <TouchableOpacity onPress={() => setTargetDate(null)} style={styles.dueDateClear}>
+                <Text style={styles.dueDateClearLabel}>✕</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          {showDatePicker && (
+            <DateTimePicker
+              value={targetDate ?? new Date()}
+              mode="date"
+              minimumDate={new Date()}
+              onChange={(_e, date) => {
+                setShowDatePicker(false);
+                if (date) setTargetDate(date);
+              }}
+            />
+          )}
+
+          <Button
+            label={isEdit ? 'Guardar' : 'Crear meta'}
+            onPress={handleSubmit}
+            loading={isBusy}
+            disabled={isBusy}
+            style={{ marginTop: Spacing.xl, marginBottom: Spacing.lg }}
+          />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </Modal>
   );
 }
 
@@ -779,6 +1281,12 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     gap: Spacing.sm,
   },
+  habitCheckWrap: {
+    width: 22,
+    height: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   habitCheck: {
     width: 22,
     height: 22,
@@ -809,6 +1317,9 @@ const styles = StyleSheet.create({
   habitNameDone: {
     color: Colors.muted,
     textDecorationLine: 'line-through',
+  },
+  habitActionBtn: {
+    padding: 4,
   },
   streakBadge: {
     flexDirection: 'row',
@@ -923,6 +1434,20 @@ const styles = StyleSheet.create({
     color: Colors.ink,
     marginBottom: Spacing.lg,
   },
+  numericSubtitle: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    color: Colors.muted,
+    marginBottom: Spacing.lg,
+    textAlign: 'center',
+  },
+  numericInput: {
+    fontSize: 48,
+    fontFamily: 'Inter_700Bold',
+    textAlign: 'center',
+    borderBottomColor: Colors.vivid,
+    marginBottom: Spacing.xl,
+  },
   input: {
     fontFamily: 'Inter_500Medium',
     fontSize: 16,
@@ -942,6 +1467,41 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: Spacing.sm,
     marginBottom: Spacing.xl,
+  },
+  dueDateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.xl,
+  },
+  dueDateBtn: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 8,
+    borderRadius: Radius.pill,
+    borderWidth: 1.5,
+    borderColor: Colors.line,
+    backgroundColor: Colors.ice,
+  },
+  dueDateBtnActive: {
+    borderColor: Colors.vivid,
+    backgroundColor: Colors.ice,
+  },
+  dueDateBtnLabel: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 14,
+    color: Colors.muted,
+  },
+  dueDateBtnLabelActive: {
+    color: Colors.vivid,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  dueDateClear: {
+    padding: 4,
+  },
+  dueDateClearLabel: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+    color: Colors.muted,
   },
   createTaskBtn: {},
 });

@@ -11,6 +11,7 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Switch,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { format, startOfMonth, endOfMonth, isToday, isYesterday, parseISO } from 'date-fns';
@@ -28,6 +29,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Chip } from '@/components/ui/Chip';
 import { Colors, Spacing, Radius, Gradients, Shadows, Layout } from '@/tokens';
 import { useAccounts, useFinanceStats, accountKeys } from '@/hooks/useAccounts';
 import {
@@ -37,8 +39,17 @@ import {
   useTxCategories,
   transactionKeys,
 } from '@/hooks/useTransactions';
+import {
+  useRecurringExpenses,
+  useCreateRecurringExpense,
+  useUpdateRecurringExpense,
+  useDeleteRecurringExpense,
+  recurringKeys,
+} from '@/hooks/useEvents';
 import type { Transaction, TransactionType } from '@/services/api/transactionApi';
 import type { Account } from '@/services/api/accountApi';
+import type { RecurringExpense } from '@/services/api/recurringExpenseApi';
+import type { CreateRecurringExpenseDTO } from '@horus/shared';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -417,14 +428,234 @@ function TransactionFormModal({
   );
 }
 
+// ─── Recurring expense components ─────────────────────────────────────────────
+
+function RecurringExpenseRow({
+  item,
+  onToggle,
+  onDelete,
+  toggling,
+  isLast,
+}: {
+  item: RecurringExpense;
+  onToggle: () => void;
+  onDelete: () => void;
+  toggling: boolean;
+  isLast?: boolean;
+}) {
+  return (
+    <View style={[styles.txRow, !isLast && styles.txRowBorder]}>
+      <View style={[styles.catDot, { backgroundColor: item.category?.color ?? Colors.muted }]} />
+      <View style={styles.txCenter}>
+        <Text style={[styles.txConcept, !item.isActive && { color: Colors.muted }]}>
+          {item.concept}
+        </Text>
+        <Text style={styles.txMeta}>
+          {item.category?.name ?? ''}
+          {item.dueDay ? ` · día ${item.dueDay}` : ''}
+          {item.currency !== 'ARS' ? ` · ${item.currency}` : ''}
+        </Text>
+      </View>
+      {toggling ? (
+        <ActivityIndicator size="small" color={Colors.vivid} style={{ marginRight: 8 }} />
+      ) : (
+        <Switch
+          value={item.isActive}
+          onValueChange={onToggle}
+          trackColor={{ false: Colors.line, true: Colors.vivid }}
+          thumbColor="#fff"
+        />
+      )}
+      <TouchableOpacity
+        onPress={() =>
+          Alert.alert('Eliminar', `¿Eliminar "${item.concept}"?`, [
+            { text: 'Cancelar', style: 'cancel' },
+            { text: 'Eliminar', style: 'destructive', onPress: onDelete },
+          ])
+        }
+        hitSlop={8}
+        style={{ marginLeft: 4 }}
+      >
+        <Trash2 size={16} color={Colors.muted} strokeWidth={1.5} />
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const CURRENCIES = ['ARS', 'USD', 'EUR'];
+
+function RecurringFormModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const [concept, setConcept] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [currency, setCurrency] = useState('ARS');
+  const [dueDay, setDueDay] = useState('');
+  const [notes, setNotes] = useState('');
+
+  const { data: categories = [] } = useTxCategories('gastos');
+  const createRecurring = useCreateRecurringExpense();
+
+  useEffect(() => {
+    if (!visible) {
+      setConcept('');
+      setCategoryId('');
+      setCurrency('ARS');
+      setDueDay('');
+      setNotes('');
+    } else if (categories.length > 0 && !categoryId) {
+      setCategoryId(categories[0].id);
+    }
+  }, [visible, categories]);
+
+  const handleSubmit = () => {
+    if (!concept.trim()) {
+      Alert.alert('Error', 'El concepto es requerido');
+      return;
+    }
+    if (!categoryId) {
+      Alert.alert('Error', 'Seleccioná una categoría');
+      return;
+    }
+    const parsedDay = dueDay ? parseInt(dueDay, 10) : undefined;
+    if (parsedDay !== undefined && (parsedDay < 1 || parsedDay > 31)) {
+      Alert.alert('Error', 'El día de vencimiento debe ser entre 1 y 31');
+      return;
+    }
+    const dto: CreateRecurringExpenseDTO = {
+      concept: concept.trim(),
+      categoryId,
+      currency,
+      dueDay: parsedDay ?? null,
+      notes: notes.trim() || null,
+    };
+    createRecurring.mutate(dto, {
+      onSuccess: onClose,
+      onError: () => Alert.alert('Error', 'No se pudo crear el gasto fijo'),
+    });
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.modalOverlay}
+      >
+        <TouchableOpacity
+          style={StyleSheet.absoluteFillObject}
+          activeOpacity={1}
+          onPress={onClose}
+        />
+        <View style={styles.modalSheet}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Nuevo gasto fijo</Text>
+            <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <X size={20} color={Colors.muted} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <TextInput
+              style={styles.conceptInput}
+              value={concept}
+              onChangeText={setConcept}
+              placeholder="Concepto (ej. Alquiler, Netflix…)"
+              placeholderTextColor={Colors.muted}
+              autoFocus
+              returnKeyType="next"
+            />
+
+            <Text style={styles.pickerLabel}>CATEGORÍA *</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.pickerScroll}
+              contentContainerStyle={{ gap: Spacing.sm }}
+            >
+              {categories.map((c) => (
+                <TouchableOpacity
+                  key={c.id}
+                  style={[styles.pickerChip, categoryId === c.id && styles.pickerChipActive]}
+                  onPress={() => setCategoryId(c.id)}
+                >
+                  {c.icon && <Text style={{ fontSize: 13 }}>{c.icon}</Text>}
+                  <Text
+                    style={[
+                      styles.pickerChipLabel,
+                      { color: categoryId === c.id ? '#fff' : Colors.ink },
+                    ]}
+                  >
+                    {c.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <Text style={styles.pickerLabel}>MONEDA</Text>
+            <View style={{ flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg }}>
+              {CURRENCIES.map((cur) => (
+                <TouchableOpacity
+                  key={cur}
+                  style={[styles.pickerChip, currency === cur && styles.pickerChipActive]}
+                  onPress={() => setCurrency(cur)}
+                >
+                  <Text
+                    style={[
+                      styles.pickerChipLabel,
+                      { color: currency === cur ? '#fff' : Colors.ink },
+                    ]}
+                  >
+                    {cur}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.pickerLabel}>DÍA DE VENCIMIENTO (opcional, 1–31)</Text>
+            <TextInput
+              style={[styles.conceptInput, { marginBottom: Spacing.lg }]}
+              value={dueDay}
+              onChangeText={(v) => setDueDay(v.replace(/\D/g, '').slice(0, 2))}
+              placeholder="Ej. 15"
+              placeholderTextColor={Colors.muted}
+              keyboardType="numeric"
+              returnKeyType="done"
+            />
+
+            <Text style={styles.pickerLabel}>NOTAS (opcional)</Text>
+            <TextInput
+              style={[styles.conceptInput, { minHeight: 56, textAlignVertical: 'top' }]}
+              value={notes}
+              onChangeText={setNotes}
+              placeholder="Comentarios…"
+              placeholderTextColor={Colors.muted}
+              multiline
+            />
+
+            <Button
+              label="Guardar gasto fijo"
+              onPress={handleSubmit}
+              loading={createRecurring.isPending}
+              disabled={!concept.trim() || !categoryId || createRecurring.isPending}
+              style={{ marginTop: Spacing.sm, marginBottom: Spacing.md }}
+            />
+          </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
 // ─── screen ───────────────────────────────────────────────────────────────────
+
+type DineroTab = 'movimientos' | 'fijos';
 
 export default function DineroScreen() {
   const now = new Date();
+  const [activeTab, setActiveTab] = useState<DineroTab>('movimientos');
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [showRecurringModal, setShowRecurringModal] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -456,6 +687,10 @@ export default function DineroScreen() {
 
   const deleteTransaction = useDeleteTransaction();
 
+  const { data: recurringList = [], isLoading: recurringLoading } = useRecurringExpenses();
+  const updateRecurring = useUpdateRecurringExpense();
+  const deleteRecurring = useDeleteRecurringExpense();
+
   const accounts = accountsData?.accounts ?? [];
   const transactions = txData?.transactions ?? [];
   const grouped = useMemo(() => groupByDate(transactions), [transactions]);
@@ -464,6 +699,7 @@ export default function DineroScreen() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: accountKeys.all }),
       queryClient.invalidateQueries({ queryKey: transactionKeys.all }),
+      queryClient.invalidateQueries({ queryKey: recurringKeys.all }),
     ]);
   }, [queryClient]);
 
@@ -505,87 +741,163 @@ export default function DineroScreen() {
           onNext={handleNextMonth}
         />
 
-        {accounts.length > 0 && (
+        {/* ─── Tab chips ──────────────────────────────────── */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.tabScroll}
+          contentContainerStyle={styles.tabRow}
+        >
+          <Chip
+            label="Movimientos"
+            active={activeTab === 'movimientos'}
+            badge={transactions.length || undefined}
+            onPress={() => setActiveTab('movimientos')}
+          />
+          <Chip
+            label="Fijos"
+            active={activeTab === 'fijos'}
+            badge={recurringList.length || undefined}
+            onPress={() => setActiveTab('fijos')}
+          />
+        </ScrollView>
+
+        {activeTab === 'movimientos' ? (
+          <>
+            {accounts.length > 0 && (
+              <>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>CUENTAS</Text>
+                </View>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ gap: Spacing.sm, paddingRight: Spacing.screenX }}
+                  style={{ marginBottom: Spacing.sm }}
+                >
+                  <TouchableOpacity
+                    style={[
+                      styles.accountChip,
+                      selectedAccountId === null && styles.accountChipActive,
+                    ]}
+                    onPress={() => setSelectedAccountId(null)}
+                  >
+                    <Text
+                      style={[
+                        styles.accountChipName,
+                        { color: selectedAccountId === null ? '#fff' : Colors.ink },
+                      ]}
+                    >
+                      Todas
+                    </Text>
+                  </TouchableOpacity>
+                  {accounts.map((a) => (
+                    <AccountChip
+                      key={a.id}
+                      account={a}
+                      active={selectedAccountId === a.id}
+                      onPress={() => setSelectedAccountId(selectedAccountId === a.id ? null : a.id)}
+                    />
+                  ))}
+                </ScrollView>
+              </>
+            )}
+
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>MOVIMIENTOS</Text>
+              {transactions.length > 0 && (
+                <View style={styles.sectionBadge}>
+                  <Text style={styles.sectionBadgeText}>{transactions.length}</Text>
+                </View>
+              )}
+            </View>
+
+            {txLoading ? (
+              <ActivityIndicator color={Colors.vivid} style={{ marginVertical: 24 }} />
+            ) : grouped.length === 0 ? (
+              <Card solid>
+                <Text style={styles.emptyText}>Sin movimientos este mes 💸</Text>
+              </Card>
+            ) : (
+              grouped.map((group) => (
+                <View key={group.date}>
+                  <Text style={styles.dateHeader}>{group.label}</Text>
+                  <Card padding={0} solid>
+                    {group.items.map((tx, i) => (
+                      <TransactionRow
+                        key={tx.id}
+                        tx={tx}
+                        onDelete={() => deleteTransaction.mutate(tx.id)}
+                        deleting={
+                          deleteTransaction.isPending && deleteTransaction.variables === tx.id
+                        }
+                        isLast={i === group.items.length - 1}
+                      />
+                    ))}
+                  </Card>
+                </View>
+              ))
+            )}
+          </>
+        ) : (
           <>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>CUENTAS</Text>
-            </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: Spacing.sm, paddingRight: Spacing.screenX }}
-              style={{ marginBottom: Spacing.sm }}
-            >
-              <TouchableOpacity
-                style={[styles.accountChip, selectedAccountId === null && styles.accountChipActive]}
-                onPress={() => setSelectedAccountId(null)}
-              >
-                <Text
-                  style={[
-                    styles.accountChipName,
-                    { color: selectedAccountId === null ? '#fff' : Colors.ink },
-                  ]}
-                >
-                  Todas
-                </Text>
+              <Text style={styles.sectionTitle}>GASTOS FIJOS</Text>
+              <View style={{ flex: 1 }} />
+              <TouchableOpacity onPress={() => setShowRecurringModal(true)} activeOpacity={0.7}>
+                <Text style={styles.newBtn}>+ Nuevo</Text>
               </TouchableOpacity>
-              {accounts.map((a) => (
-                <AccountChip
-                  key={a.id}
-                  account={a}
-                  active={selectedAccountId === a.id}
-                  onPress={() => setSelectedAccountId(selectedAccountId === a.id ? null : a.id)}
-                />
-              ))}
-            </ScrollView>
-          </>
-        )}
-
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>MOVIMIENTOS</Text>
-          {transactions.length > 0 && (
-            <View style={styles.sectionBadge}>
-              <Text style={styles.sectionBadgeText}>{transactions.length}</Text>
             </View>
-          )}
-        </View>
 
-        {txLoading ? (
-          <ActivityIndicator color={Colors.vivid} style={{ marginVertical: 24 }} />
-        ) : grouped.length === 0 ? (
-          <Card solid>
-            <Text style={styles.emptyText}>Sin movimientos este mes 💸</Text>
-          </Card>
-        ) : (
-          grouped.map((group) => (
-            <View key={group.date}>
-              <Text style={styles.dateHeader}>{group.label}</Text>
+            {recurringLoading ? (
+              <ActivityIndicator color={Colors.vivid} style={{ marginVertical: 24 }} />
+            ) : recurringList.length === 0 ? (
+              <Card solid>
+                <Text style={styles.emptyText}>Sin gastos fijos registrados 🧾</Text>
+              </Card>
+            ) : (
               <Card padding={0} solid>
-                {group.items.map((tx, i) => (
-                  <TransactionRow
-                    key={tx.id}
-                    tx={tx}
-                    onDelete={() => deleteTransaction.mutate(tx.id)}
-                    deleting={deleteTransaction.isPending && deleteTransaction.variables === tx.id}
-                    isLast={i === group.items.length - 1}
+                {recurringList.map((item, i) => (
+                  <RecurringExpenseRow
+                    key={item.id}
+                    item={item}
+                    onToggle={() =>
+                      updateRecurring.mutate({ id: item.id, dto: { isActive: !item.isActive } })
+                    }
+                    onDelete={() => deleteRecurring.mutate(item.id)}
+                    toggling={
+                      updateRecurring.isPending &&
+                      (updateRecurring.variables as any)?.id === item.id
+                    }
+                    isLast={i === recurringList.length - 1}
                   />
                 ))}
               </Card>
-            </View>
-          ))
+            )}
+          </>
         )}
 
         <View style={{ height: Layout.tabBarHeight + Layout.tabBarOffset + 16 }} />
       </ScreenContainer>
 
-      <TouchableOpacity style={styles.fab} onPress={() => setShowModal(true)} activeOpacity={0.85}>
-        <Plus size={24} color="#fff" strokeWidth={2} />
-      </TouchableOpacity>
+      {activeTab === 'movimientos' && (
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => setShowModal(true)}
+          activeOpacity={0.85}
+        >
+          <Plus size={24} color="#fff" strokeWidth={2} />
+        </TouchableOpacity>
+      )}
 
       <TransactionFormModal
         visible={showModal}
         onClose={() => setShowModal(false)}
         accounts={accounts}
+      />
+      <RecurringFormModal
+        visible={showRecurringModal}
+        onClose={() => setShowRecurringModal(false)}
       />
     </View>
   );
@@ -650,6 +962,21 @@ const styles = StyleSheet.create({
     height: 40,
     backgroundColor: 'rgba(255,255,255,0.15)',
     marginHorizontal: Spacing.md,
+  },
+
+  // Tabs
+  tabScroll: { marginBottom: Spacing.xl },
+  tabRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    paddingRight: Spacing.screenX,
+  },
+
+  // New button (gastos fijos header)
+  newBtn: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+    color: Colors.vivid,
   },
 
   // Section

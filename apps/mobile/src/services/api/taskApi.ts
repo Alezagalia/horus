@@ -27,6 +27,10 @@ export interface CreateTaskDTO {
   categoryId?: string;
 }
 
+export interface UpdateTaskDTO extends Partial<CreateTaskDTO> {
+  status?: TaskStatus;
+}
+
 export const taskApi = {
   list: async (filters?: { status?: string }): Promise<Task[]> => {
     const { data } = await axiosInstance.get('/tasks', { params: filters });
@@ -40,6 +44,11 @@ export const taskApi = {
 
   create: async (dto: CreateTaskDTO): Promise<Task> => {
     const { data } = await axiosInstance.post('/tasks', dto);
+    return data.task ?? data;
+  },
+
+  update: async (taskId: string, dto: UpdateTaskDTO): Promise<Task> => {
+    const { data } = await axiosInstance.put(`/tasks/${taskId}`, dto);
     return data.task ?? data;
   },
 

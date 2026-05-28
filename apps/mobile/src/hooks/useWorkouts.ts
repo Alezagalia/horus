@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { workoutApi } from '@/services/api/workoutApi';
+import { workoutApi, type AddSetDTO } from '@/services/api/workoutApi';
 
 export const workoutKeys = {
   all: ['workouts'] as const,
@@ -50,5 +50,34 @@ export function useCancelWorkout() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: workoutKeys.all });
     },
+  });
+}
+
+// Set mutations — no auto-invalidate; callers update local state from response
+export function useAddSet() {
+  return useMutation({
+    mutationFn: ({
+      workoutId,
+      workoutExerciseId,
+      dto,
+    }: {
+      workoutId: string;
+      workoutExerciseId: string;
+      dto: AddSetDTO;
+    }) => workoutApi.addSet(workoutId, workoutExerciseId, dto),
+  });
+}
+
+export function useDeleteSet() {
+  return useMutation({
+    mutationFn: ({
+      workoutId,
+      workoutExerciseId,
+      setId,
+    }: {
+      workoutId: string;
+      workoutExerciseId: string;
+      setId: string;
+    }) => workoutApi.deleteSet(workoutId, workoutExerciseId, setId),
   });
 }

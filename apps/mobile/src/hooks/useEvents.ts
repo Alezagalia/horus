@@ -3,6 +3,7 @@ import { eventApi } from '@/services/api/eventApi';
 import { categoryApi } from '@/services/api/categoryApi';
 import { recurringExpenseApi } from '@/services/api/recurringExpenseApi';
 import type { CreateEventDTO, UpdateEventDTO } from '@/services/api/eventApi';
+import type { CreateRecurringExpenseDTO, UpdateRecurringExpenseDTO } from '@horus/shared';
 
 export const eventKeys = {
   all: ['events'] as const,
@@ -84,5 +85,38 @@ export function useRecurringExpensesCount() {
       return list.length;
     },
     staleTime: 1000 * 60 * 10,
+  });
+}
+
+export function useRecurringExpenses(activeOnly?: boolean) {
+  return useQuery({
+    queryKey: [...recurringKeys.all, 'list', activeOnly] as const,
+    queryFn: () => recurringExpenseApi.list(activeOnly),
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+export function useCreateRecurringExpense() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: CreateRecurringExpenseDTO) => recurringExpenseApi.create(dto),
+    onSuccess: () => qc.invalidateQueries({ queryKey: recurringKeys.all }),
+  });
+}
+
+export function useUpdateRecurringExpense() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, dto }: { id: string; dto: UpdateRecurringExpenseDTO }) =>
+      recurringExpenseApi.update(id, dto),
+    onSuccess: () => qc.invalidateQueries({ queryKey: recurringKeys.all }),
+  });
+}
+
+export function useDeleteRecurringExpense() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => recurringExpenseApi.remove(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: recurringKeys.all }),
   });
 }

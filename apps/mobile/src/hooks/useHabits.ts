@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { habitApi } from '@/services/api/habitApi';
+import { habitApi, type CreateHabitDTO, type UpdateHabitDTO } from '@/services/api/habitApi';
+import { categoryApi } from '@/services/api/categoryApi';
 
 export const habitKeys = {
   all: ['habits'] as const,
@@ -23,6 +24,14 @@ export function useHabitStats() {
   });
 }
 
+export function useHabitCategories() {
+  return useQuery({
+    queryKey: ['categories', 'habitos'],
+    queryFn: () => categoryApi.listByScope('habitos'),
+    staleTime: 1000 * 60 * 10,
+  });
+}
+
 export function useToggleHabitComplete() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -35,6 +44,48 @@ export function useToggleHabitComplete() {
       date: string;
       completed: boolean;
     }) => habitApi.toggleRecord(habitId, date, completed),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: habitKeys.list() });
+      queryClient.invalidateQueries({ queryKey: habitKeys.stats() });
+    },
+  });
+}
+
+export function useCreateHabit() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: CreateHabitDTO) => habitApi.create(dto),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: habitKeys.all });
+    },
+  });
+}
+
+export function useUpdateHabit() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, dto }: { id: string; dto: UpdateHabitDTO }) => habitApi.update(id, dto),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: habitKeys.all });
+    },
+  });
+}
+
+export function useDeleteHabit() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => habitApi.remove(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: habitKeys.all });
+    },
+  });
+}
+
+export function useNumericHabitProgress() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ habitId, date, value }: { habitId: string; date: string; value: number }) =>
+      habitApi.updateNumericProgress(habitId, date, value),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: habitKeys.list() });
       queryClient.invalidateQueries({ queryKey: habitKeys.stats() });
