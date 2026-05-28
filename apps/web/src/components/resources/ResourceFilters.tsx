@@ -1,6 +1,7 @@
 import { ResourceType, ResourceFilters as Filters } from '@horus/shared';
 import { Search, Filter, X } from 'lucide-react';
 import { useState } from 'react';
+import { useCategories } from '../../hooks/useCategories';
 
 interface ResourceFiltersProps {
   filters: Filters;
@@ -9,6 +10,7 @@ interface ResourceFiltersProps {
 
 export function ResourceFilters({ filters, onChange }: ResourceFiltersProps) {
   const [searchInput, setSearchInput] = useState(filters.search || '');
+  const { data: knowledgeCategories = [] } = useCategories({ scope: 'knowledge' });
 
   const handleSearchChange = (value: string) => {
     setSearchInput(value);
@@ -32,7 +34,7 @@ export function ResourceFilters({ filters, onChange }: ResourceFiltersProps) {
     onChange({});
   };
 
-  const hasActiveFilters = filters.type || filters.isPinned || filters.search;
+  const hasActiveFilters = filters.type || filters.isPinned || filters.search || filters.categoryId;
 
   return (
     <div className="space-y-4 p-4 bg-gray-50 rounded-lg border">
@@ -112,6 +114,22 @@ export function ResourceFilters({ filters, onChange }: ResourceFiltersProps) {
         >
           ⭐ Favoritos
         </button>
+
+        {/* Category filter */}
+        {knowledgeCategories.length > 0 && (
+          <select
+            value={filters.categoryId ?? ''}
+            onChange={(e) => onChange({ ...filters, categoryId: e.target.value || undefined })}
+            className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="">Todas las categorías</option>
+            {knowledgeCategories.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.icon} {cat.name}
+              </option>
+            ))}
+          </select>
+        )}
 
         {/* Clear filters */}
         {hasActiveFilters && (

@@ -20,7 +20,7 @@ import {
 } from '@mdxeditor/editor';
 import '@mdxeditor/editor/style.css';
 import './mdx-editor-custom.css';
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 
 interface NoteEditorProps {
   value: string;
@@ -30,6 +30,10 @@ interface NoteEditorProps {
 
 export function NoteEditor({ value, onChange, placeholder }: NoteEditorProps) {
   const editorRef = useRef<MDXEditorMethods>(null);
+
+  useEffect(() => {
+    editorRef.current?.setMarkdown(value || '');
+  }, [value]);
 
   return (
     <div className="mdx-editor-wrapper border rounded-lg overflow-hidden bg-white">

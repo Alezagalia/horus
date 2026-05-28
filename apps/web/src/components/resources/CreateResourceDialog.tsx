@@ -6,6 +6,7 @@ import { NoteEditor } from './NoteEditor';
 import { SnippetEditor } from './SnippetEditor';
 import { BookmarkForm } from './BookmarkForm';
 import { useCreateResource, useUpdateResource } from '../../hooks/useResources';
+import { useCategories } from '../../hooks/useCategories';
 
 interface CreateResourceDialogProps {
   open: boolean;
@@ -23,8 +24,10 @@ export function CreateResourceDialog({ open, onClose, resource }: CreateResource
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [color, setColor] = useState('');
+  const [categoryId, setCategoryId] = useState('');
 
   const createMutation = useCreateResource();
+  const { data: knowledgeCategories = [] } = useCategories({ scope: 'knowledge' });
   const updateMutation = useUpdateResource();
 
   // Reset form when dialog opens/closes or when resource changes
@@ -38,6 +41,7 @@ export function CreateResourceDialog({ open, onClose, resource }: CreateResource
       setLanguage(resource.language || 'javascript');
       setTags(resource.tags || []);
       setColor(resource.color || '');
+      setCategoryId(resource.categoryId || '');
     } else {
       setType(ResourceType.NOTE);
       setTitle('');
@@ -48,6 +52,7 @@ export function CreateResourceDialog({ open, onClose, resource }: CreateResource
       setTags([]);
       setTagInput('');
       setColor('');
+      setCategoryId('');
     }
   }, [resource, open]);
 
@@ -72,6 +77,7 @@ export function CreateResourceDialog({ open, onClose, resource }: CreateResource
       description: description || undefined,
       tags,
       color: color || undefined,
+      categoryId: categoryId || undefined,
     };
 
     if (type === ResourceType.NOTE || type === ResourceType.SNIPPET) {
@@ -172,6 +178,25 @@ export function CreateResourceDialog({ open, onClose, resource }: CreateResource
                 placeholder="Descripción breve (opcional)..."
               />
             </div>
+
+            {/* Category */}
+            {knowledgeCategories.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Categoría</label>
+                <select
+                  value={categoryId}
+                  onChange={(e) => setCategoryId(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">Sin categoría</option>
+                  {knowledgeCategories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.icon} {cat.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Content based on type */}
             {type === ResourceType.NOTE && (

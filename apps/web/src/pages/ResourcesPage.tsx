@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Plus, BookOpen } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Plus, BookOpen, Tag, ChevronDown, ChevronRight } from 'lucide-react';
 import { useResources, useDeleteResource, useTogglePin } from '../hooks/useResources';
 import { ResourceCard } from '../components/resources/ResourceCard';
 import { ResourceFilters } from '../components/resources/ResourceFilters';
@@ -11,9 +11,48 @@ export function ResourcesPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingResource, setEditingResource] = useState<Resource | null>(null);
 
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+
   const { data: resources, isLoading } = useResources(filters);
   const deleteMutation = useDeleteResource();
   const togglePinMutation = useTogglePin();
+
+  const groupedResources = useMemo(() => {
+    if (!resources || resources.length === 0) return [];
+
+    const tagMap = new Map<string, Resource[]>();
+    const untagged: Resource[] = [];
+
+    for (const resource of resources) {
+      if (resource.tags.length === 0) {
+        untagged.push(resource);
+      } else {
+        for (const tag of resource.tags) {
+          if (!tagMap.has(tag)) tagMap.set(tag, []);
+          tagMap.get(tag)!.push(resource);
+        }
+      }
+    }
+
+    const groups = [...tagMap.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([tag, items]) => ({ tag, resources: items }));
+
+    if (untagged.length > 0) {
+      groups.push({ tag: '', resources: untagged });
+    }
+
+    return groups;
+  }, [resources]);
+
+  const toggleGroup = (tag: string) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(tag)) next.delete(tag);
+      else next.add(tag);
+      return next;
+    });
+  };
 
   const handleDelete = async (id: string) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este recurso?')) {
@@ -96,23 +135,53 @@ export function ResourcesPage() {
         </div>
       )}
 
-      {/* Resources Grid */}
+      {/* Resources grouped by tag */}
       {!isLoading && resources && resources.length > 0 && (
         <>
           <div className="mb-4 text-sm text-gray-600">
             {resources.length}{' '}
             {resources.length === 1 ? 'recurso encontrado' : 'recursos encontrados'}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {resources.map((resource) => (
-              <ResourceCard
-                key={resource.id}
-                resource={resource}
-                onEdit={() => handleEdit(resource)}
-                onDelete={() => handleDelete(resource.id)}
-                onTogglePin={() => handleTogglePin(resource.id)}
-              />
-            ))}
+
+          <div className="space-y-6">
+            {groupedResources.map(({ tag, resources: items }) => {
+              const isCollapsed = collapsedGroups.has(tag);
+              const label = tag || 'Sin etiqueta';
+              return (
+                <section key={tag || '__untagged__'}>
+                  <button
+                    onClick={() => toggleGroup(tag)}
+                    className="flex items-center gap-2 mb-3 group w-full text-left"
+                  >
+                    {isCollapsed ? (
+                      <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    )}
+                    <Tag className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+                    <span className="font-semibold text-gray-800 group-hover:text-indigo-600 transition-colors">
+                      {tag ? `#${label}` : label}
+                    </span>
+                    <span className="ml-1 text-xs text-gray-400 font-normal">({items.length})</span>
+                    <span className="flex-1 border-t border-gray-200 ml-2" />
+                  </button>
+
+                  {!isCollapsed && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {items.map((resource) => (
+                        <ResourceCard
+                          key={`${tag}-${resource.id}`}
+                          resource={resource}
+                          onEdit={() => handleEdit(resource)}
+                          onDelete={() => handleDelete(resource.id)}
+                          onTogglePin={() => handleTogglePin(resource.id)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </section>
+              );
+            })}
           </div>
         </>
       )}

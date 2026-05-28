@@ -8,6 +8,9 @@ export enum Scope {
   TAREAS = 'tareas',
   EVENTOS = 'eventos',
   GASTOS = 'gastos',
+  METAS = 'metas',
+  KNOWLEDGE = 'knowledge',
+  NUTRICION = 'nutricion',
 }
 
 export interface Category {
@@ -45,6 +48,9 @@ export const SCOPE_LABELS: Record<Scope, string> = {
   [Scope.TAREAS]: 'Tareas',
   [Scope.EVENTOS]: 'Eventos',
   [Scope.GASTOS]: 'Gastos',
+  [Scope.METAS]: 'Metas',
+  [Scope.KNOWLEDGE]: 'Conocimiento',
+  [Scope.NUTRICION]: 'Nutrición',
 };
 
 export const SCOPE_ICONS: Record<Scope, string> = {
@@ -52,4 +58,7 @@ export const SCOPE_ICONS: Record<Scope, string> = {
   [Scope.TAREAS]: '✅',
   [Scope.EVENTOS]: '📅',
   [Scope.GASTOS]: '💰',
+  [Scope.METAS]: '🏆',
+  [Scope.KNOWLEDGE]: '📚',
+  [Scope.NUTRICION]: '🥗',
 };
