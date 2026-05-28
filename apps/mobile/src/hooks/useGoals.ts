@@ -1,10 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { goalApi } from '@/services/api/goalApi';
-import type { CreateGoalDTO, UpdateGoalDTO } from '@horus/shared';
+import type {
+  CreateGoalDTO,
+  UpdateGoalDTO,
+  CreateKeyResultDTO,
+  UpdateKeyResultDTO,
+} from '@horus/shared';
 
 export const goalKeys = {
   all: ['goals'] as const,
   list: (status?: string) => [...goalKeys.all, 'list', status] as const,
+  detail: (id: string) => [...goalKeys.all, 'detail', id] as const,
 };
 
 export function useGoals(status?: string) {
@@ -41,6 +47,58 @@ export function useDeleteGoal() {
     mutationFn: (id: string) => goalApi.remove(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: goalKeys.all });
+    },
+  });
+}
+
+export function useGoal(id: string | undefined) {
+  return useQuery({
+    queryKey: goalKeys.detail(id!),
+    queryFn: () => goalApi.getById(id!),
+    enabled: !!id,
+    staleTime: 1000 * 60 * 2,
+  });
+}
+
+export function useCreateKeyResult() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ goalId, dto }: { goalId: string; dto: CreateKeyResultDTO }) =>
+      goalApi.createKeyResult(goalId, dto),
+    onSuccess: (_, { goalId }) => {
+      qc.invalidateQueries({ queryKey: goalKeys.detail(goalId) });
+      qc.invalidateQueries({ queryKey: goalKeys.all });
+    },
+  });
+}
+
+export function useUpdateKeyResult() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      goalId,
+      krId,
+      dto,
+    }: {
+      goalId: string;
+      krId: string;
+      dto: UpdateKeyResultDTO;
+    }) => goalApi.updateKeyResult(goalId, krId, dto),
+    onSuccess: (_, { goalId }) => {
+      qc.invalidateQueries({ queryKey: goalKeys.detail(goalId) });
+      qc.invalidateQueries({ queryKey: goalKeys.all });
+    },
+  });
+}
+
+export function useDeleteKeyResult() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ goalId, krId }: { goalId: string; krId: string }) =>
+      goalApi.deleteKeyResult(goalId, krId),
+    onSuccess: (_, { goalId }) => {
+      qc.invalidateQueries({ queryKey: goalKeys.detail(goalId) });
+      qc.invalidateQueries({ queryKey: goalKeys.all });
     },
   });
 }

@@ -26,7 +26,10 @@ import {
   Pencil,
   Plus,
   Trash2,
+  ClipboardCheck,
+  Salad,
 } from 'lucide-react-native';
+import { router } from 'expo-router';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -590,6 +593,22 @@ export default function YoScreen() {
           ))}
         </Card>
       )}
+
+      {/* ─── Herramientas ─────────────────────────────────────────── */}
+      <SectionLabel label="HERRAMIENTAS" />
+      <Card padding={0} solid>
+        <SettingRow
+          icon={<ClipboardCheck size={16} color={Colors.vivid} />}
+          label="Revisión Semanal"
+          onPress={() => router.push('/revision-semanal')}
+        />
+        <View style={styles.divider} />
+        <SettingRow
+          icon={<Salad size={16} color="#22c55e" />}
+          label="Nutrición"
+          onPress={() => router.push('/nutricion')}
+        />
+      </Card>
 
       {/* ─── App info ─────────────────────────────────────────────── */}
       <SectionLabel label="APLICACIÓN" />

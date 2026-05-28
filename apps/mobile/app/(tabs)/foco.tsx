@@ -47,6 +47,7 @@ import type { Task, CreateTaskDTO } from '@/services/api/taskApi';
 import type { GoalWithProgress, CreateGoalDTO, UpdateGoalDTO, GoalPriority } from '@horus/shared';
 import { LinearGradient } from 'expo-linear-gradient';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { router } from 'expo-router';
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
@@ -325,38 +326,43 @@ function GoalListItem({
     goal.priority === 'alta' ? '#EF4444' : goal.priority === 'media' ? '#F97316' : Colors.muted;
 
   return (
-    <Card solid style={styles.goalListItem}>
-      <View style={styles.goalListTop}>
-        <View style={[styles.goalPriorityBar, { backgroundColor: priorityColor }]} />
-        <Text style={styles.goalListTitle} numberOfLines={2}>
-          {goal.title}
-        </Text>
-        <Text style={styles.goalListPct}>{pct}%</Text>
-        <TouchableOpacity onPress={onEdit} hitSlop={8} style={styles.deleteBtn}>
-          <Pencil size={14} color={Colors.muted} strokeWidth={1.5} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() =>
-            Alert.alert('Eliminar', `¿Eliminar "${goal.title}"?`, [
-              { text: 'Cancelar', style: 'cancel' },
-              { text: 'Eliminar', style: 'destructive', onPress: onDelete },
-            ])
-          }
-          hitSlop={8}
-          style={styles.deleteBtn}
-        >
-          <Trash2 size={14} color={Colors.muted} strokeWidth={1.5} />
-        </TouchableOpacity>
-      </View>
-      <View style={styles.goalBar}>
-        <View style={[styles.goalBarFill, { width: `${pct}%` }]} />
-      </View>
-      {goal.targetDate && (
-        <Text style={styles.goalMeta}>
-          Quedan {Math.max(0, differenceInDays(parseISO(goal.targetDate), new Date()))} días
-        </Text>
-      )}
-    </Card>
+    <TouchableOpacity
+      onPress={() => router.push({ pathname: '/meta-detalle', params: { id: goal.id } })}
+      activeOpacity={0.85}
+    >
+      <Card solid style={styles.goalListItem}>
+        <View style={styles.goalListTop}>
+          <View style={[styles.goalPriorityBar, { backgroundColor: priorityColor }]} />
+          <Text style={styles.goalListTitle} numberOfLines={2}>
+            {goal.title}
+          </Text>
+          <Text style={styles.goalListPct}>{pct}%</Text>
+          <TouchableOpacity onPress={onEdit} hitSlop={8} style={styles.deleteBtn}>
+            <Pencil size={14} color={Colors.muted} strokeWidth={1.5} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() =>
+              Alert.alert('Eliminar', `¿Eliminar "${goal.title}"?`, [
+                { text: 'Cancelar', style: 'cancel' },
+                { text: 'Eliminar', style: 'destructive', onPress: onDelete },
+              ])
+            }
+            hitSlop={8}
+            style={styles.deleteBtn}
+          >
+            <Trash2 size={14} color={Colors.muted} strokeWidth={1.5} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.goalBar}>
+          <View style={[styles.goalBarFill, { width: `${pct}%` }]} />
+        </View>
+        {goal.targetDate && (
+          <Text style={styles.goalMeta}>
+            Quedan {Math.max(0, differenceInDays(parseISO(goal.targetDate), new Date()))} días
+          </Text>
+        )}
+      </Card>
+    </TouchableOpacity>
   );
 }
 
