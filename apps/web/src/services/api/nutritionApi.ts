@@ -159,6 +159,13 @@ export async function generateShoppingListFromPlan(
   return response.data.shoppingList;
 }
 
+export async function syncShoppingListFromPlan(mealPlanId: string): Promise<ShoppingList> {
+  const response = await axiosInstance.put<{ shoppingList: ShoppingList }>(
+    `/meal-plans/${mealPlanId}/shopping-list`
+  );
+  return response.data.shoppingList;
+}
+
 // ─── NutritionLogs ────────────────────────────────────────────────────────────
 
 export async function getNutritionLogs(params?: {

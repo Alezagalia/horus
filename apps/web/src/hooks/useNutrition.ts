@@ -25,6 +25,7 @@ import {
   deleteMealEntry,
   getMealPlanMacros,
   generateShoppingListFromPlan,
+  syncShoppingListFromPlan,
   getNutritionLog,
   getNutritionLogs,
   upsertNutritionLog,
@@ -227,9 +228,15 @@ export function useAddMealEntry() {
   return useMutation({
     mutationFn: ({ mealPlanId, data }: { mealPlanId: string; data: AddMealEntryDTO }) =>
       addMealEntry(mealPlanId, data),
-    onSuccess: (_, { mealPlanId }) => {
-      qc.invalidateQueries({ queryKey: nutritionKeys.mealPlans.detail(mealPlanId) });
+    onSuccess: async (_, { mealPlanId }) => {
+      qc.invalidateQueries({ queryKey: nutritionKeys.mealPlans.all });
       qc.invalidateQueries({ queryKey: nutritionKeys.mealPlans.macros(mealPlanId) });
+      try {
+        await syncShoppingListFromPlan(mealPlanId);
+        qc.invalidateQueries({ queryKey: nutritionKeys.shoppingLists.all });
+      } catch {
+        // sync failure no bloquea el flujo principal
+      }
     },
   });
 }
@@ -239,9 +246,15 @@ export function useDeleteMealEntry() {
   return useMutation({
     mutationFn: ({ mealPlanId, entryId }: { mealPlanId: string; entryId: string }) =>
       deleteMealEntry(mealPlanId, entryId),
-    onSuccess: (_, { mealPlanId }) => {
-      qc.invalidateQueries({ queryKey: nutritionKeys.mealPlans.detail(mealPlanId) });
+    onSuccess: async (_, { mealPlanId }) => {
+      qc.invalidateQueries({ queryKey: nutritionKeys.mealPlans.all });
       qc.invalidateQueries({ queryKey: nutritionKeys.mealPlans.macros(mealPlanId) });
+      try {
+        await syncShoppingListFromPlan(mealPlanId);
+        qc.invalidateQueries({ queryKey: nutritionKeys.shoppingLists.all });
+      } catch {
+        // sync failure no bloquea el flujo principal
+      }
     },
   });
 }

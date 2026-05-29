@@ -20,5 +20,6 @@ router.post('/:id/entries', mealPlanController.addEntry);
 router.delete('/:id/entries/:entryId', mealPlanController.deleteEntry);
 router.get('/:id/macros', mealPlanController.getMacros);
 router.post('/:id/shopping-list', shoppingListController.generateFromMealPlan);
+router.put('/:id/shopping-list', shoppingListController.syncFromMealPlan);
 
 export default router;

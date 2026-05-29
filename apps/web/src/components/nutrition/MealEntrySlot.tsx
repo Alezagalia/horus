@@ -12,6 +12,7 @@ interface MealEntrySlotProps {
   mealTime: MealTime;
   entries: MealEntry[];
   onAdd: () => void;
+  onViewRecipe?: (recipeId: string) => void;
 }
 
 export function MealEntrySlot({
@@ -20,6 +21,7 @@ export function MealEntrySlot({
   mealTime: _mealTime,
   entries,
   onAdd,
+  onViewRecipe,
 }: MealEntrySlotProps) {
   const { mutate: deleteEntry } = useDeleteMealEntry();
 
@@ -38,12 +40,32 @@ export function MealEntrySlot({
     <div className="space-y-1">
       {entries.map((entry) => (
         <div key={entry.id} className="bg-indigo-50 rounded-xl p-2 group relative">
-          {entry.items.map((item) => (
-            <div key={item.id} className="text-xs text-gray-700 truncate">
-              {item.food?.name ?? item.recipe?.name ?? 'Ítem'}
-              <span className="text-gray-400 ml-1">{item.grams}g</span>
-            </div>
-          ))}
+          {entry.items.map((item) => {
+            const isRecipe = !!item.recipe;
+            const name = item.food?.name ?? item.recipe?.name ?? 'Ítem';
+
+            return (
+              <div key={item.id} className="flex items-center gap-1 min-w-0">
+                {isRecipe && onViewRecipe ? (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onViewRecipe(item.recipe!.id);
+                    }}
+                    className="text-xs text-indigo-700 font-medium truncate text-left hover:underline underline-offset-2 flex-1 min-w-0"
+                    title="Ver receta completa"
+                  >
+                    {name}
+                  </button>
+                ) : (
+                  <span className="text-xs text-gray-700 truncate flex-1 min-w-0">{name}</span>
+                )}
+                <span className="text-gray-400 text-xs shrink-0">
+                  {item.servings ? `${item.servings}p` : `${item.grams}g`}
+                </span>
+              </div>
+            );
+          })}
           <p className="text-xs text-orange-600 font-semibold mt-0.5">
             {Math.round(entry.macros.calories)} kcal
           </p>

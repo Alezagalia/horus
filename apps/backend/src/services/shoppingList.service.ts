@@ -254,6 +254,108 @@ export const shoppingListService = {
     return serializeList(list as Parameters<typeof serializeList>[0]);
   },
 
+  async syncFromMealPlan(mealPlanId: string, userId: string) {
+    const plan = await prisma.mealPlan.findFirst({
+      where: { id: mealPlanId },
+      include: {
+        entries: {
+          include: {
+            items: {
+              include: {
+                food: true,
+                recipe: {
+                  include: { ingredients: { include: { food: true } } },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!plan) throw new NotFoundError('Plan no encontrado');
+    if (plan.userId !== userId) throw new ForbiddenError('Sin permiso');
+
+    // Aggregate grams per food (same logic as generateFromMealPlan)
+    const foodMap = new Map<
+      string,
+      { food: { id: string; name: string; unit: string }; totalGrams: number }
+    >();
+
+    for (const entry of plan.entries) {
+      for (const item of entry.items) {
+        if (item.food) {
+          const existing = foodMap.get(item.food.id);
+          if (existing) {
+            existing.totalGrams += Number(item.grams);
+          } else {
+            foodMap.set(item.food.id, {
+              food: { id: item.food.id, name: item.food.name, unit: item.food.unit },
+              totalGrams: Number(item.grams),
+            });
+          }
+        }
+
+        if (item.recipe) {
+          const servings = item.servings != null ? Number(item.servings) : 1;
+          const recipeServings = item.recipe.servings;
+          for (const ing of item.recipe.ingredients) {
+            const gramsForServings = (Number(ing.grams) / recipeServings) * servings;
+            const existing = foodMap.get(ing.food.id);
+            if (existing) {
+              existing.totalGrams += gramsForServings;
+            } else {
+              foodMap.set(ing.food.id, {
+                food: { id: ing.food.id, name: ing.food.name, unit: ing.food.unit },
+                totalGrams: gramsForServings,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    const newItems = Array.from(foodMap.values()).map(({ food, totalGrams }) => ({
+      foodId: food.id,
+      name: food.name,
+      quantity: Math.ceil(totalGrams),
+      unit: food.unit,
+    }));
+
+    const existingList = await prisma.shoppingList.findFirst({
+      where: { mealPlanId, userId },
+    });
+
+    if (existingList) {
+      await prisma.shoppingListItem.deleteMany({ where: { shoppingListId: existingList.id } });
+      const updated = await prisma.shoppingList.update({
+        where: { id: existingList.id },
+        data: {
+          generatedAt: new Date(),
+          items: { create: newItems },
+        },
+        include: includeItems,
+      });
+      return serializeList(updated as Parameters<typeof serializeList>[0]);
+    } else {
+      const weekStart =
+        plan.weekStart instanceof Date
+          ? plan.weekStart.toISOString().split('T')[0]
+          : String(plan.weekStart);
+      const list = await prisma.shoppingList.create({
+        data: {
+          userId,
+          mealPlanId,
+          name: `Compras semana ${weekStart}`,
+          generatedAt: new Date(),
+          items: { create: newItems },
+        },
+        include: includeItems,
+      });
+      return serializeList(list as Parameters<typeof serializeList>[0]);
+    }
+  },
+
   async linkTransaction(listId: string, userId: string, transactionId: string) {
     const list = await prisma.shoppingList.findFirst({ where: { id: listId } });
 

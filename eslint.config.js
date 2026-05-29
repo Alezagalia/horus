@@ -85,6 +85,7 @@ export default tseslint.config(
       '**/playwright.config.ts',
       'apps/web/e2e/**',
       'apps/mobile/**',
+      'apps/backend/prisma/**',
     ],
   }
 );

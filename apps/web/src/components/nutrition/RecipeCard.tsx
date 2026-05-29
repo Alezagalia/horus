@@ -11,22 +11,48 @@ interface RecipeCardProps {
   onEdit?: (recipe: RecipeWithIngredients) => void;
   onDelete?: (recipe: RecipeWithIngredients) => void;
   onSelect?: (recipe: RecipeWithIngredients) => void;
+  onView?: (recipe: RecipeWithIngredients) => void;
 }
 
-export function RecipeCard({ recipe, onEdit, onDelete, onSelect }: RecipeCardProps) {
+export function RecipeCard({ recipe, onEdit, onDelete, onSelect, onView }: RecipeCardProps) {
+  const handleClick = onView ? () => onView(recipe) : onSelect ? () => onSelect(recipe) : undefined;
+
+  const isClickable = Boolean(handleClick);
+
   return (
     <div
-      className={`glass-card p-4 rounded-xl flex flex-col gap-2 ${onSelect ? 'cursor-pointer hover:ring-2 hover:ring-indigo-400 transition-all' : ''}`}
-      onClick={onSelect ? () => onSelect(recipe) : undefined}
+      className={`glass-card p-4 rounded-xl flex flex-col gap-2 transition-all ${
+        isClickable ? 'cursor-pointer hover:ring-2 hover:ring-indigo-400 hover:shadow-md' : ''
+      }`}
+      onClick={handleClick}
     >
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="font-semibold text-gray-900 truncate">{recipe.name}</p>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <p className="font-semibold text-gray-900 truncate">{recipe.name}</p>
+            {onView && (
+              <svg
+                className="w-3.5 h-3.5 text-indigo-400 shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            )}
+          </div>
           {recipe.description && (
-            <p className="text-xs text-gray-500 line-clamp-1">{recipe.description}</p>
+            <p className="text-xs text-gray-500 line-clamp-2 mt-0.5 leading-relaxed">
+              {recipe.description.split('\n')[0]}
+            </p>
           )}
-          <p className="text-xs text-gray-400 mt-0.5">
-            {recipe.ingredients.length} ingredientes · {recipe.servings} porción
+          <p className="text-xs text-gray-400 mt-1">
+            {recipe.ingredients.length} ingredientes &middot; {recipe.servings} porción
             {recipe.servings !== 1 ? 'es' : ''}
           </p>
         </div>

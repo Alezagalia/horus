@@ -116,6 +116,18 @@ export const shoppingListController = {
     }
   },
 
+  async syncFromMealPlan(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const user = req.user;
+      if (!user) throw new UnauthorizedError('User not found');
+
+      const shoppingList = await shoppingListService.syncFromMealPlan(req.params.id, user.id);
+      res.status(200).json({ message: 'Lista sincronizada', shoppingList });
+    } catch (error) {
+      next(error);
+    }
+  },
+
   async linkTransaction(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const user = req.user;

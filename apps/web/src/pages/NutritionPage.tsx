@@ -7,9 +7,9 @@ import { useState } from 'react';
 import { FoodCard } from '@/components/nutrition/FoodCard';
 import { FoodFormModal } from '@/components/nutrition/FoodFormModal';
 import { RecipeCard } from '@/components/nutrition/RecipeCard';
+import { RecipeDetailModal } from '@/components/nutrition/RecipeDetailModal';
 import { RecipeFormModal } from '@/components/nutrition/RecipeFormModal';
 import { MealPlanGrid } from '@/components/nutrition/MealPlanGrid';
-import { DayMacrosSummary } from '@/components/nutrition/DayMacrosSummary';
 import { NutritionLogDay } from '@/components/nutrition/NutritionLogDay';
 import { ShoppingListPanel } from '@/components/nutrition/ShoppingListPanel';
 import {
@@ -17,6 +17,7 @@ import {
   useDeleteFood,
   useRecipes,
   useDeleteRecipe,
+  useRecipe,
   useMealPlanByWeek,
   useMealPlanMacros,
   useCreateMealPlan,
@@ -179,6 +180,7 @@ function RecipesTab({
 }) {
   const { data: recipes = [], isLoading } = useRecipes();
   const { mutate: deleteRecipe } = useDeleteRecipe();
+  const [viewRecipe, setViewRecipe] = useState<RecipeWithIngredients | null>(null);
 
   return (
     <div className="space-y-4">
@@ -203,6 +205,7 @@ function RecipesTab({
                 <RecipeCard
                   key={recipe.id}
                   recipe={recipe}
+                  onView={setViewRecipe}
                   onEdit={onEdit}
                   onDelete={(r) => deleteRecipe(r.id)}
                 />
@@ -210,8 +213,26 @@ function RecipesTab({
           )}
         </div>
       )}
+
+      {viewRecipe && (
+        <RecipeDetailModal
+          recipe={viewRecipe}
+          open={true}
+          onClose={() => setViewRecipe(null)}
+          onEdit={(r) => {
+            setViewRecipe(null);
+            onEdit(r);
+          }}
+        />
+      )}
     </div>
   );
+}
+
+function PlannerRecipeDetail({ recipeId, onClose }: { recipeId: string; onClose: () => void }) {
+  const { data: recipe } = useRecipe(recipeId);
+  if (!recipe) return null;
+  return <RecipeDetailModal recipe={recipe} open={true} onClose={onClose} />;
 }
 
 function PlannerTab({
@@ -221,6 +242,7 @@ function PlannerTab({
   weekStart: string;
   onWeekChange: (w: string) => void;
 }) {
+  const [viewRecipeId, setViewRecipeId] = useState<string | null>(null);
   const { data: mealPlan, isLoading } = useMealPlanByWeek(weekStart);
   const { data: dayMacros = [] } = useMealPlanMacros(mealPlan?.id ?? '');
   const { mutate: createPlan, isPending: creating } = useCreateMealPlan();
@@ -289,8 +311,10 @@ function PlannerTab({
         </div>
       ) : (
         <>
-          {dayMacros.length > 0 && <DayMacrosSummary dayMacros={dayMacros} />}
-          <MealPlanGrid mealPlan={mealPlan} />
+          <MealPlanGrid mealPlan={mealPlan} dayMacros={dayMacros} onViewRecipe={setViewRecipeId} />
+          {viewRecipeId && (
+            <PlannerRecipeDetail recipeId={viewRecipeId} onClose={() => setViewRecipeId(null)} />
+          )}
         </>
       )}
     </div>
