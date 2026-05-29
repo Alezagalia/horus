@@ -5,6 +5,7 @@ export const workoutKeys = {
   all: ['workouts'] as const,
   routines: () => [...workoutKeys.all, 'routines'] as const,
   history: (params?: object) => [...workoutKeys.all, 'history', params] as const,
+  detail: (id: string) => [...workoutKeys.all, 'detail', id] as const,
 };
 
 export function useRoutines() {
@@ -12,6 +13,15 @@ export function useRoutines() {
     queryKey: workoutKeys.routines(),
     queryFn: workoutApi.listRoutines,
     staleTime: 1000 * 60 * 5,
+  });
+}
+
+export function useWorkoutDetail(id: string) {
+  return useQuery({
+    queryKey: workoutKeys.detail(id),
+    queryFn: () => workoutApi.getWorkoutById(id),
+    staleTime: 10 * 60 * 1000,
+    enabled: !!id,
   });
 }
 

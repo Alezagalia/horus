@@ -13,6 +13,7 @@ import {
   KeyboardAvoidingView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
 import { format, formatDistanceToNow, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
@@ -197,7 +198,20 @@ function RoutineCard({
 
 function WorkoutHistoryRow({ workout, isLast }: { workout: WorkoutSummaryItem; isLast?: boolean }) {
   return (
-    <View style={[styles.historyRow, !isLast && styles.historyRowBorder]}>
+    <TouchableOpacity
+      style={[styles.historyRow, !isLast && styles.historyRowBorder]}
+      onPress={() =>
+        router.push({
+          pathname: '/workout-detail',
+          params: {
+            id: workout.id,
+            name: workout.routineName ?? 'Sin rutina',
+            startTime: workout.startTime,
+          },
+        })
+      }
+      activeOpacity={0.7}
+    >
       <View style={styles.historyLeft}>
         <Text style={styles.historyName} numberOfLines={1}>
           {workout.routineName ?? 'Sin rutina'}
@@ -218,7 +232,8 @@ function WorkoutHistoryRow({ workout, isLast }: { workout: WorkoutSummaryItem; i
           <Text style={styles.historyStatSub}>volumen</Text>
         </View>
       )}
-    </View>
+      <ChevronRight size={15} color={Colors.muted} strokeWidth={1.5} />
+    </TouchableOpacity>
   );
 }
 

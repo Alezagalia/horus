@@ -61,6 +61,58 @@ export interface StartedWorkout {
   exercises: WorkoutExercise[];
 }
 
+// ─── Workout detail types ──────────────────────────────────────────────────────
+
+export interface WorkoutSetDetailed {
+  setNumber: number;
+  reps: number;
+  weight: number;
+  weightUnit: string;
+  completed: boolean;
+  restTime: number | null;
+  timestamp: string;
+}
+
+export interface WorkoutExerciseDetailed {
+  id: string;
+  exerciseId: string;
+  exerciseName: string;
+  muscleGroup: string | null;
+  order: number;
+  rpe: number | null;
+  notes: string | null;
+  sets: WorkoutSetDetailed[];
+}
+
+export interface PersonalRecord {
+  exerciseId: string;
+  exerciseName: string;
+  newPR: number;
+  previousPR: number;
+  improvement: number;
+}
+
+export interface WorkoutSummary {
+  exercisesCompleted: number;
+  totalSets: number;
+  totalReps: number;
+  totalVolume: number;
+  avgWeight: number;
+  personalRecords: PersonalRecord[];
+}
+
+export interface WorkoutDetailResponse {
+  id: string;
+  routineId: string | null;
+  routineName: string | null;
+  startTime: string;
+  endTime: string | null;
+  duration: number | null;
+  notes: string | null;
+  exercises: WorkoutExerciseDetailed[];
+  summary: WorkoutSummary | null;
+}
+
 // ─── API ───────────────────────────────────────────────────────────────────────
 
 export const workoutApi = {
@@ -109,5 +161,10 @@ export const workoutApi = {
     await axiosInstance.delete(
       `/workouts/${workoutId}/exercises/${workoutExerciseId}/sets/${setId}`
     );
+  },
+
+  getWorkoutById: async (id: string): Promise<WorkoutDetailResponse> => {
+    const { data } = await axiosInstance.get(`/workouts/${id}`);
+    return data;
   },
 };
