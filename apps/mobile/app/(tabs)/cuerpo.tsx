@@ -58,6 +58,7 @@ import {
   exerciseKeys,
 } from '@/hooks/useExercises';
 import type { ExerciseWithStats, MuscleGroup } from '@/services/api/exerciseApi';
+import { useOverviewStats, useExerciseStats } from '@/hooks/useWorkoutStats';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -846,9 +847,356 @@ function ExerciseFormModal({
   );
 }
 
+// ─── Stats view ───────────────────────────────────────────────────────────────
+
+const PERIOD_OPTIONS = [
+  { label: '7 días', days: 7 },
+  { label: '30 días', days: 30 },
+  { label: '90 días', days: 90 },
+];
+
+const MUSCLE_COLORS: Record<string, string> = {
+  pecho: '#3B82F6',
+  espalda: '#8B5CF6',
+  piernas: '#10B981',
+  hombros: '#F59E0B',
+  brazos: '#EF4444',
+  core: '#06B6D4',
+  cardio: '#F97316',
+  otro: '#6B7280',
+};
+
+function StatsOverviewCard({
+  label,
+  value,
+  sub,
+  accent,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  accent?: boolean;
+}) {
+  return (
+    <Card solid style={stStyles.overviewCard}>
+      <Text style={stStyles.overviewLabel}>{label}</Text>
+      <Text style={[stStyles.overviewValue, accent && stStyles.overviewValueAccent]}>{value}</Text>
+      {sub ? <Text style={stStyles.overviewSub}>{sub}</Text> : null}
+    </Card>
+  );
+}
+
+function ExerciseStatsModal({
+  exerciseId,
+  exerciseName,
+  onClose,
+}: {
+  exerciseId: string;
+  exerciseName: string;
+  onClose: () => void;
+}) {
+  const [days, setDays] = useState(90);
+  const { data, isLoading } = useExerciseStats(exerciseId, days);
+
+  return (
+    <Modal visible animationType="slide" transparent onRequestClose={onClose}>
+      <View style={stStyles.exStatOverlay}>
+        <TouchableOpacity
+          style={StyleSheet.absoluteFillObject}
+          activeOpacity={1}
+          onPress={onClose}
+        />
+        <View style={stStyles.exStatSheet}>
+          <View style={stStyles.exStatHeader}>
+            <Text style={stStyles.exStatTitle} numberOfLines={1}>
+              {exerciseName}
+            </Text>
+            <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <X size={20} color={Colors.muted} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Period chips */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: Spacing.sm, paddingBottom: Spacing.md }}
+          >
+            {PERIOD_OPTIONS.map((p) => (
+              <Chip
+                key={p.days}
+                label={p.label}
+                active={days === p.days}
+                onPress={() => setDays(p.days)}
+              />
+            ))}
+          </ScrollView>
+
+          {isLoading ? (
+            <ActivityIndicator color={Colors.vivid} style={{ marginVertical: 32 }} />
+          ) : data ? (
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Summary row */}
+              <View style={stStyles.exStatRow}>
+                <View style={stStyles.exStatCell}>
+                  <Text style={stStyles.exStatVal}>{data.executions.timesExecuted}</Text>
+                  <Text style={stStyles.exStatCellLabel}>veces</Text>
+                </View>
+                <View style={stStyles.exStatCell}>
+                  <Text style={stStyles.exStatVal}>{data.loadProgress.maxWeightPeriod} kg</Text>
+                  <Text style={stStyles.exStatCellLabel}>máx período</Text>
+                </View>
+                <View style={stStyles.exStatCell}>
+                  <Text style={stStyles.exStatVal}>{data.loadProgress.maxWeightAllTime} kg</Text>
+                  <Text style={stStyles.exStatCellLabel}>record</Text>
+                </View>
+              </View>
+
+              <View style={stStyles.exStatRow}>
+                <View style={stStyles.exStatCell}>
+                  <Text style={stStyles.exStatVal}>
+                    {data.loadProgress.improvement >= 0 ? '+' : ''}
+                    {data.loadProgress.improvement.toFixed(1)} kg
+                  </Text>
+                  <Text style={stStyles.exStatCellLabel}>mejora</Text>
+                </View>
+                <View style={stStyles.exStatCell}>
+                  <Text style={stStyles.exStatVal}>{data.executions.totalSets}</Text>
+                  <Text style={stStyles.exStatCellLabel}>series</Text>
+                </View>
+                <View style={stStyles.exStatCell}>
+                  <Text style={stStyles.exStatVal}>{formatVolume(data.volume.totalVolume)}</Text>
+                  <Text style={stStyles.exStatCellLabel}>volumen</Text>
+                </View>
+              </View>
+
+              {/* Weight progression list */}
+              {data.chart.length > 0 && (
+                <>
+                  <Text style={stStyles.exStatSection}>PROGRESIÓN DE PESO</Text>
+                  <Card padding={0} solid>
+                    {data.chart.slice(-6).map((point, i, arr) => (
+                      <View
+                        key={point.date}
+                        style={[
+                          stStyles.progressRow,
+                          i < arr.length - 1 && {
+                            borderBottomWidth: 1,
+                            borderBottomColor: Colors.ice,
+                          },
+                        ]}
+                      >
+                        <Text style={stStyles.progressDate}>
+                          {format(new Date(point.date), 'd MMM', { locale: es })}
+                        </Text>
+                        <View style={stStyles.progressBarWrap}>
+                          <View
+                            style={[
+                              stStyles.progressBarFill,
+                              {
+                                width: `${Math.min(
+                                  100,
+                                  data.loadProgress.maxWeightAllTime > 0
+                                    ? (point.maxWeight / data.loadProgress.maxWeightAllTime) * 100
+                                    : 0
+                                )}%` as any,
+                              },
+                            ]}
+                          />
+                        </View>
+                        <Text style={stStyles.progressWeight}>{point.maxWeight} kg</Text>
+                      </View>
+                    ))}
+                  </Card>
+                </>
+              )}
+
+              {/* Last workout */}
+              {data.lastWorkout && (
+                <>
+                  <Text style={[stStyles.exStatSection, { marginTop: Spacing.lg }]}>
+                    ÚLTIMO ENTRENAMIENTO
+                  </Text>
+                  <Card solid>
+                    <Text style={stStyles.lastWoDate}>
+                      {format(new Date(data.lastWorkout.date), "d 'de' MMMM yyyy", { locale: es })}
+                    </Text>
+                    <View style={stStyles.setsGrid}>
+                      {data.lastWorkout.sets.map((s, i) => (
+                        <View key={i} style={stStyles.setChip}>
+                          <Text style={stStyles.setChipSub}>Serie {i + 1}</Text>
+                          <Text style={stStyles.setChipVal}>
+                            {s.reps}×{s.weight}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                    {data.lastWorkout.notes ? (
+                      <Text style={stStyles.lastWoNotes}>{data.lastWorkout.notes}</Text>
+                    ) : null}
+                  </Card>
+                </>
+              )}
+
+              <View style={{ height: Spacing.xl }} />
+            </ScrollView>
+          ) : null}
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function StatsView() {
+  const [periodDays, setPeriodDays] = useState(30);
+  const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
+  const [selectedExerciseName, setSelectedExerciseName] = useState('');
+  const { data: stats, isLoading } = useOverviewStats(periodDays);
+
+  return (
+    <>
+      {/* Period selector */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterScroll}
+        contentContainerStyle={{ gap: Spacing.sm, paddingRight: Spacing.screenX }}
+      >
+        {PERIOD_OPTIONS.map((p) => (
+          <Chip
+            key={p.days}
+            label={p.label}
+            active={periodDays === p.days}
+            onPress={() => setPeriodDays(p.days)}
+          />
+        ))}
+      </ScrollView>
+
+      {isLoading ? (
+        <ActivityIndicator color={Colors.vivid} style={{ marginVertical: 32 }} />
+      ) : stats ? (
+        <>
+          {/* Overview cards */}
+          <SectionHeader title="RESUMEN" />
+          <View style={stStyles.overviewGrid}>
+            <StatsOverviewCard
+              label="Entrenamientos"
+              value={String(stats.workouts.completed)}
+              sub={`${stats.workouts.frequency.toFixed(1)}×/sem`}
+            />
+            <StatsOverviewCard
+              label="Duración media"
+              value={formatDuration(stats.workouts.avgDuration)}
+              accent
+            />
+            <StatsOverviewCard
+              label="Volumen total"
+              value={formatVolume(stats.volume.total)}
+              sub={`${formatVolume(stats.volume.avgPerWorkout)}/workout`}
+            />
+            <StatsOverviewCard
+              label="Series totales"
+              value={String(stats.exercises.totalSets)}
+              sub={`${stats.exercises.uniqueExercises} ejercicios únicos`}
+              accent
+            />
+          </View>
+
+          {/* Muscle group distribution */}
+          {stats.muscleGroupDistribution.length > 0 && (
+            <>
+              <SectionHeader title="DISTRIBUCIÓN MUSCULAR" />
+              <Card solid style={{ marginBottom: Spacing.xl }}>
+                {stats.muscleGroupDistribution.map((mg) => (
+                  <View key={mg.muscleGroup} style={stStyles.mgRow}>
+                    <View
+                      style={[
+                        stStyles.mgDot,
+                        { backgroundColor: MUSCLE_COLORS[mg.muscleGroup] ?? Colors.muted },
+                      ]}
+                    />
+                    <Text style={stStyles.mgName}>
+                      {MUSCLE_GROUP_LABELS[mg.muscleGroup as MuscleGroup] ?? mg.muscleGroup}
+                    </Text>
+                    <View style={stStyles.mgBarWrap}>
+                      <View
+                        style={[
+                          stStyles.mgBarFill,
+                          {
+                            width: `${mg.percentage}%` as any,
+                            backgroundColor: MUSCLE_COLORS[mg.muscleGroup] ?? Colors.muted,
+                          },
+                        ]}
+                      />
+                    </View>
+                    <Text style={stStyles.mgPct}>{Math.round(mg.percentage)}%</Text>
+                  </View>
+                ))}
+              </Card>
+            </>
+          )}
+
+          {/* Top exercises */}
+          {stats.topExercises.length > 0 && (
+            <>
+              <SectionHeader title="EJERCICIOS MÁS REALIZADOS" />
+              <Card padding={0} solid style={{ marginBottom: Spacing.xl }}>
+                {stats.topExercises.slice(0, 6).map((ex, i, arr) => (
+                  <TouchableOpacity
+                    key={ex.exerciseId}
+                    style={[
+                      stStyles.topExRow,
+                      i < arr.length - 1 && { borderBottomWidth: 1, borderBottomColor: Colors.ice },
+                    ]}
+                    onPress={() => {
+                      setSelectedExerciseId(ex.exerciseId);
+                      setSelectedExerciseName(ex.exerciseName);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <View style={stStyles.topExRank}>
+                      <Text style={stStyles.topExRankText}>{i + 1}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={stStyles.topExName}>{ex.exerciseName}</Text>
+                      <Text style={stStyles.topExSub}>{ex.count} veces realizdo</Text>
+                    </View>
+                    <Text style={stStyles.topExVol}>{formatVolume(ex.totalVolume)}</Text>
+                    <ChevronRight size={14} color={Colors.muted} strokeWidth={1.5} />
+                  </TouchableOpacity>
+                ))}
+              </Card>
+            </>
+          )}
+
+          {stats.workouts.completed === 0 && (
+            <Card solid style={styles.emptyCard}>
+              <BarChart2 size={32} color={Colors.ceilLight} strokeWidth={1} />
+              <Text style={styles.emptyTitle}>Sin datos</Text>
+              <Text style={styles.emptySub}>
+                Completa tu primer entrenamiento para ver estadísticas
+              </Text>
+            </Card>
+          )}
+        </>
+      ) : null}
+
+      <View style={{ height: Layout.tabBarHeight + Layout.tabBarOffset + 16 }} />
+
+      {selectedExerciseId && (
+        <ExerciseStatsModal
+          exerciseId={selectedExerciseId}
+          exerciseName={selectedExerciseName}
+          onClose={() => setSelectedExerciseId(null)}
+        />
+      )}
+    </>
+  );
+}
+
 // ─── screen ───────────────────────────────────────────────────────────────────
 
-type Tab = 'rutinas' | 'historial' | 'ejercicios';
+type Tab = 'rutinas' | 'historial' | 'ejercicios' | 'stats';
 
 export default function CuerpoScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('rutinas');
@@ -910,19 +1258,26 @@ export default function CuerpoScreen() {
             badge={exerciseCount > 0 ? exerciseCount : undefined}
             onPress={() => setActiveTab('ejercicios')}
           />
+          <Chip
+            label="Stats"
+            active={activeTab === 'stats'}
+            onPress={() => setActiveTab('stats')}
+          />
         </ScrollView>
 
         {activeTab === 'rutinas' ? (
           <RoutinesView onStarted={setActiveWorkout} />
         ) : activeTab === 'historial' ? (
           <HistorialView />
-        ) : (
+        ) : activeTab === 'ejercicios' ? (
           <ExercisesView
             onEdit={(ex) => {
               setEditingExercise(ex);
               setShowExerciseModal(true);
             }}
           />
+        ) : (
+          <StatsView />
         )}
       </ScreenContainer>
 
@@ -1475,5 +1830,244 @@ const awStyles = StyleSheet.create({
     fontFamily: 'Inter_700Bold',
     fontSize: 13,
     color: '#fff',
+  },
+});
+
+// ─── Stats styles ──────────────────────────────────────────────────────────────
+
+const stStyles = StyleSheet.create({
+  overviewGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+    marginBottom: Spacing.xl,
+  },
+  overviewCard: {
+    flex: 1,
+    minWidth: '45%',
+  },
+  overviewLabel: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 11,
+    color: Colors.muted,
+    marginBottom: 4,
+  },
+  overviewValue: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 20,
+    color: Colors.ink,
+    letterSpacing: -0.5,
+  },
+  overviewValueAccent: {
+    color: Colors.vivid,
+  },
+  overviewSub: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 10,
+    color: Colors.muted,
+    marginTop: 2,
+  },
+  // Muscle group distribution
+  mgRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: 10,
+  },
+  mgDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  mgName: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 12,
+    color: Colors.ink,
+    width: 68,
+  },
+  mgBarWrap: {
+    flex: 1,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.ice,
+    overflow: 'hidden',
+  },
+  mgBarFill: {
+    height: 6,
+    borderRadius: 3,
+  },
+  mgPct: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 11,
+    color: Colors.muted,
+    width: 32,
+    textAlign: 'right',
+  },
+  // Top exercises
+  topExRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 12,
+  },
+  topExRank: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: Colors.ice,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  topExRankText: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 11,
+    color: Colors.vivid,
+  },
+  topExName: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 13,
+    color: Colors.ink,
+  },
+  topExSub: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 11,
+    color: Colors.muted,
+  },
+  topExVol: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 12,
+    color: Colors.vivid,
+    marginRight: 4,
+  },
+  // Exercise stats modal
+  exStatOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(10,14,31,0.5)',
+  },
+  exStatSheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: Radius['3xl'],
+    borderTopRightRadius: Radius['3xl'],
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.lg,
+    paddingBottom: 40,
+    maxHeight: '88%',
+  },
+  exStatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.md,
+  },
+  exStatTitle: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 17,
+    color: Colors.ink,
+    flex: 1,
+    marginRight: Spacing.md,
+  },
+  exStatRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  exStatCell: {
+    flex: 1,
+    backgroundColor: Colors.bgTop,
+    borderRadius: Radius.lg,
+    padding: Spacing.sm,
+    alignItems: 'center',
+  },
+  exStatVal: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 16,
+    color: Colors.ink,
+    letterSpacing: -0.3,
+  },
+  exStatCellLabel: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 10,
+    color: Colors.muted,
+    marginTop: 2,
+  },
+  exStatSection: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 10,
+    color: Colors.muted,
+    letterSpacing: 1,
+    marginTop: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
+  // Progression chart (as rows)
+  progressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 10,
+  },
+  progressDate: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 11,
+    color: Colors.muted,
+    width: 48,
+  },
+  progressBarWrap: {
+    flex: 1,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.ice,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.vivid,
+  },
+  progressWeight: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 12,
+    color: Colors.vivid,
+    width: 52,
+    textAlign: 'right',
+  },
+  // Last workout
+  lastWoDate: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    color: Colors.muted,
+    marginBottom: Spacing.sm,
+  },
+  setsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+  },
+  setChip: {
+    backgroundColor: Colors.bgTop,
+    borderRadius: Radius.lg,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    alignItems: 'center',
+    minWidth: 72,
+  },
+  setChipSub: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 10,
+    color: Colors.muted,
+  },
+  setChipVal: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 14,
+    color: Colors.ink,
+  },
+  lastWoNotes: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    color: Colors.muted,
+    fontStyle: 'italic',
+    marginTop: Spacing.sm,
   },
 });
