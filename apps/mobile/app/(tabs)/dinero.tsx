@@ -25,6 +25,7 @@ import {
   X,
   Trash2,
   Undo2,
+  Pencil,
 } from 'lucide-react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
@@ -53,10 +54,19 @@ import {
   useUndoMonthlyExpensePayment,
   monthlyExpenseKeys,
 } from '@/hooks/useMonthlyExpenses';
+import {
+  useBudgetsSummary,
+  useBudgets,
+  useCreateBudget,
+  useUpdateBudget,
+  useDeleteBudget,
+  budgetKeys,
+} from '@/hooks/useBudgets';
 import type { Transaction, TransactionType } from '@/services/api/transactionApi';
 import type { Account } from '@/services/api/accountApi';
 import type { RecurringExpense } from '@/services/api/recurringExpenseApi';
 import type { MonthlyExpense } from '@/services/api/monthlyExpenseApi';
+import type { BudgetSummary } from '@/services/api/budgetApi';
 import type { CreateRecurringExpenseDTO } from '@horus/shared';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -816,9 +826,230 @@ function PayExpenseModal({
   );
 }
 
+// ─── Budget components ────────────────────────────────────────────────────────
+
+function BudgetCard({
+  budget,
+  onEdit,
+  onDelete,
+}: {
+  budget: BudgetSummary;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const pct = Math.min(budget.percentage, 100);
+  const isOver = budget.percentage > 100;
+  const dotColor = budget.category?.color ?? Colors.vivid;
+  const barColor = isOver ? '#ef4444' : budget.percentage >= 80 ? '#f59e0b' : Colors.vivid;
+
+  return (
+    <Card solid style={{ marginBottom: Spacing.md }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+        <View
+          style={[
+            styles.catDot,
+            { backgroundColor: dotColor, width: 12, height: 12, borderRadius: 6 },
+          ]}
+        />
+        <View style={{ flex: 1, marginLeft: 8 }}>
+          <Text style={styles.txConcept}>
+            {budget.category?.icon ? `${budget.category.icon} ` : ''}
+            {budget.category?.name ?? 'Sin categoría'}
+          </Text>
+          <Text style={styles.txMeta}>{formatMoney(budget.amount, budget.currency)}</Text>
+        </View>
+        <Text style={[styles.budgetPct, { color: isOver ? '#ef4444' : Colors.muted }]}>
+          {Math.round(budget.percentage)}%
+        </Text>
+        <TouchableOpacity onPress={onEdit} hitSlop={8} style={{ marginLeft: 12 }}>
+          <Pencil size={15} color={Colors.muted} strokeWidth={1.5} />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={onDelete} hitSlop={8} style={{ marginLeft: 10 }}>
+          <Trash2 size={15} color={Colors.muted} strokeWidth={1.5} />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.progressBar}>
+        <View
+          style={[styles.progressFill, { width: `${pct}%` as any, backgroundColor: barColor }]}
+        />
+      </View>
+
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
+        <Text style={[styles.txMeta, { color: '#ef4444' }]}>
+          Gastado {formatMoney(budget.spent, budget.currency)}
+        </Text>
+        <Text style={[styles.txMeta, { color: isOver ? '#ef4444' : '#22c55e' }]}>
+          {isOver ? 'Excedido' : 'Restante'}{' '}
+          {formatMoney(Math.abs(budget.remaining), budget.currency)}
+        </Text>
+      </View>
+    </Card>
+  );
+}
+
+function BudgetFormModal({
+  visible,
+  budget,
+  onClose,
+}: {
+  visible: boolean;
+  budget: BudgetSummary | null;
+  onClose: () => void;
+}) {
+  const isEditing = !!budget;
+  const [categoryId, setCategoryId] = useState('');
+  const [amount, setAmount] = useState('');
+  const [currency, setCurrency] = useState('ARS');
+
+  const { data: categories = [] } = useTxCategories('gastos');
+  const createBudget = useCreateBudget();
+  const updateBudget = useUpdateBudget();
+
+  useEffect(() => {
+    if (visible) {
+      if (budget) {
+        setCategoryId(budget.categoryId);
+        setAmount(String(budget.amount));
+        setCurrency(budget.currency);
+      } else {
+        setCategoryId(categories[0]?.id ?? '');
+        setAmount('');
+        setCurrency('ARS');
+      }
+    }
+  }, [visible, budget, categories]);
+
+  const handleClose = () => {
+    setAmount('');
+    onClose();
+  };
+
+  const canSubmit = amount.trim() !== '' && parseFloat(amount) > 0 && (isEditing || !!categoryId);
+
+  const handleSubmit = () => {
+    if (!canSubmit) return;
+    if (isEditing && budget) {
+      updateBudget.mutate(
+        { id: budget.id, dto: { amount: parseFloat(amount), currency } },
+        { onSuccess: handleClose }
+      );
+    } else {
+      createBudget.mutate(
+        { categoryId, amount: parseFloat(amount), currency },
+        { onSuccess: handleClose }
+      );
+    }
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.modalOverlay}
+      >
+        <TouchableOpacity
+          style={StyleSheet.absoluteFillObject}
+          activeOpacity={1}
+          onPress={handleClose}
+        />
+        <View style={styles.modalSheet}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>
+              {isEditing ? 'Editar presupuesto' : 'Nuevo presupuesto'}
+            </Text>
+            <TouchableOpacity
+              onPress={handleClose}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <X size={20} color={Colors.muted} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            {!isEditing && (
+              <>
+                <Text style={styles.pickerLabel}>CATEGORÍA *</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.pickerScroll}
+                  contentContainerStyle={{ gap: Spacing.sm }}
+                >
+                  {categories.map((c) => (
+                    <TouchableOpacity
+                      key={c.id}
+                      style={[styles.pickerChip, categoryId === c.id && styles.pickerChipActive]}
+                      onPress={() => setCategoryId(c.id)}
+                    >
+                      {c.icon && <Text style={{ fontSize: 13 }}>{c.icon}</Text>}
+                      <Text
+                        style={[
+                          styles.pickerChipLabel,
+                          { color: categoryId === c.id ? '#fff' : Colors.ink },
+                        ]}
+                      >
+                        {c.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </>
+            )}
+
+            {isEditing && (
+              <Text style={[styles.txMeta, { marginBottom: Spacing.md, fontSize: 13 }]}>
+                {budget?.category?.icon} {budget?.category?.name}
+              </Text>
+            )}
+
+            <TextInput
+              style={styles.amountInput}
+              value={amount}
+              onChangeText={setAmount}
+              placeholder="0"
+              placeholderTextColor={Colors.ceilLight}
+              keyboardType="numeric"
+              autoFocus={isEditing}
+            />
+
+            <Text style={styles.pickerLabel}>MONEDA</Text>
+            <View style={{ flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg }}>
+              {CURRENCIES.map((cur) => (
+                <TouchableOpacity
+                  key={cur}
+                  style={[styles.pickerChip, currency === cur && styles.pickerChipActive]}
+                  onPress={() => setCurrency(cur)}
+                >
+                  <Text
+                    style={[
+                      styles.pickerChipLabel,
+                      { color: currency === cur ? '#fff' : Colors.ink },
+                    ]}
+                  >
+                    {cur}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Button
+              label={isEditing ? 'Guardar cambios' : 'Crear presupuesto'}
+              onPress={handleSubmit}
+              loading={createBudget.isPending || updateBudget.isPending}
+              disabled={!canSubmit}
+              style={{ marginTop: Spacing.sm, marginBottom: Spacing.md }}
+            />
+          </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
 // ─── screen ───────────────────────────────────────────────────────────────────
 
-type DineroTab = 'movimientos' | 'fijos' | 'mensuales';
+type DineroTab = 'movimientos' | 'fijos' | 'mensuales' | 'presupuestos';
 
 export default function DineroScreen() {
   const now = new Date();
@@ -830,6 +1061,8 @@ export default function DineroScreen() {
   const [showRecurringModal, setShowRecurringModal] = useState(false);
   const [showPayModal, setShowPayModal] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<MonthlyExpense | null>(null);
+  const [showBudgetModal, setShowBudgetModal] = useState(false);
+  const [budgetEditing, setBudgetEditing] = useState<BudgetSummary | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -871,6 +1104,14 @@ export default function DineroScreen() {
   );
   const undoPayment = useUndoMonthlyExpensePayment();
 
+  const { data: budgetSummaryData, isLoading: budgetLoading } = useBudgetsSummary(
+    selectedMonth + 1,
+    selectedYear
+  );
+  useBudgets(); // prefetch base budgets for edit
+  const deleteBudgetMutation = useDeleteBudget();
+  const budgetSummary = budgetSummaryData?.summary ?? [];
+
   const monthlyExpenses = monthlyData?.monthlyExpenses ?? [];
   const pendingExpenses = useMemo(
     () => monthlyExpenses.filter((e) => e.status === 'pendiente'),
@@ -899,6 +1140,7 @@ export default function DineroScreen() {
       queryClient.invalidateQueries({ queryKey: transactionKeys.all }),
       queryClient.invalidateQueries({ queryKey: recurringKeys.all }),
       queryClient.invalidateQueries({ queryKey: monthlyExpenseKeys.all }),
+      queryClient.invalidateQueries({ queryKey: budgetKeys.all }),
     ]);
   }, [queryClient]);
 
@@ -964,6 +1206,12 @@ export default function DineroScreen() {
             active={activeTab === 'mensuales'}
             badge={pendingExpenses.length || undefined}
             onPress={() => setActiveTab('mensuales')}
+          />
+          <Chip
+            label="Presupuesto"
+            active={activeTab === 'presupuestos'}
+            badge={budgetSummary.length || undefined}
+            onPress={() => setActiveTab('presupuestos')}
           />
         </ScrollView>
 
@@ -1080,7 +1328,7 @@ export default function DineroScreen() {
               </Card>
             )}
           </>
-        ) : (
+        ) : activeTab === 'mensuales' ? (
           <>
             {/* PENDIENTES */}
             <View style={styles.sectionHeader}>
@@ -1178,15 +1426,65 @@ export default function DineroScreen() {
               </Card>
             )}
           </>
+        ) : (
+          <>
+            {budgetLoading ? (
+              <ActivityIndicator color={Colors.vivid} style={{ marginVertical: 24 }} />
+            ) : budgetSummary.length === 0 ? (
+              <Card solid>
+                <Text style={styles.emptyText}>Sin presupuestos configurados 🎯</Text>
+                <Button
+                  label="+ Nuevo presupuesto"
+                  onPress={() => {
+                    setBudgetEditing(null);
+                    setShowBudgetModal(true);
+                  }}
+                  style={{ marginTop: Spacing.md }}
+                />
+              </Card>
+            ) : (
+              budgetSummary.map((b) => (
+                <BudgetCard
+                  key={b.id}
+                  budget={b}
+                  onEdit={() => {
+                    setBudgetEditing(b);
+                    setShowBudgetModal(true);
+                  }}
+                  onDelete={() =>
+                    Alert.alert(
+                      'Eliminar presupuesto',
+                      `¿Eliminar el presupuesto de ${b.category?.name ?? 'esta categoría'}?`,
+                      [
+                        { text: 'Cancelar', style: 'cancel' },
+                        {
+                          text: 'Eliminar',
+                          style: 'destructive',
+                          onPress: () => deleteBudgetMutation.mutate(b.id),
+                        },
+                      ]
+                    )
+                  }
+                />
+              ))
+            )}
+          </>
         )}
 
         <View style={{ height: Layout.tabBarHeight + Layout.tabBarOffset + 16 }} />
       </ScreenContainer>
 
-      {activeTab === 'movimientos' && (
+      {(activeTab === 'movimientos' || activeTab === 'presupuestos') && (
         <TouchableOpacity
           style={styles.fab}
-          onPress={() => setShowModal(true)}
+          onPress={() => {
+            if (activeTab === 'presupuestos') {
+              setBudgetEditing(null);
+              setShowBudgetModal(true);
+            } else {
+              setShowModal(true);
+            }
+          }}
           activeOpacity={0.85}
         >
           <Plus size={24} color="#fff" strokeWidth={2} />
@@ -1209,6 +1507,14 @@ export default function DineroScreen() {
         onClose={() => {
           setShowPayModal(false);
           setSelectedExpense(null);
+        }}
+      />
+      <BudgetFormModal
+        visible={showBudgetModal}
+        budget={budgetEditing}
+        onClose={() => {
+          setShowBudgetModal(false);
+          setBudgetEditing(null);
         }}
       />
     </View>
@@ -1513,6 +1819,23 @@ const styles = StyleSheet.create({
   pageSubtitle: {
     fontFamily: 'Inter_400Regular',
     fontSize: 14,
+    color: Colors.muted,
+  },
+
+  // Budget card
+  progressBar: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.ice,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: 6,
+    borderRadius: 3,
+  },
+  budgetPct: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 13,
     color: Colors.muted,
   },
 
