@@ -10,6 +10,7 @@ import {
   Modal,
   TextInput,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { format, formatDistanceToNow, parseISO } from 'date-fns';
@@ -23,12 +24,15 @@ import {
   ChevronRight,
   Trophy,
   Trash2,
+  Plus,
+  Pencil,
+  X,
 } from 'lucide-react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
-import { Colors, Spacing, Radius, Gradients, Shadows, Typography } from '@/tokens';
+import { Colors, Spacing, Radius, Gradients, Shadows, Typography, Layout } from '@/tokens';
 import {
   useRoutines,
   useWorkoutHistory,
@@ -46,6 +50,14 @@ import type {
   WorkoutSet,
   WorkoutExercise,
 } from '@/services/api/workoutApi';
+import {
+  useExercises,
+  useCreateExercise,
+  useUpdateExercise,
+  useDeleteExercise,
+  exerciseKeys,
+} from '@/hooks/useExercises';
+import type { ExerciseWithStats, MuscleGroup } from '@/services/api/exerciseApi';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -68,6 +80,31 @@ function formatRelative(dateStr: string): string {
 function formatWorkoutDate(dateStr: string): string {
   return format(parseISO(dateStr), "d MMM · HH'h'mm", { locale: es });
 }
+
+// ─── exercise constants ────────────────────────────────────────────────────────
+
+const MUSCLE_GROUPS: Array<{ key: MuscleGroup | undefined; label: string }> = [
+  { key: undefined, label: 'Todos' },
+  { key: 'pecho', label: 'Pecho' },
+  { key: 'espalda', label: 'Espalda' },
+  { key: 'piernas', label: 'Piernas' },
+  { key: 'hombros', label: 'Hombros' },
+  { key: 'brazos', label: 'Brazos' },
+  { key: 'core', label: 'Core' },
+  { key: 'cardio', label: 'Cardio' },
+  { key: 'otro', label: 'Otro' },
+];
+
+const MUSCLE_GROUP_LABELS: Partial<Record<MuscleGroup, string>> = {
+  pecho: 'Pecho',
+  espalda: 'Espalda',
+  piernas: 'Piernas',
+  hombros: 'Hombros',
+  brazos: 'Brazos',
+  core: 'Core',
+  cardio: 'Cardio',
+  otro: 'Otro',
+};
 
 // ─── sub-components ───────────────────────────────────────────────────────────
 
@@ -556,21 +593,279 @@ function ActiveWorkoutModal({
   );
 }
 
+// ─── Exercise components ───────────────────────────────────────────────────────
+
+function ExerciseRow({
+  exercise,
+  onEdit,
+  onDelete,
+  isLast,
+}: {
+  exercise: ExerciseWithStats;
+  onEdit: () => void;
+  onDelete: () => void;
+  isLast?: boolean;
+}) {
+  return (
+    <TouchableOpacity
+      style={[styles.exerciseRow, !isLast && styles.exerciseRowBorder]}
+      onPress={onEdit}
+      activeOpacity={0.7}
+    >
+      <View style={{ flex: 1 }}>
+        <Text style={styles.exerciseName}>{exercise.name}</Text>
+        {exercise.muscleGroup && (
+          <Text style={styles.exerciseGroup}>
+            {MUSCLE_GROUP_LABELS[exercise.muscleGroup]}
+            {exercise.usedInRoutines > 0
+              ? ` · ${exercise.usedInRoutines} rutina${exercise.usedInRoutines !== 1 ? 's' : ''}`
+              : ''}
+          </Text>
+        )}
+      </View>
+      <TouchableOpacity
+        onPress={onDelete}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        style={{ marginLeft: Spacing.sm }}
+      >
+        <Trash2 size={16} color={Colors.muted} strokeWidth={1.5} />
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+}
+
+function ExercisesView({ onEdit }: { onEdit: (ex: ExerciseWithStats) => void }) {
+  const [muscleFilter, setMuscleFilter] = useState<MuscleGroup | undefined>(undefined);
+  const { data, isLoading } = useExercises(muscleFilter);
+  const deleteExercise = useDeleteExercise();
+  const exercises = data?.exercises ?? [];
+
+  return (
+    <>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterScroll}
+        contentContainerStyle={{ gap: Spacing.sm, paddingRight: Spacing.screenX }}
+      >
+        {MUSCLE_GROUPS.map((g) => (
+          <Chip
+            key={g.label}
+            label={g.label}
+            active={muscleFilter === g.key}
+            onPress={() => setMuscleFilter(g.key)}
+          />
+        ))}
+      </ScrollView>
+
+      {isLoading ? (
+        <ActivityIndicator color={Colors.vivid} style={{ marginVertical: 24 }} />
+      ) : exercises.length === 0 ? (
+        <Card>
+          <View style={styles.emptyCard}>
+            <Dumbbell size={32} color={Colors.muted} />
+            <Text style={styles.emptyTitle}>Sin ejercicios</Text>
+            <Text style={styles.emptySub}>
+              {muscleFilter
+                ? 'No hay ejercicios en este grupo muscular'
+                : 'Creá tu primer ejercicio con el botón +'}
+            </Text>
+          </View>
+        </Card>
+      ) : (
+        <Card padding={0} solid>
+          {exercises.map((ex, i) => (
+            <ExerciseRow
+              key={ex.id}
+              exercise={ex}
+              onEdit={() => onEdit(ex)}
+              onDelete={() =>
+                Alert.alert('Eliminar ejercicio', `¿Eliminar "${ex.name}"?`, [
+                  { text: 'Cancelar', style: 'cancel' },
+                  {
+                    text: 'Eliminar',
+                    style: 'destructive',
+                    onPress: () => deleteExercise.mutate(ex.id),
+                  },
+                ])
+              }
+              isLast={i === exercises.length - 1}
+            />
+          ))}
+        </Card>
+      )}
+      <View style={{ height: Layout.tabBarHeight + Layout.tabBarOffset + 52 + 16 }} />
+    </>
+  );
+}
+
+function ExerciseFormModal({
+  visible,
+  exercise,
+  onClose,
+}: {
+  visible: boolean;
+  exercise: ExerciseWithStats | null;
+  onClose: () => void;
+}) {
+  const isEditing = !!exercise;
+  const [name, setName] = useState('');
+  const [muscleGroup, setMuscleGroup] = useState<MuscleGroup | undefined>(undefined);
+  const [notes, setNotes] = useState('');
+
+  const createExercise = useCreateExercise();
+  const updateExercise = useUpdateExercise();
+
+  useEffect(() => {
+    if (visible) {
+      if (exercise) {
+        setName(exercise.name);
+        setMuscleGroup(exercise.muscleGroup ?? undefined);
+        setNotes(exercise.notes ?? '');
+      } else {
+        setName('');
+        setMuscleGroup(undefined);
+        setNotes('');
+      }
+    }
+  }, [visible, exercise]);
+
+  const handleClose = () => {
+    setName('');
+    setMuscleGroup(undefined);
+    setNotes('');
+    onClose();
+  };
+
+  const canSubmit = name.trim().length >= 2;
+
+  const handleSubmit = () => {
+    if (!canSubmit) return;
+    const dto = {
+      name: name.trim(),
+      muscleGroup: muscleGroup ?? null,
+      notes: notes.trim() || null,
+    };
+    if (isEditing && exercise) {
+      updateExercise.mutate({ id: exercise.id, dto }, { onSuccess: handleClose });
+    } else {
+      createExercise.mutate(dto, { onSuccess: handleClose });
+    }
+  };
+
+  const isBusy = createExercise.isPending || updateExercise.isPending;
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={exStyles.overlay}
+      >
+        <TouchableOpacity
+          style={StyleSheet.absoluteFillObject}
+          activeOpacity={1}
+          onPress={handleClose}
+        />
+        <View style={exStyles.sheet}>
+          <View style={exStyles.header}>
+            <Text style={exStyles.title}>{isEditing ? 'Editar ejercicio' : 'Nuevo ejercicio'}</Text>
+            <TouchableOpacity
+              onPress={handleClose}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <X size={20} color={Colors.muted} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <TextInput
+              style={exStyles.nameInput}
+              value={name}
+              onChangeText={setName}
+              placeholder="Nombre del ejercicio"
+              placeholderTextColor={Colors.muted}
+              autoFocus
+              returnKeyType="done"
+            />
+
+            <Text style={exStyles.label}>GRUPO MUSCULAR</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ marginBottom: Spacing.lg }}
+              contentContainerStyle={{ gap: Spacing.sm }}
+            >
+              {MUSCLE_GROUPS.slice(1).map((g) => (
+                <TouchableOpacity
+                  key={g.label}
+                  style={[exStyles.chip, muscleGroup === g.key && exStyles.chipActive]}
+                  onPress={() => setMuscleGroup(muscleGroup === g.key ? undefined : g.key)}
+                >
+                  <Text
+                    style={[
+                      exStyles.chipLabel,
+                      { color: muscleGroup === g.key ? '#fff' : Colors.ink },
+                    ]}
+                  >
+                    {g.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <Text style={exStyles.label}>NOTAS (opcional)</Text>
+            <TextInput
+              style={[
+                exStyles.nameInput,
+                { minHeight: 60, textAlignVertical: 'top', marginBottom: Spacing.lg },
+              ]}
+              value={notes}
+              onChangeText={setNotes}
+              placeholder="Ej. Cuidar la postura..."
+              placeholderTextColor={Colors.muted}
+              multiline
+            />
+
+            <TouchableOpacity
+              style={[exStyles.submitBtn, (!canSubmit || isBusy) && { opacity: 0.45 }]}
+              onPress={handleSubmit}
+              disabled={!canSubmit || isBusy}
+            >
+              {isBusy ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={exStyles.submitLabel}>
+                  {isEditing ? 'Guardar cambios' : 'Crear ejercicio'}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
 // ─── screen ───────────────────────────────────────────────────────────────────
 
-type Tab = 'rutinas' | 'historial';
+type Tab = 'rutinas' | 'historial' | 'ejercicios';
 
 export default function CuerpoScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('rutinas');
   const [activeWorkout, setActiveWorkout] = useState<StartedWorkout | null>(null);
+  const [showExerciseModal, setShowExerciseModal] = useState(false);
+  const [editingExercise, setEditingExercise] = useState<ExerciseWithStats | null>(null);
   const queryClient = useQueryClient();
 
   const { data: routines = [] } = useRoutines();
   const { data: historyData } = useWorkoutHistory({ limit: 20 });
   const workoutCount = historyData?.pagination.total ?? 0;
+  const { data: exercisesData } = useExercises();
+  const exerciseCount = exercisesData?.exercises.length ?? 0;
 
   const onRefresh = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: workoutKeys.all });
+    await queryClient.invalidateQueries({ queryKey: exerciseKeys.all });
   }, [queryClient]);
 
   const handleWorkoutFinished = useCallback(() => {
@@ -609,12 +904,25 @@ export default function CuerpoScreen() {
             badge={workoutCount > 0 ? workoutCount : undefined}
             onPress={() => setActiveTab('historial')}
           />
+          <Chip
+            label="Ejercicios"
+            active={activeTab === 'ejercicios'}
+            badge={exerciseCount > 0 ? exerciseCount : undefined}
+            onPress={() => setActiveTab('ejercicios')}
+          />
         </ScrollView>
 
         {activeTab === 'rutinas' ? (
           <RoutinesView onStarted={setActiveWorkout} />
-        ) : (
+        ) : activeTab === 'historial' ? (
           <HistorialView />
+        ) : (
+          <ExercisesView
+            onEdit={(ex) => {
+              setEditingExercise(ex);
+              setShowExerciseModal(true);
+            }}
+          />
         )}
       </ScreenContainer>
 
@@ -626,6 +934,28 @@ export default function CuerpoScreen() {
           onCancel={() => setActiveWorkout(null)}
         />
       )}
+
+      {activeTab === 'ejercicios' && !activeWorkout && (
+        <TouchableOpacity
+          style={styles.exerciseFab}
+          onPress={() => {
+            setEditingExercise(null);
+            setShowExerciseModal(true);
+          }}
+          activeOpacity={0.85}
+        >
+          <Plus size={24} color="#fff" strokeWidth={2} />
+        </TouchableOpacity>
+      )}
+
+      <ExerciseFormModal
+        visible={showExerciseModal}
+        exercise={editingExercise}
+        onClose={() => {
+          setShowExerciseModal(false);
+          setEditingExercise(null);
+        }}
+      />
     </>
   );
 }
@@ -833,6 +1163,45 @@ const styles = StyleSheet.create({
     color: Colors.muted,
   },
 
+  // Exercise library
+  exerciseFab: {
+    position: 'absolute',
+    right: Spacing.lg,
+    bottom: Layout.tabBarHeight + Layout.tabBarOffset,
+    width: 52,
+    height: 52,
+    borderRadius: Radius.fab,
+    backgroundColor: Colors.vivid,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Shadows.fab,
+  },
+  filterScroll: {
+    marginBottom: Spacing.xl,
+  },
+  exerciseRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 12,
+    gap: Spacing.md,
+  },
+  exerciseRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.line,
+  },
+  exerciseName: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 14,
+    color: Colors.ink,
+  },
+  exerciseGroup: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 11,
+    color: Colors.muted,
+    marginTop: 2,
+  },
+
   // Empty state
   emptyCard: {
     alignItems: 'center',
@@ -850,6 +1219,78 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.muted,
     textAlign: 'center',
+  },
+});
+
+// ─── Exercise form modal styles ───────────────────────────────────────────────
+
+const exStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(10,14,31,0.5)',
+  },
+  sheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: Radius['3xl'],
+    borderTopRightRadius: Radius['3xl'],
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.lg,
+    paddingBottom: 40,
+    maxHeight: '90%',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.lg,
+  },
+  title: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 17,
+    color: Colors.ink,
+  },
+  label: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 11,
+    color: Colors.muted,
+    letterSpacing: 0.6,
+    marginBottom: Spacing.sm,
+  },
+  nameInput: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 15,
+    color: Colors.ink,
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.line,
+    marginBottom: Spacing.lg,
+  },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.ice,
+  },
+  chipActive: {
+    backgroundColor: Colors.vivid,
+  },
+  chipLabel: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 12,
+  },
+  submitBtn: {
+    backgroundColor: Colors.vivid,
+    borderRadius: Radius.lg,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  submitLabel: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 15,
+    color: '#fff',
   },
 });
 
