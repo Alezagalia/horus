@@ -30,6 +30,7 @@ import {
   Salad,
   Scale,
   History,
+  Tag,
 } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
@@ -603,6 +604,12 @@ export default function YoScreen() {
           icon={<ClipboardCheck size={16} color={Colors.vivid} />}
           label="Revisión Semanal"
           onPress={() => router.push('/revision-semanal')}
+        />
+        <View style={styles.divider} />
+        <SettingRow
+          icon={<Tag size={16} color="#8B5CF6" />}
+          label="Categorías"
+          onPress={() => router.push('/categorias')}
         />
         <View style={styles.divider} />
         <View style={styles.divider} />
