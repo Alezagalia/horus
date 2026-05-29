@@ -31,6 +31,7 @@ import {
   Scale,
   History,
   Tag,
+  BarChart2,
 } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
@@ -600,6 +601,12 @@ export default function YoScreen() {
       {/* ─── Herramientas ─────────────────────────────────────────── */}
       <SectionLabel label="HERRAMIENTAS" />
       <Card padding={0} solid>
+        <SettingRow
+          icon={<BarChart2 size={16} color="#F59E0B" />}
+          label="Reportes"
+          onPress={() => router.push('/reportes')}
+        />
+        <View style={styles.divider} />
         <SettingRow
           icon={<ClipboardCheck size={16} color={Colors.vivid} />}
           label="Revisión Semanal"
