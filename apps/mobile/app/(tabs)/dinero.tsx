@@ -24,6 +24,7 @@ import {
   Plus,
   X,
   Trash2,
+  Undo2,
 } from 'lucide-react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
@@ -46,9 +47,16 @@ import {
   useDeleteRecurringExpense,
   recurringKeys,
 } from '@/hooks/useEvents';
+import {
+  useMonthlyExpenses,
+  usePayMonthlyExpense,
+  useUndoMonthlyExpensePayment,
+  monthlyExpenseKeys,
+} from '@/hooks/useMonthlyExpenses';
 import type { Transaction, TransactionType } from '@/services/api/transactionApi';
 import type { Account } from '@/services/api/accountApi';
 import type { RecurringExpense } from '@/services/api/recurringExpenseApi';
+import type { MonthlyExpense } from '@/services/api/monthlyExpenseApi';
 import type { CreateRecurringExpenseDTO } from '@horus/shared';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -644,9 +652,173 @@ function RecurringFormModal({ visible, onClose }: { visible: boolean; onClose: (
   );
 }
 
+// ─── Monthly expense components ───────────────────────────────────────────────
+
+function MonthlyExpenseRow({
+  item,
+  onPay,
+  onUndo,
+  actionPending,
+  isLast,
+}: {
+  item: MonthlyExpense;
+  onPay: () => void;
+  onUndo: () => void;
+  actionPending: boolean;
+  isLast?: boolean;
+}) {
+  const isPaid = item.status === 'pagado';
+  const dotColor = item.category?.color ?? Colors.muted;
+
+  return (
+    <View style={[styles.txRow, !isLast && styles.txRowBorder]}>
+      <View style={[styles.catDot, { backgroundColor: dotColor }]} />
+      <View style={styles.txCenter}>
+        <Text style={[styles.txConcept, isPaid && { color: Colors.muted }]} numberOfLines={1}>
+          {item.concept}
+        </Text>
+        <Text style={styles.txMeta}>
+          {item.category?.name}
+          {item.recurringExpense?.dueDay ? ` · día ${item.recurringExpense.dueDay}` : ''}
+        </Text>
+      </View>
+      <Text style={[styles.txAmount, { color: isPaid ? Colors.muted : Colors.ink }]}>
+        {formatMoney(item.amount, item.recurringExpense?.currency)}
+      </Text>
+      {actionPending ? (
+        <ActivityIndicator size="small" color={Colors.vivid} style={{ marginLeft: 8 }} />
+      ) : isPaid ? (
+        <TouchableOpacity onPress={onUndo} hitSlop={8} style={{ marginLeft: 8 }}>
+          <Undo2 size={16} color={Colors.muted} strokeWidth={1.5} />
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity onPress={onPay} style={styles.payBtn}>
+          <Text style={styles.payBtnLabel}>Pagar</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
+function PayExpenseModal({
+  visible,
+  expense,
+  accounts,
+  onClose,
+}: {
+  visible: boolean;
+  expense: MonthlyExpense | null;
+  accounts: Account[];
+  onClose: () => void;
+}) {
+  const [amount, setAmount] = useState('');
+  const [accountId, setAccountId] = useState('');
+  const payMutation = usePayMonthlyExpense();
+
+  useEffect(() => {
+    if (visible && expense) {
+      setAmount(String(expense.amount));
+    }
+    if (visible && accounts.length > 0) {
+      setAccountId((prev) => prev || accounts[0].id);
+    }
+  }, [visible, expense, accounts]);
+
+  const handleClose = () => {
+    setAmount('');
+    onClose();
+  };
+
+  const canSubmit = amount.trim() !== '' && parseFloat(amount) > 0 && !!accountId;
+
+  const handlePay = () => {
+    if (!expense || !canSubmit) return;
+    payMutation.mutate(
+      { id: expense.id, dto: { amount: parseFloat(amount), accountId } },
+      { onSuccess: handleClose }
+    );
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.modalOverlay}
+      >
+        <TouchableOpacity
+          style={StyleSheet.absoluteFillObject}
+          activeOpacity={1}
+          onPress={handleClose}
+        />
+        <View style={styles.modalSheet}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Registrar pago</Text>
+            <TouchableOpacity
+              onPress={handleClose}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <X size={20} color={Colors.muted} />
+            </TouchableOpacity>
+          </View>
+
+          {expense && (
+            <Text style={[styles.txMeta, { marginBottom: Spacing.md, fontSize: 13 }]}>
+              {expense.concept}
+            </Text>
+          )}
+
+          <TextInput
+            style={styles.amountInput}
+            value={amount}
+            onChangeText={setAmount}
+            placeholder="0"
+            placeholderTextColor={Colors.ceilLight}
+            keyboardType="numeric"
+            autoFocus
+          />
+
+          <Text style={styles.pickerLabel}>CUENTA</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.pickerScroll}
+            contentContainerStyle={{ gap: Spacing.sm }}
+          >
+            {accounts.map((a) => (
+              <TouchableOpacity
+                key={a.id}
+                style={[styles.pickerChip, accountId === a.id && styles.pickerChipActive]}
+                onPress={() => setAccountId(a.id)}
+              >
+                {a.color && <View style={[styles.accountDot, { backgroundColor: a.color }]} />}
+                <Text
+                  style={[
+                    styles.pickerChipLabel,
+                    { color: accountId === a.id ? '#fff' : Colors.ink },
+                  ]}
+                >
+                  {a.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          <Button
+            label="Confirmar pago"
+            onPress={handlePay}
+            loading={payMutation.isPending}
+            disabled={!canSubmit}
+            style={{ marginTop: Spacing.lg }}
+          />
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
 // ─── screen ───────────────────────────────────────────────────────────────────
 
-type DineroTab = 'movimientos' | 'fijos';
+type DineroTab = 'movimientos' | 'fijos' | 'mensuales';
 
 export default function DineroScreen() {
   const now = new Date();
@@ -656,6 +828,8 @@ export default function DineroScreen() {
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [showRecurringModal, setShowRecurringModal] = useState(false);
+  const [showPayModal, setShowPayModal] = useState(false);
+  const [selectedExpense, setSelectedExpense] = useState<MonthlyExpense | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -691,6 +865,30 @@ export default function DineroScreen() {
   const updateRecurring = useUpdateRecurringExpense();
   const deleteRecurring = useDeleteRecurringExpense();
 
+  const { data: monthlyData, isLoading: monthlyLoading } = useMonthlyExpenses(
+    selectedMonth + 1,
+    selectedYear
+  );
+  const undoPayment = useUndoMonthlyExpensePayment();
+
+  const monthlyExpenses = monthlyData?.monthlyExpenses ?? [];
+  const pendingExpenses = useMemo(
+    () => monthlyExpenses.filter((e) => e.status === 'pendiente'),
+    [monthlyExpenses]
+  );
+  const paidExpenses = useMemo(
+    () => monthlyExpenses.filter((e) => e.status === 'pagado'),
+    [monthlyExpenses]
+  );
+  const totalPending = useMemo(
+    () => pendingExpenses.reduce((sum, e) => sum + e.amount, 0),
+    [pendingExpenses]
+  );
+  const totalPaid = useMemo(
+    () => paidExpenses.reduce((sum, e) => sum + e.amount, 0),
+    [paidExpenses]
+  );
+
   const accounts = accountsData?.accounts ?? [];
   const transactions = txData?.transactions ?? [];
   const grouped = useMemo(() => groupByDate(transactions), [transactions]);
@@ -700,6 +898,7 @@ export default function DineroScreen() {
       queryClient.invalidateQueries({ queryKey: accountKeys.all }),
       queryClient.invalidateQueries({ queryKey: transactionKeys.all }),
       queryClient.invalidateQueries({ queryKey: recurringKeys.all }),
+      queryClient.invalidateQueries({ queryKey: monthlyExpenseKeys.all }),
     ]);
   }, [queryClient]);
 
@@ -759,6 +958,12 @@ export default function DineroScreen() {
             active={activeTab === 'fijos'}
             badge={recurringList.length || undefined}
             onPress={() => setActiveTab('fijos')}
+          />
+          <Chip
+            label="Mensuales"
+            active={activeTab === 'mensuales'}
+            badge={pendingExpenses.length || undefined}
+            onPress={() => setActiveTab('mensuales')}
           />
         </ScrollView>
 
@@ -839,7 +1044,7 @@ export default function DineroScreen() {
               ))
             )}
           </>
-        ) : (
+        ) : activeTab === 'fijos' ? (
           <>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>GASTOS FIJOS</Text>
@@ -875,6 +1080,104 @@ export default function DineroScreen() {
               </Card>
             )}
           </>
+        ) : (
+          <>
+            {/* PENDIENTES */}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>PENDIENTES</Text>
+              {pendingExpenses.length > 0 && (
+                <View style={styles.sectionBadge}>
+                  <Text style={styles.sectionBadgeText}>{pendingExpenses.length}</Text>
+                </View>
+              )}
+            </View>
+
+            {monthlyLoading ? (
+              <ActivityIndicator color={Colors.vivid} style={{ marginVertical: 24 }} />
+            ) : pendingExpenses.length === 0 ? (
+              <Card solid>
+                <Text style={styles.emptyText}>Todo pagado este mes ✅</Text>
+              </Card>
+            ) : (
+              <Card padding={0} solid>
+                {pendingExpenses.map((item, i) => (
+                  <MonthlyExpenseRow
+                    key={item.id}
+                    item={item}
+                    onPay={() => {
+                      setSelectedExpense(item);
+                      setShowPayModal(true);
+                    }}
+                    onUndo={() => undoPayment.mutate(item.id)}
+                    actionPending={undoPayment.isPending && undoPayment.variables === item.id}
+                    isLast={i === pendingExpenses.length - 1}
+                  />
+                ))}
+              </Card>
+            )}
+
+            {/* PAGADOS */}
+            {paidExpenses.length > 0 && (
+              <>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>PAGADOS</Text>
+                  <View style={styles.sectionBadge}>
+                    <Text style={styles.sectionBadgeText}>{paidExpenses.length}</Text>
+                  </View>
+                </View>
+                <Card padding={0} solid>
+                  {paidExpenses.map((item, i) => (
+                    <MonthlyExpenseRow
+                      key={item.id}
+                      item={item}
+                      onPay={() => {
+                        setSelectedExpense(item);
+                        setShowPayModal(true);
+                      }}
+                      onUndo={() => undoPayment.mutate(item.id)}
+                      actionPending={undoPayment.isPending && undoPayment.variables === item.id}
+                      isLast={i === paidExpenses.length - 1}
+                    />
+                  ))}
+                </Card>
+              </>
+            )}
+
+            {/* RESUMEN */}
+            {monthlyExpenses.length > 0 && (
+              <Card solid style={{ marginTop: Spacing.xl }}>
+                <View
+                  style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}
+                >
+                  <Text style={styles.txMeta}>Pendiente</Text>
+                  <Text style={[styles.txAmount, { color: '#ef4444', fontSize: 13 }]}>
+                    {formatMoney(totalPending)}
+                  </Text>
+                </View>
+                <View
+                  style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}
+                >
+                  <Text style={styles.txMeta}>Pagado</Text>
+                  <Text style={[styles.txAmount, { color: '#22c55e', fontSize: 13 }]}>
+                    {formatMoney(totalPaid)}
+                  </Text>
+                </View>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    marginTop: 8,
+                    paddingTop: 8,
+                    borderTopWidth: 1,
+                    borderTopColor: Colors.line,
+                  }}
+                >
+                  <Text style={[styles.txConcept, { fontSize: 13 }]}>Total</Text>
+                  <Text style={styles.txAmount}>{formatMoney(totalPending + totalPaid)}</Text>
+                </View>
+              </Card>
+            )}
+          </>
         )}
 
         <View style={{ height: Layout.tabBarHeight + Layout.tabBarOffset + 16 }} />
@@ -898,6 +1201,15 @@ export default function DineroScreen() {
       <RecurringFormModal
         visible={showRecurringModal}
         onClose={() => setShowRecurringModal(false)}
+      />
+      <PayExpenseModal
+        visible={showPayModal}
+        expense={selectedExpense}
+        accounts={accounts}
+        onClose={() => {
+          setShowPayModal(false);
+          setSelectedExpense(null);
+        }}
       />
     </View>
   );
@@ -1202,6 +1514,20 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     fontSize: 14,
     color: Colors.muted,
+  },
+
+  // Pay button (monthly expenses)
+  payBtn: {
+    marginLeft: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.vivid,
+  },
+  payBtnLabel: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 11,
+    color: '#fff',
   },
 
   // Empty
