@@ -93,9 +93,6 @@ export function LoginPage() {
             <Link to="/forgot-password" className="text-sm text-indigo-600 hover:text-indigo-500">
               ¿Olvidaste tu contraseña?
             </Link>
-            <Link to="/register" className="text-sm text-indigo-600 hover:text-indigo-500">
-              ¿No tienes cuenta? Crear cuenta
-            </Link>
           </div>
         </form>
       </div>
