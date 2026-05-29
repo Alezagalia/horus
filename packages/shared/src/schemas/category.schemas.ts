@@ -8,7 +8,15 @@ import { z } from 'zod';
 /**
  * Scope enum schema for Zod validation
  */
-export const scopeSchema = z.enum(['habitos', 'tareas', 'eventos', 'gastos']);
+export const scopeSchema = z.enum([
+  'habitos',
+  'tareas',
+  'eventos',
+  'gastos',
+  'metas',
+  'knowledge',
+  'nutricion',
+]);
 
 /**
  * Create Category Schema

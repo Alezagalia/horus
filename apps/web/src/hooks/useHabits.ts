@@ -205,6 +205,8 @@ export function useToggleHabitComplete() {
 
       if (record.completed) {
         toast.success('Hábito completado', { icon: '✅' });
+        // Refrescar metas por si se auto-incrementó algún KR vinculado
+        queryClient.invalidateQueries({ queryKey: ['goals'] });
       }
     },
     onError: (error: Error) => {

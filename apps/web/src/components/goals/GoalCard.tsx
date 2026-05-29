@@ -34,9 +34,10 @@ interface GoalCardProps {
   goal: GoalWithProgress;
   onEdit: (goal: GoalWithProgress) => void;
   onDelete: (goal: GoalWithProgress) => void;
+  onFeature: (goalId: string) => void;
 }
 
-export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
+export function GoalCard({ goal, onEdit, onDelete, onFeature }: GoalCardProps) {
   const navigate = useNavigate();
   const daysRemaining = getDaysRemaining(goal.targetDate);
   const priorityConfig = PRIORITY_CONFIG[goal.priority];
@@ -45,7 +46,7 @@ export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
 
   return (
     <div
-      className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3 hover:shadow-md transition-shadow group cursor-pointer"
+      className={`bg-white rounded-xl border shadow-sm p-5 flex flex-col gap-3 hover:shadow-md transition-shadow group cursor-pointer ${goal.isFeatured ? 'border-amber-300 ring-1 ring-amber-200' : 'border-gray-100'}`}
       onClick={() => navigate(`/goals/${goal.id}`)}
     >
       {/* Header */}
@@ -56,13 +57,36 @@ export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
           )}
           <h3 className="text-sm font-semibold text-gray-900 truncate">{goal.title}</h3>
         </div>
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {/* Feature button — always visible when featured, hover-visible otherwise */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onFeature(goal.id);
+            }}
+            className={`p-1 rounded transition-colors ${goal.isFeatured ? 'text-amber-400 hover:text-amber-500' : 'text-gray-300 opacity-0 group-hover:opacity-100 hover:text-amber-400'}`}
+            title={goal.isFeatured ? 'Quitar del dashboard' : 'Destacar en el dashboard'}
+          >
+            <svg
+              className="w-3.5 h-3.5"
+              fill={goal.isFeatured ? 'currentColor' : 'none'}
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+              />
+            </svg>
+          </button>
           <button
             onClick={(e) => {
               e.stopPropagation();
               onEdit(goal);
             }}
-            className="p-1 rounded text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+            className="p-1 rounded text-gray-400 opacity-0 group-hover:opacity-100 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
             title="Editar"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -79,7 +103,7 @@ export function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
               e.stopPropagation();
               onDelete(goal);
             }}
-            className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+            className="p-1 rounded text-gray-400 opacity-0 group-hover:opacity-100 hover:text-red-600 hover:bg-red-50 transition-colors"
             title="Eliminar"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

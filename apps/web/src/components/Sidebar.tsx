@@ -135,6 +135,12 @@ const menuSections: MenuSection[] = [
         icon: '🏷️',
         gradient: 'from-gray-500 to-slate-500',
       },
+      {
+        name: 'Momentos del día',
+        path: '/habit-moments',
+        icon: '🕐',
+        gradient: 'from-sky-500 to-indigo-500',
+      },
     ],
     collapsible: true,
   },

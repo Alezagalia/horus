@@ -5,6 +5,7 @@
 
 import { useNavigate } from 'react-router-dom';
 import type { Habit } from '@/types/habits';
+import { useHabitMoments } from '@/hooks/useHabitMoments';
 
 interface HabitListItemProps {
   habit: Habit;
@@ -24,21 +25,12 @@ const periodicityLabels = {
   CUSTOM: 'Personalizado',
 };
 
-const timeOfDayLabels: Record<string, string> = {
-  AYUNO: '🍽️ En ayuno',
-  MANANA: '🌅 Mañana',
-  MEDIA_MANANA: '☕ Media mañana',
-  TARDE: '☀️ Tarde',
-  MEDIA_TARDE: '🍵 Media tarde',
-  NOCHE: '🌙 Noche',
-  ANTES_DORMIR: '🛏️ Antes de dormir',
-  ANYTIME: '⏰ Cualquier momento',
-};
-
 const weekDayNames = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
 
 export function HabitListItem({ habit, onEdit, onToggleActive }: HabitListItemProps) {
   const navigate = useNavigate();
+  const { data: moments = [] } = useHabitMoments();
+  const momentMap = Object.fromEntries(moments.map((m) => [m.key, `${m.emoji} ${m.label}`]));
 
   const getPeriodicityDisplay = () => {
     if (habit.periodicity === 'WEEKLY' && habit.weekDays && habit.weekDays.length > 0) {
@@ -154,7 +146,7 @@ export function HabitListItem({ habit, onEdit, onToggleActive }: HabitListItemPr
 
             {/* Time of Day Badge */}
             <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 text-amber-700">
-              {timeOfDayLabels[habit.timeOfDay] || habit.timeOfDay}
+              {momentMap[habit.timeOfDay] || habit.timeOfDay}
             </span>
 
             {/* Category Badge */}

@@ -59,9 +59,20 @@ export async function syncGoogleCalendar(): Promise<GoogleCalendarSyncResult> {
   const response = await axiosInstance.post<GoogleCalendarSyncResult>(
     '/sync/google-calendar/sync',
     {},
-    {
-      timeout: 60000, // 60 seconds for sync operation (can take time with many events)
-    }
+    { timeout: 60000 }
+  );
+  return response.data;
+}
+
+/**
+ * Force re-sync: overwrites all local Google events with Google's version.
+ * Use to correct events imported with wrong dates.
+ */
+export async function forceResyncGoogleCalendar(): Promise<GoogleCalendarSyncResult> {
+  const response = await axiosInstance.post<GoogleCalendarSyncResult>(
+    '/sync/google-calendar/resync',
+    {},
+    { timeout: 120000 } // 2 minutes — processes all events
   );
   return response.data;
 }

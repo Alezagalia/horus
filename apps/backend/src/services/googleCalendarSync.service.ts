@@ -30,21 +30,21 @@ function convertFromGoogleEvent(googleEvent: any, userId: string, defaultCategor
   // Handle all-day events
   if (googleEvent.start.date) {
     // All-day event (has 'date' instead of 'dateTime')
-    const startDate = new Date(googleEvent.start.date);
-    const endDate = new Date(googleEvent.end.date);
+    // IMPORTANT: new Date("YYYY-MM-DD") parses as UTC midnight, which shifts the date
+    // one day back in UTC-3 timezones. Parse components manually and use noon UTC
+    // so the date is correct for any timezone within ±12h of UTC.
+    const [sy, sm, sd] = googleEvent.start.date.split('-').map(Number);
+    const startDate = new Date(Date.UTC(sy, sm - 1, sd, 12, 0, 0, 0));
 
-    // Google end date is exclusive, subtract 1 day for local storage
-    endDate.setDate(endDate.getDate() - 1);
-
-    // Set to start and end of day
-    startDate.setHours(0, 0, 0, 0);
-    endDate.setHours(23, 59, 59, 999);
+    // Google end date is exclusive, so subtract 1 day
+    const [ey, em, ed] = googleEvent.end.date.split('-').map(Number);
+    const endDate = new Date(Date.UTC(ey, em - 1, ed - 1, 23, 59, 59, 999));
 
     localEvent.startDateTime = startDate;
     localEvent.endDateTime = endDate;
     localEvent.isAllDay = true;
   } else {
-    // Timed event
+    // Timed event — dateTime includes timezone offset, JavaScript parses it correctly
     localEvent.startDateTime = new Date(googleEvent.start.dateTime);
     localEvent.endDateTime = new Date(googleEvent.end.dateTime);
     localEvent.isAllDay = false;
@@ -510,9 +510,11 @@ export const googleCalendarSyncService = {
   },
 
   /**
-   * Syncs events from Google Calendar to local database
+   * Syncs events from Google Calendar to local database.
+   * @param forceResync When true, bypasses last-write-wins and always applies Google's version.
+   *                    Use this to correct events imported with wrong dates.
    */
-  async syncFromGoogle(userId: string) {
+  async syncFromGoogle(userId: string, forceResync = false) {
     try {
       // Get sync settings
       const syncSetting = await prisma.syncSetting.findUnique({
@@ -545,10 +547,10 @@ export const googleCalendarSyncService = {
         },
       });
 
-      // For first sync, fetch all events (ignore lastSyncAt)
-      // Otherwise, only fetch events updated since last sync
-      const since = syncedEventsCount === 0 ? undefined : syncSetting.lastSyncAt || undefined;
-      const googleEvents = await this.fetchGoogleEvents(userId, since);
+      // forceResync and first-sync both fetch everything without date filter
+      const fetchSince =
+        forceResync || syncedEventsCount === 0 ? undefined : syncSetting.lastSyncAt || undefined;
+      const googleEvents = await this.fetchGoogleEvents(userId, fetchSince);
 
       const stats = {
         fetched: googleEvents.length,
@@ -592,18 +594,15 @@ export const googleCalendarSyncService = {
           const localEventData = convertFromGoogleEvent(googleEvent, userId, defaultCategory.id);
 
           if (existingEvent) {
-            // Event exists, check for conflicts
             const googleUpdated = googleEvent.updated ? new Date(googleEvent.updated) : new Date();
             const localUpdated = existingEvent.updatedAt;
 
-            // Compare timestamps (last-write-wins)
-            if (googleUpdated > localUpdated) {
-              // Google is more recent, update local
+            // forceResync always overwrites local; otherwise use last-write-wins
+            if (forceResync || googleUpdated > localUpdated) {
               await prisma.event.update({
                 where: { id: existingEvent.id },
                 data: {
                   ...localEventData,
-                  // Preserve local-only fields
                   id: existingEvent.id,
                   createdAt: existingEvent.createdAt,
                   recurringEventId: existingEvent.recurringEventId,
@@ -611,10 +610,7 @@ export const googleCalendarSyncService = {
               });
               stats.updated++;
             } else {
-              // Local is more recent or equal, skip update
-              // Next export cycle will push local changes to Google
               stats.conflicts++;
-              // Only log first 10 conflicts to avoid spam
               if (stats.conflicts <= 10) {
                 console.log(`Conflict: Local event ${existingEvent.id} is more recent than Google`);
               } else if (stats.conflicts === 11) {
@@ -644,9 +640,10 @@ export const googleCalendarSyncService = {
 
       const conflictMsg =
         stats.conflicts > 0 ? `, ${stats.conflicts} conflictos (versión local más reciente)` : '';
+      const prefix = forceResync ? 'Re-sincronización forzada' : 'Sincronización';
       return {
         success: true,
-        message: `Sincronización completada: ${stats.created} creados, ${stats.updated} actualizados${conflictMsg}`,
+        message: `${prefix} completada: ${stats.created} creados, ${stats.updated} actualizados${conflictMsg}`,
         eventsImported: stats.created,
         eventsUpdated: stats.updated,
         eventsDeleted: stats.deleted,

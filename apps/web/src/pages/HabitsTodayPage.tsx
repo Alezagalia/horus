@@ -33,7 +33,8 @@ import {
   useUpdateHabitProgress,
   useReorderHabits,
 } from '@/hooks/useHabits';
-import type { HabitOfDay, HabitsGrouped, DayProgress, TimeOfDay } from '@/types/habits';
+import { useHabitMoments } from '@/hooks/useHabitMoments';
+import type { HabitOfDay, HabitsGrouped, DayProgress } from '@/types/habits';
 
 /**
  * Extracts the YYYY-MM-DD portion from an ISO date string.
@@ -44,27 +45,7 @@ function extractDateString(isoDateString: string): string {
   return isoDateString.substring(0, 10);
 }
 
-const timeOfDayLabels = {
-  AYUNO: 'En ayuno',
-  MANANA: 'Mañana',
-  MEDIA_MANANA: 'Media mañana',
-  TARDE: 'Tarde',
-  MEDIA_TARDE: 'Media tarde',
-  NOCHE: 'Noche',
-  ANTES_DORMIR: 'Antes de dormir',
-  ANYTIME: 'Cualquier momento',
-};
-
-const timeOfDayIcons: Record<string, string> = {
-  AYUNO: '🍽️',
-  MANANA: '🌅',
-  MEDIA_MANANA: '☕',
-  TARDE: '☀️',
-  MEDIA_TARDE: '🍵',
-  NOCHE: '🌙',
-  ANTES_DORMIR: '🛏️',
-  ANYTIME: '⏰',
-};
+// timeOfDayLabels e icons ahora vienen dinámicamente de useHabitMoments
 
 // Helper to check if habit is scheduled for a specific day — mirrors backend debiaRealizarseEnFecha
 function isHabitScheduledForDate(
@@ -97,6 +78,16 @@ export function HabitsTodayPage() {
 
   // API queries
   const { data: habitsFromAPI, isLoading, error } = useHabits();
+  const { data: moments = [] } = useHabitMoments();
+
+  // Mapas dinámicos de momentos
+  const momentOrder = moments.map((m) => m.key);
+  const momentLabels: Record<string, string> = Object.fromEntries(
+    moments.map((m) => [m.key, m.label])
+  );
+  const momentIcons: Record<string, string> = Object.fromEntries(
+    moments.map((m) => [m.key, m.emoji])
+  );
 
   // Mutations
   const toggleCompleteMutation = useToggleHabitComplete();
@@ -169,25 +160,15 @@ export function HabitsTodayPage() {
 
   // Group habits by time of day, sorted by order then completed status
   const groupedHabits: HabitsGrouped = useMemo(() => {
-    const groups: HabitsGrouped = {
-      AYUNO: [],
-      MANANA: [],
-      MEDIA_MANANA: [],
-      TARDE: [],
-      MEDIA_TARDE: [],
-      NOCHE: [],
-      ANTES_DORMIR: [],
-      ANYTIME: [],
-    };
+    const groups: HabitsGrouped = {};
     todayHabits.forEach((habit) => {
-      groups[habit.timeOfDay].push(habit);
+      const key = habit.timeOfDay ?? 'ANYTIME';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(habit);
     });
-    // Sort each group: first by order, then completed at the bottom
     Object.keys(groups).forEach((key) => {
-      groups[key as keyof HabitsGrouped].sort((a, b) => {
-        // First sort by order
+      groups[key].sort((a, b) => {
         if (a.order !== b.order) return a.order - b.order;
-        // Then completed habits at the bottom
         if (a.completed !== b.completed) return a.completed ? 1 : -1;
         return 0;
       });
@@ -197,7 +178,7 @@ export function HabitsTodayPage() {
 
   // Handle drag end for reordering
   const handleDragEnd = useCallback(
-    (event: DragEndEvent, timeOfDay: TimeOfDay) => {
+    (event: DragEndEvent, timeOfDay: string) => {
       const { active, over } = event;
 
       if (over && active.id !== over.id) {
@@ -388,26 +369,19 @@ export function HabitsTodayPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          {(
-            [
-              'AYUNO',
-              'MANANA',
-              'MEDIA_MANANA',
-              'TARDE',
-              'MEDIA_TARDE',
-              'NOCHE',
-              'ANTES_DORMIR',
-              'ANYTIME',
-            ] as const
-          ).map((timeOfDay) => {
+          {/* Momentos en el orden configurado; claves desconocidas al final */}
+          {[
+            ...momentOrder,
+            ...Object.keys(groupedHabits).filter((k) => !momentOrder.includes(k)),
+          ].map((timeOfDay) => {
             const habitsInSection = groupedHabits[timeOfDay];
-            if (habitsInSection.length === 0) return null;
+            if (!habitsInSection || habitsInSection.length === 0) return null;
 
             return (
               <div key={timeOfDay}>
                 <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  {timeOfDayIcons[timeOfDay]}
-                  {timeOfDayLabels[timeOfDay]}
+                  {momentIcons[timeOfDay] ?? '⏰'}
+                  {momentLabels[timeOfDay] ?? timeOfDay}
                   {habitsInSection.length > 1 && (
                     <span className="text-xs text-gray-400 font-normal ml-2">
                       (arrastra para reordenar)

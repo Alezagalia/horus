@@ -157,13 +157,39 @@ export const removeKR = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
+// ─── Feature ──────────────────────────────────────────────────────────────────
+
+export const getFeatured = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const goal = await goalService.getFeaturedGoal(req.user!.id);
+    res.status(200).json({ data: goal });
+  } catch (error: unknown) {
+    res.status(500).json({ message: msg(error, 'Error al obtener meta destacada') });
+  }
+};
+
+export const feature = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const goal = await goalService.featureGoal(req.params.id, req.user!.id);
+    res.status(200).json({ message: 'Meta destacada actualizada', data: goal });
+  } catch (error: unknown) {
+    const message = msg(error, 'Error al destacar meta');
+    if (message === 'Meta no encontrada') {
+      res.status(404).json({ message });
+      return;
+    }
+    res.status(400).json({ message });
+  }
+};
+
 // ─── Link / Unlink ────────────────────────────────────────────────────────────
 
 export const linkHabit = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
     const { id, habitId } = req.params;
-    await goalService.linkHabit(id, userId, habitId);
+    const krId = typeof req.body?.krId === 'string' ? req.body.krId : undefined;
+    await goalService.linkHabit(id, userId, habitId, krId);
     res.status(200).json({ message: 'Hábito vinculado exitosamente' });
   } catch (error: unknown) {
     const message = msg(error, 'Error al vincular hábito');

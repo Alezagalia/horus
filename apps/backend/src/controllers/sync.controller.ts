@@ -133,6 +133,23 @@ export const syncController = {
   },
 
   /**
+   * POST /api/sync/google-calendar/resync
+   * Force re-sync: overwrites local events with Google data, ignoring timestamps.
+   * Use to correct events that were imported with wrong dates.
+   */
+  async forceResync(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const user = req.user;
+      if (!user) throw new UnauthorizedError('User not found');
+
+      const result = await googleCalendarSyncService.syncFromGoogle(user.id, true);
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  /**
    * POST /api/sync/google-calendar/reset-sync
    * Resets sync timestamp to force full sync (for testing/debugging)
    */

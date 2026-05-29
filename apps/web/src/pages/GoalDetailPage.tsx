@@ -80,6 +80,7 @@ export function GoalDetailPage() {
   const [showTaskPanel, setShowTaskPanel] = useState(false);
   const [habitOptions, setHabitOptions] = useState<HabitOption[]>([]);
   const [taskOptions, setTaskOptions] = useState<TaskOption[]>([]);
+  const [pendingHabitId, setPendingHabitId] = useState<string | null>(null);
 
   const loadHabits = async () => {
     if (habitOptions.length > 0) {
@@ -408,33 +409,96 @@ export function GoalDetailPage() {
         </div>
 
         {showHabitPanel && (
-          <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-            <p className="text-xs font-medium text-gray-600 mb-2">
-              Seleccioná un hábito para vincular:
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {habitOptions
-                .filter((h) => !linkedHabitIds.has(h.id))
-                .map((h) => (
-                  <button
-                    key={h.id}
-                    onClick={() => {
-                      linkHabit.mutate(h.id);
-                      setShowHabitPanel(false);
-                    }}
-                    className="flex items-center gap-1 px-3 py-1 bg-white border border-gray-200 rounded-full text-sm hover:border-blue-400 hover:text-blue-700 transition-colors"
-                  >
-                    {h.icon && <span>{h.icon}</span>}
-                    {h.name}
-                  </button>
-                ))}
-              {habitOptions.filter((h) => !linkedHabitIds.has(h.id)).length === 0 && (
-                <span className="text-xs text-gray-400">Todos los hábitos ya están vinculados</span>
-              )}
-            </div>
+          <div className="mb-4 p-3 bg-blue-50 rounded-lg space-y-3">
+            {/* Step 1: elegir hábito */}
+            {!pendingHabitId && (
+              <>
+                <p className="text-xs font-medium text-gray-600">
+                  Seleccioná un hábito para vincular:
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {habitOptions
+                    .filter((h) => !linkedHabitIds.has(h.id))
+                    .map((h) => (
+                      <button
+                        key={h.id}
+                        onClick={() => {
+                          setPendingHabitId(h.id);
+                        }}
+                        className="flex items-center gap-1 px-3 py-1 bg-white border border-gray-200 rounded-full text-sm hover:border-blue-400 hover:text-blue-700 transition-colors"
+                      >
+                        {h.icon && <span>{h.icon}</span>}
+                        {h.name}
+                      </button>
+                    ))}
+                  {habitOptions.filter((h) => !linkedHabitIds.has(h.id)).length === 0 && (
+                    <span className="text-xs text-gray-400">
+                      Todos los hábitos ya están vinculados
+                    </span>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* Step 2: elegir KR (opcional) */}
+            {pendingHabitId &&
+              (() => {
+                const h = habitOptions.find((o) => o.id === pendingHabitId);
+                const krs = goal.keyResults ?? [];
+                return (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-gray-700">
+                      ¿A qué Key Result alimenta{' '}
+                      <strong>
+                        {h?.icon} {h?.name}
+                      </strong>
+                      ?
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      Cada vez que completes el hábito, su valor se sumará al KR elegido.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => {
+                          linkHabit.mutate({ habitId: pendingHabitId });
+                          setPendingHabitId(null);
+                          setShowHabitPanel(false);
+                        }}
+                        className="px-3 py-1 bg-white border border-gray-200 rounded-full text-xs hover:border-blue-400 transition-colors"
+                      >
+                        Sin KR (solo vincular)
+                      </button>
+                      {krs.map((kr) => (
+                        <button
+                          key={kr.id}
+                          onClick={() => {
+                            linkHabit.mutate({ habitId: pendingHabitId, krId: kr.id });
+                            setPendingHabitId(null);
+                            setShowHabitPanel(false);
+                          }}
+                          className="px-3 py-1 bg-indigo-600 text-white rounded-full text-xs hover:bg-indigo-700 transition-colors"
+                        >
+                          → {kr.title} ({kr.currentValue}/{kr.targetValue}
+                          {kr.unit ? ` ${kr.unit}` : ''})
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => setPendingHabitId(null)}
+                      className="text-xs text-gray-400 hover:text-gray-600"
+                    >
+                      ← Atrás
+                    </button>
+                  </div>
+                );
+              })()}
+
             <button
-              onClick={() => setShowHabitPanel(false)}
-              className="mt-2 text-xs text-gray-400 hover:text-gray-600"
+              onClick={() => {
+                setShowHabitPanel(false);
+                setPendingHabitId(null);
+              }}
+              className="text-xs text-gray-400 hover:text-gray-600"
             >
               Cerrar
             </button>
@@ -445,25 +509,34 @@ export function GoalDetailPage() {
           <p className="text-sm text-gray-400 text-center py-4">Sin hábitos vinculados.</p>
         ) : (
           <div className="space-y-2">
-            {(goal.goalHabits ?? []).map((gh: GoalLinkedHabit) => (
-              <div key={gh.habitId} className="flex items-center justify-between py-1.5">
-                <div className="flex items-center gap-2">
-                  {gh.habit.icon && <span>{gh.habit.icon}</span>}
-                  <span className="text-sm text-gray-800">{gh.habit.name}</span>
-                  {gh.habit.lastCompletedDate && (
-                    <span className="text-xs text-gray-400">
-                      Último: {new Date(gh.habit.lastCompletedDate).toLocaleDateString('es-AR')}
+            {(goal.goalHabits ?? []).map((gh: GoalLinkedHabit) => {
+              const linkedKr = gh.krId
+                ? (goal.keyResults ?? []).find((kr) => kr.id === gh.krId)
+                : null;
+              return (
+                <div key={gh.habitId} className="flex items-center justify-between py-1.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm text-gray-800">{gh.habit.name}</span>
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">
+                      {gh.habit.type === 'NUMERIC' ? 'Numérico' : 'Check'}
                     </span>
-                  )}
+                    {linkedKr ? (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-medium">
+                        → {linkedKr.title}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-300">sin KR</span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => unlinkHabit.mutate(gh.habitId)}
+                    className="text-xs text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
+                  >
+                    Desvincular
+                  </button>
                 </div>
-                <button
-                  onClick={() => unlinkHabit.mutate(gh.habitId)}
-                  className="text-xs text-gray-400 hover:text-red-500 transition-colors"
-                >
-                  Desvincular
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>

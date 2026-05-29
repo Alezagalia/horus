@@ -32,16 +32,6 @@ enum Periodicity {
   CUSTOM
 }
 
-enum TimeOfDay {
-  AYUNO
-  MANANA
-  MEDIA_MANANA
-  TARDE
-  MEDIA_TARDE
-  NOCHE
-  ANTES_DORMIR
-  ANYTIME
-}
 
 enum ChangeType {
   CREATED
@@ -201,6 +191,7 @@ model User {
   mealPlans            MealPlan[]
   nutritionLogs        NutritionLog[]
   shoppingLists        ShoppingList[]
+  habitMoments         HabitMoment[]
 
   @@index([email])
   @@map("users")
@@ -245,7 +236,7 @@ model Habit {
   unit              String?
   periodicity       Periodicity @default(DAILY)
   weekDays          Int[]       @default([])
-  timeOfDay         TimeOfDay   @default(ANYTIME)
+  timeOfDay         String      @default("ANYTIME")
   reminderTime      String?
   color             String?
   order             Int         @default(0)
@@ -1158,6 +1149,7 @@ model Goal {
   targetDate  DateTime?
   completedAt DateTime?
   isActive    Boolean    @default(true)
+  isFeatured  Boolean    @default(false)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
@@ -1170,6 +1162,7 @@ model Goal {
 
   @@index([userId, isActive, status])
   @@index([userId, targetDate])
+  @@index([userId, isFeatured])
   @@map("goals")
 }
 
@@ -1185,24 +1178,29 @@ model KeyResult {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  goal Goal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  goal       Goal        @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  goalHabits GoalHabit[]
 
   @@index([goalId])
   @@map("key_results")
 }
 
 /// GoalHabit: Relación N:N entre Goal y Habit (F-02)
+/// krId opcional: si se indica, cada completado del hábito auto-incrementa ese KR
 model GoalHabit {
   id        String   @id @default(uuid())
   goalId    String
   habitId   String
+  krId      String?
   createdAt DateTime @default(now())
 
-  goal  Goal  @relation(fields: [goalId], references: [id], onDelete: Cascade)
-  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  goal  Goal       @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  habit Habit      @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  kr    KeyResult? @relation(fields: [krId], references: [id], onDelete: SetNull)
 
   @@unique([goalId, habitId])
   @@index([goalId])
+  @@index([habitId, krId])
   @@map("goal_habits")
 }
 
@@ -1645,4 +1643,28 @@ model ShoppingListItem {
 
   @@index([shoppingListId])
   @@map("shopping_list_items")
+}
+
+/// HabitMoment: Momento del día configurable por el usuario para agrupar hábitos.
+/// Reemplaza el enum TimeOfDay con valores editables y rangos horarios.
+model HabitMoment {
+  id          String   @id @default(uuid())
+  userId      String
+  key         String   // identificador slug, ej. "AYUNO", "MANANA", o custom
+  label       String   // etiqueta visible, ej. "En ayunas"
+  emoji       String   @default("⏰")
+  startHour   Int      // hora inicio 0-23
+  startMinute Int      @default(0)
+  endHour     Int      // hora fin 0-23
+  endMinute   Int      @default(0)
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])
+  @@index([userId, isActive])
+  @@map("habit_moments")
 }

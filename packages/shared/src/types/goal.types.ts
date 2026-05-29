@@ -36,6 +36,7 @@ export interface Goal {
   targetDate?: string | null;
   completedAt?: string | null;
   isActive: boolean;
+  isFeatured: boolean;
   createdAt: string;
   updatedAt: string;
   category?: GoalCategory | null;
@@ -44,10 +45,11 @@ export interface Goal {
 
 export interface GoalLinkedHabit {
   habitId: string;
+  krId?: string | null;
   habit: {
     id: string;
     name: string;
-    icon?: string | null;
+    type: string;
     color?: string | null;
     lastCompletedDate?: string | null;
   };

@@ -9,7 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import EmojiPicker, { type EmojiClickData } from 'emoji-picker-react';
 import { HexColorPicker } from 'react-colorful';
-import type { Category, Scope, CreateCategoryDTO } from '@horus/shared';
+import { SCOPE_LABELS, type Category, type Scope, type CreateCategoryDTO } from '@horus/shared';
 
 // Local schema para el formulario
 const formSchema = z.object({
@@ -237,15 +237,7 @@ export function CategoryModal({
               <label className="block text-sm font-medium text-gray-700 mb-1">Ámbito</label>
               <input
                 type="text"
-                value={
-                  scope === 'habitos'
-                    ? 'Hábitos'
-                    : scope === 'tareas'
-                      ? 'Tareas'
-                      : scope === 'eventos'
-                        ? 'Eventos'
-                        : 'Gastos'
-                }
+                value={SCOPE_LABELS[scope] ?? scope}
                 disabled
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed"
               />

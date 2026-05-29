@@ -9,6 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'react-hot-toast';
 import type { Habit, Category, HabitFormData } from '@/types/habits';
 import { habitSchema, type HabitFormSchema } from '@/schemas/habitSchema';
+import { useHabitMoments } from '@/hooks/useHabitMoments';
 
 interface HabitFormModalProps {
   isOpen: boolean;
@@ -65,6 +66,7 @@ export function HabitFormModal({
   const watchType = watch('type');
   const watchPeriodicity = watch('periodicity');
   const watchWeekDays = watch('weekDays');
+  const { data: moments = [] } = useHabitMoments();
 
   // Reset form when modal opens or editingHabit changes
   useEffect(() => {
@@ -309,14 +311,25 @@ export function HabitFormModal({
                   {...register('timeOfDay')}
                   className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
-                  <option value="AYUNO">🍽️ Ayuno</option>
-                  <option value="MANANA">🌅 Mañana</option>
-                  <option value="MEDIA_MANANA">☕ Media mañana</option>
-                  <option value="TARDE">☀️ Tarde</option>
-                  <option value="MEDIA_TARDE">🍵 Media tarde</option>
-                  <option value="NOCHE">🌙 Noche</option>
-                  <option value="ANTES_DORMIR">🛏️ Antes dormir</option>
-                  <option value="ANYTIME">⏰ Cualquiera</option>
+                  {moments.length > 0 ? (
+                    moments.map((m) => (
+                      <option key={m.key} value={m.key}>
+                        {m.emoji} {m.label}
+                      </option>
+                    ))
+                  ) : (
+                    /* fallback estático mientras carga */
+                    <>
+                      <option value="AYUNO">🌅 En ayunas</option>
+                      <option value="MANANA">☀️ Mañana</option>
+                      <option value="MEDIA_MANANA">☕ Media mañana</option>
+                      <option value="TARDE">🌤️ Tarde</option>
+                      <option value="MEDIA_TARDE">🍵 Media tarde</option>
+                      <option value="NOCHE">🌙 Noche</option>
+                      <option value="ANTES_DORMIR">😴 Antes de dormir</option>
+                      <option value="ANYTIME">⏰ Cualquier momento</option>
+                    </>
+                  )}
                 </select>
                 {errors.timeOfDay && (
                   <p className="mt-0.5 text-xs text-red-600">{errors.timeOfDay.message}</p>

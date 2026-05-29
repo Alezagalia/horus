@@ -11,6 +11,8 @@ import {
   createGoal,
   updateGoal,
   deleteGoal,
+  featureGoal,
+  getFeaturedGoal,
   createKeyResult,
   updateKeyResult,
   deleteKeyResult,
@@ -30,6 +32,7 @@ export const goalKeys = {
   all: ['goals'] as const,
   list: (status?: string) => ['goals', status] as const,
   detail: (id: string) => ['goals', id] as const,
+  featured: ['goals', 'featured'] as const,
 };
 
 export function useGoals(status?: string) {
@@ -92,6 +95,32 @@ export function useDeleteGoal() {
   });
 }
 
+export function useFeaturedGoal() {
+  return useQuery({
+    queryKey: goalKeys.featured,
+    queryFn: () => getFeaturedGoal(),
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+export function useFeatureGoal() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => featureGoal(id),
+    onSuccess: (goal) => {
+      toast.success(
+        goal.isFeatured ? '⭐ Meta destacada en el dashboard' : 'Meta removida del dashboard',
+        { duration: 2000 }
+      );
+      queryClient.invalidateQueries({ queryKey: goalKeys.all });
+      queryClient.invalidateQueries({ queryKey: goalKeys.featured });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Error al destacar meta');
+    },
+  });
+}
+
 export function useCreateKeyResult(goalId: string) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -135,7 +164,8 @@ export function useDeleteKeyResult(goalId: string) {
 export function useLinkHabit(goalId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (habitId: string) => linkHabit(goalId, habitId),
+    mutationFn: ({ habitId, krId }: { habitId: string; krId?: string }) =>
+      linkHabit(goalId, habitId, krId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: goalKeys.detail(goalId) });
     },

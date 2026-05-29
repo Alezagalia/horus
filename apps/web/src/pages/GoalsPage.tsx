@@ -5,7 +5,13 @@
 
 import { useState } from 'react';
 import { Toaster } from 'react-hot-toast';
-import { useGoals, useCreateGoal, useUpdateGoal, useDeleteGoal } from '@/hooks/useGoals';
+import {
+  useGoals,
+  useCreateGoal,
+  useUpdateGoal,
+  useDeleteGoal,
+  useFeatureGoal,
+} from '@/hooks/useGoals';
 import { GoalCard } from '@/components/goals/GoalCard';
 import { GoalFormModal } from '@/components/goals/GoalFormModal';
 import type { GoalWithProgress, CreateGoalDTO, UpdateGoalDTO } from '@horus/shared';
@@ -28,6 +34,7 @@ export function GoalsPage() {
   const createMutation = useCreateGoal();
   const updateMutation = useUpdateGoal();
   const deleteMutation = useDeleteGoal();
+  const featureMutation = useFeatureGoal();
 
   const goals = data?.goals ?? [];
 
@@ -121,7 +128,13 @@ export function GoalsPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {goals.map((goal) => (
-            <GoalCard key={goal.id} goal={goal} onEdit={handleEdit} onDelete={setDeletingGoal} />
+            <GoalCard
+              key={goal.id}
+              goal={goal}
+              onEdit={handleEdit}
+              onDelete={setDeletingGoal}
+              onFeature={(id) => featureMutation.mutate(id)}
+            />
           ))}
         </div>
       )}

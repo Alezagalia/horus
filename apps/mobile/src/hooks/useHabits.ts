@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { habitApi, type CreateHabitDTO, type UpdateHabitDTO } from '@/services/api/habitApi';
 import { categoryApi } from '@/services/api/categoryApi';
+import { goalKeys } from './useGoals';
 
 export const habitKeys = {
   all: ['habits'] as const,
@@ -44,9 +45,12 @@ export function useToggleHabitComplete() {
       date: string;
       completed: boolean;
     }) => habitApi.toggleRecord(habitId, date, completed),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: habitKeys.list() });
       queryClient.invalidateQueries({ queryKey: habitKeys.stats() });
+      if (variables.completed) {
+        queryClient.invalidateQueries({ queryKey: goalKeys.all });
+      }
     },
   });
 }
@@ -89,6 +93,7 @@ export function useNumericHabitProgress() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: habitKeys.list() });
       queryClient.invalidateQueries({ queryKey: habitKeys.stats() });
+      queryClient.invalidateQueries({ queryKey: goalKeys.all });
     },
   });
 }

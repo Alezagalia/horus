@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/prisma.js';
 import { env } from '../config/env.js';
 import { categoryService } from './category.service.js';
+import { habitMomentService } from './habitMoment.service.js';
 
 const SALT_ROUNDS = 12;
 
@@ -83,12 +84,17 @@ export const authService = {
     });
 
     // Seed default categories (US-019)
-    // Don't block registration if seed fails, just log error
     try {
       await categoryService.createDefaultCategories(user.id);
     } catch (error) {
       console.error(`[US-019] Failed to seed default categories for user ${user.id}:`, error);
-      // Continue with registration - user can create categories manually
+    }
+
+    // Seed default habit moments
+    try {
+      await habitMomentService.createDefaultMoments(user.id);
+    } catch (error) {
+      console.error(`Failed to seed default habit moments for user ${user.id}:`, error);
     }
 
     return user;

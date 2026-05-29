@@ -52,4 +52,14 @@ export const goalApi = {
   deleteKeyResult: async (goalId: string, krId: string): Promise<void> => {
     await axiosInstance.delete(`/goals/${goalId}/key-results/${krId}`);
   },
+
+  featureGoal: async (id: string): Promise<GoalWithProgress> => {
+    const { data } = await axiosInstance.put(`/goals/${id}/feature`);
+    return data.data ?? data;
+  },
+
+  getFeaturedGoal: async (): Promise<GoalWithProgress | null> => {
+    const { data } = await axiosInstance.get('/goals/featured');
+    return data.data ?? null;
+  },
 };

@@ -4,15 +4,7 @@
  */
 
 export type HabitType = 'CHECK' | 'NUMERIC';
-export type TimeOfDay =
-  | 'AYUNO'
-  | 'MANANA'
-  | 'MEDIA_MANANA'
-  | 'TARDE'
-  | 'MEDIA_TARDE'
-  | 'NOCHE'
-  | 'ANTES_DORMIR'
-  | 'ANYTIME';
+export type TimeOfDay = string;
 export type Periodicity = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'CUSTOM';
 
 export interface HabitOfDay {
@@ -53,16 +45,7 @@ export interface Habit {
   createdAt: string;
 }
 
-export interface HabitsGrouped {
-  AYUNO: HabitOfDay[];
-  MANANA: HabitOfDay[];
-  MEDIA_MANANA: HabitOfDay[];
-  TARDE: HabitOfDay[];
-  MEDIA_TARDE: HabitOfDay[];
-  NOCHE: HabitOfDay[];
-  ANTES_DORMIR: HabitOfDay[];
-  ANYTIME: HabitOfDay[];
-}
+export type HabitsGrouped = Record<string, HabitOfDay[]>;
 
 export interface DayProgress {
   completed: number;

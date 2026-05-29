@@ -10,6 +10,7 @@ import {
   connectGoogleCalendar,
   disconnectGoogleCalendar,
   syncGoogleCalendar,
+  forceResyncGoogleCalendar,
   type GoogleCalendarSyncResult,
 } from '@/services/api/googleCalendarApi';
 import { calendarEventKeys } from './useCalendarEvents';
@@ -112,6 +113,28 @@ export function useSyncGoogleCalendar() {
       } else {
         toast.error(`Error al sincronizar: ${error.message || 'Error desconocido'}`);
       }
+    },
+  });
+}
+
+/**
+ * Force re-sync: overwrites all local Google events with Google's version.
+ */
+export function useForceResyncGoogleCalendar() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: forceResyncGoogleCalendar,
+    onSuccess: (data: GoogleCalendarSyncResult) => {
+      const updated = (data.eventsImported || 0) + (data.eventsUpdated || 0);
+      toast.success(
+        `Re-sincronización completada: ${updated} evento${updated !== 1 ? 's' : ''} corregido${updated !== 1 ? 's' : ''}`
+      );
+      queryClient.invalidateQueries({ queryKey: calendarEventKeys.all });
+      queryClient.invalidateQueries({ queryKey: googleCalendarKeys.status() });
+    },
+    onError: (error: any) => {
+      toast.error(`Error en re-sincronización: ${error.message || 'Error desconocido'}`);
     },
   });
 }

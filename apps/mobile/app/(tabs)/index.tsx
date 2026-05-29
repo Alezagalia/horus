@@ -13,6 +13,7 @@ import { Colors, Spacing, Radius, Gradients, Shadows } from '@/tokens';
 import { useAuthStore } from '@/store/authStore';
 import { useHabits, useHabitStats, useToggleHabitComplete, habitKeys } from '@/hooks/useHabits';
 import { useTasks, useToggleTaskComplete, taskKeys } from '@/hooks/useTasks';
+import { useFeaturedGoal, goalKeys } from '@/hooks/useGoals';
 import { useFinanceStats, accountKeys } from '@/hooks/useAccounts';
 import {
   useUpcomingEvents,
@@ -23,6 +24,7 @@ import {
 import type { Habit } from '@/services/api/habitApi';
 import type { Task } from '@/services/api/taskApi';
 import type { UpcomingEvent } from '@/services/api/eventApi';
+import type { GoalWithProgress } from '@horus/shared';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -294,6 +296,45 @@ function EventRow({ event, isLast }: { event: UpcomingEvent; isLast: boolean }) 
   );
 }
 
+// ─── FeaturedGoalCard ─────────────────────────────────────────────────────────
+
+function FeaturedGoalCard({ goal }: { goal: GoalWithProgress }) {
+  const pct = goal.progress ?? 0;
+  return (
+    <TouchableOpacity
+      onPress={() => router.push({ pathname: '/meta-detalle', params: { id: goal.id } })}
+      activeOpacity={0.85}
+      style={styles.featuredGoal}
+    >
+      <View style={styles.featuredGoalHeader}>
+        <Text style={styles.featuredGoalLabel}>⭐ META DESTACADA</Text>
+        <Text style={styles.featuredGoalPct}>{pct}%</Text>
+      </View>
+      <Text style={styles.featuredGoalTitle} numberOfLines={2}>
+        {goal.title}
+      </Text>
+      <View style={styles.featuredGoalBar}>
+        <View style={[styles.featuredGoalFill, { width: `${Math.min(pct, 100)}%` }]} />
+      </View>
+      {(goal.linkedHabitsCount > 0 ||
+        goal.linkedTasksCount > 0 ||
+        (goal.keyResults?.length ?? 0) > 0) && (
+        <View style={styles.featuredGoalMeta}>
+          {(goal.keyResults?.length ?? 0) > 0 && (
+            <Text style={styles.featuredGoalMetaText}>🎯 {goal.keyResults!.length} KRs</Text>
+          )}
+          {goal.linkedHabitsCount > 0 && (
+            <Text style={styles.featuredGoalMetaText}>🔄 {goal.linkedHabitsCount} hábitos</Text>
+          )}
+          {goal.linkedTasksCount > 0 && (
+            <Text style={styles.featuredGoalMetaText}>✅ {goal.linkedTasksCount} tareas</Text>
+          )}
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+}
+
 // ─── screen ───────────────────────────────────────────────────────────────────
 
 export default function HoyScreen() {
@@ -302,6 +343,7 @@ export default function HoyScreen() {
   const { data: habits = [], isLoading: habitsLoading } = useHabits();
   const { data: stats } = useHabitStats();
   const { data: tasks = [], isLoading: tasksLoading } = useTasks();
+  const { data: featuredGoal } = useFeaturedGoal();
   const { data: financeStats } = useFinanceStats();
   const { data: recurringCount = 0 } = useRecurringExpensesCount();
   const { data: upcomingEvents = [] } = useUpcomingEvents(3);
@@ -324,6 +366,7 @@ export default function HoyScreen() {
       queryClient.invalidateQueries({ queryKey: accountKeys.all }),
       queryClient.invalidateQueries({ queryKey: eventKeys.all }),
       queryClient.invalidateQueries({ queryKey: recurringKeys.all }),
+      queryClient.invalidateQueries({ queryKey: goalKeys.featured }),
     ]);
   }, [queryClient]);
 
@@ -350,6 +393,9 @@ export default function HoyScreen() {
 
       {/* ─── Hero ─────────────────────────────────────────────── */}
       <HeroCard pct={pct} done={done} total={total} longestStreak={longestStreak} />
+
+      {/* ─── Featured Goal ────────────────────────────────────── */}
+      {featuredGoal && <FeaturedGoalCard goal={featuredGoal} />}
 
       {/* ─── Quick stats ──────────────────────────────────────── */}
       <View style={styles.statsRow}>
@@ -667,6 +713,63 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.muted,
     marginTop: 2,
+  },
+
+  // Featured goal
+  featuredGoal: {
+    backgroundColor: '#FFFBEB',
+    borderRadius: Radius['2xl'],
+    borderWidth: 1,
+    borderColor: '#FCD34D',
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+    ...Shadows.account,
+  },
+  featuredGoalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  featuredGoalLabel: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 11,
+    color: '#D97706',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  featuredGoalPct: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 20,
+    color: '#D97706',
+  },
+  featuredGoalTitle: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 16,
+    color: Colors.ink,
+    letterSpacing: -0.3,
+    marginBottom: 10,
+  },
+  featuredGoalBar: {
+    height: 6,
+    backgroundColor: '#FEF3C7',
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  featuredGoalFill: {
+    height: '100%',
+    backgroundColor: '#F59E0B',
+    borderRadius: 3,
+  },
+  featuredGoalMeta: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+  },
+  featuredGoalMetaText: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    color: Colors.muted,
   },
 
   // Empty

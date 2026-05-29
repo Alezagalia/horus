@@ -41,7 +41,16 @@ import {
   useTaskCategories,
   taskKeys,
 } from '@/hooks/useTasks';
-import { useGoals, useCreateGoal, useUpdateGoal, useDeleteGoal, goalKeys } from '@/hooks/useGoals';
+import {
+  useGoals,
+  useCreateGoal,
+  useUpdateGoal,
+  useDeleteGoal,
+  useFeaturedGoal,
+  useFeatureGoal,
+  goalKeys,
+} from '@/hooks/useGoals';
+import { useHabitMoments } from '@/hooks/useHabitMoments';
 import type { Habit } from '@/services/api/habitApi';
 import type { Task, CreateTaskDTO } from '@/services/api/taskApi';
 import type { GoalWithProgress, CreateGoalDTO, UpdateGoalDTO, GoalPriority } from '@horus/shared';
@@ -53,27 +62,7 @@ import { router } from 'expo-router';
 
 const TODAY = format(new Date(), 'yyyy-MM-dd');
 
-const TIME_ORDER = [
-  'AYUNO',
-  'MANANA',
-  'MEDIA_MANANA',
-  'TARDE',
-  'MEDIA_TARDE',
-  'NOCHE',
-  'ANTES_DORMIR',
-  'ANYTIME',
-];
-
-const TIME_LABELS: Record<string, string> = {
-  AYUNO: 'En ayunas',
-  MANANA: 'Mañana',
-  MEDIA_MANANA: 'Media mañana',
-  TARDE: 'Tarde',
-  MEDIA_TARDE: 'Media tarde',
-  NOCHE: 'Noche',
-  ANTES_DORMIR: 'Antes de dormir',
-  ANYTIME: 'Cualquier momento',
-};
+// TIME_ORDER y TIME_LABELS son ahora dinámicos desde la API (useHabitMoments)
 
 const PRIORITY_OPTIONS: Array<{ value: 'alta' | 'media' | 'baja'; label: string }> = [
   { value: 'alta', label: 'Alta' },
@@ -107,15 +96,24 @@ function formatDueDate(dueDate?: string): string | null {
   }
 }
 
-function groupByTimeOfDay(habits: Habit[]): Array<{ key: string; label: string; habits: Habit[] }> {
+function groupByTimeOfDay(
+  habits: Habit[],
+  momentOrder: string[],
+  momentLabels: Record<string, string>,
+  momentEmojis: Record<string, string>
+): Array<{ key: string; label: string; emoji: string; habits: Habit[] }> {
   const map: Record<string, Habit[]> = {};
   for (const h of habits) {
     const key = h.timeOfDay ?? 'ANYTIME';
     (map[key] ??= []).push(h);
   }
-  return TIME_ORDER.filter((k) => map[k]?.length).map((k) => ({
+  // Mantener el orden de los momentos de la API; claves no encontradas al final
+  const knownKeys = momentOrder.filter((k) => map[k]?.length);
+  const unknownKeys = Object.keys(map).filter((k) => !momentOrder.includes(k) && map[k]?.length);
+  return [...knownKeys, ...unknownKeys].map((k) => ({
     key: k,
-    label: TIME_LABELS[k] ?? k,
+    label: momentLabels[k] ?? k,
+    emoji: momentEmojis[k] ?? '⏰',
     habits: map[k],
   }));
 }
@@ -316,10 +314,12 @@ function GoalListItem({
   goal,
   onEdit,
   onDelete,
+  onFeature,
 }: {
   goal: GoalWithProgress;
   onEdit: () => void;
   onDelete: () => void;
+  onFeature: () => void;
 }) {
   const pct = Math.round((goal.progress ?? 0) * 100);
   const priorityColor =
@@ -330,13 +330,19 @@ function GoalListItem({
       onPress={() => router.push({ pathname: '/meta-detalle', params: { id: goal.id } })}
       activeOpacity={0.85}
     >
-      <Card solid style={styles.goalListItem}>
+      <Card solid style={[styles.goalListItem, goal.isFeatured && styles.goalListItemFeatured]}>
         <View style={styles.goalListTop}>
           <View style={[styles.goalPriorityBar, { backgroundColor: priorityColor }]} />
           <Text style={styles.goalListTitle} numberOfLines={2}>
             {goal.title}
           </Text>
           <Text style={styles.goalListPct}>{pct}%</Text>
+          {/* Star / feature button */}
+          <TouchableOpacity onPress={onFeature} hitSlop={8} style={styles.deleteBtn}>
+            <Text style={{ fontSize: 14, color: goal.isFeatured ? '#F59E0B' : Colors.muted }}>
+              {goal.isFeatured ? '★' : '☆'}
+            </Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={onEdit} hitSlop={8} style={styles.deleteBtn}>
             <Pencil size={14} color={Colors.muted} strokeWidth={1.5} />
           </TouchableOpacity>
@@ -371,6 +377,9 @@ function GoalListItem({
 function HabitView({
   habits,
   stats,
+  momentOrder,
+  momentLabels,
+  momentEmojis,
   onToggle,
   onEdit,
   onDelete,
@@ -379,6 +388,9 @@ function HabitView({
 }: {
   habits: Habit[];
   stats: { today: { total: number; completed: number; percentage: number } } | undefined;
+  momentOrder: string[];
+  momentLabels: Record<string, string>;
+  momentEmojis: Record<string, string>;
   onToggle: (h: Habit) => void;
   onEdit: (h: Habit) => void;
   onDelete: (id: string) => void;
@@ -388,7 +400,7 @@ function HabitView({
   const pct = stats?.today.percentage ?? 0;
   const done = stats?.today.completed ?? 0;
   const total = stats?.today.total ?? 0;
-  const groups = groupByTimeOfDay(habits);
+  const groups = groupByTimeOfDay(habits, momentOrder, momentLabels, momentEmojis);
 
   return (
     <>
@@ -417,7 +429,9 @@ function HabitView({
       ) : (
         groups.map((group) => (
           <View key={group.key} style={styles.group}>
-            <Text style={styles.groupLabel}>{group.label.toUpperCase()}</Text>
+            <Text style={styles.groupLabel}>
+              {group.emoji} {group.label.toUpperCase()}
+            </Text>
             <Card padding={0} solid>
               {group.habits.map((h, i) => (
                 <HabitRow
@@ -694,6 +708,9 @@ type Tab = 'tareas' | 'habitos' | 'metas';
 
 export default function FocoScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('tareas');
+  const [taskStatusFilter, setTaskStatusFilter] = useState<
+    'pendiente' | 'en_progreso' | 'completada' | 'todas'
+  >('pendiente');
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | undefined>(undefined);
   const [showHabitModal, setShowHabitModal] = useState(false);
@@ -707,6 +724,13 @@ export default function FocoScreen() {
   const { data: stats } = useHabitStats();
   const { data: tasks = [], isLoading: tLoading } = useTasks();
   const { data: goals = [], isLoading: gLoading } = useGoals('en_progreso');
+  const { data: featuredGoal } = useFeaturedGoal();
+  const { data: moments = [] } = useHabitMoments();
+  const featureGoal = useFeatureGoal();
+
+  const momentOrder = moments.map((m) => m.key);
+  const momentLabels = Object.fromEntries(moments.map((m) => [m.key, m.label]));
+  const momentEmojis = Object.fromEntries(moments.map((m) => [m.key, m.emoji]));
 
   const toggleHabit = useToggleHabitComplete();
   const deleteHabit = useDeleteHabit();
@@ -715,18 +739,37 @@ export default function FocoScreen() {
   const deleteGoal = useDeleteGoal();
 
   const todayHabits = habits.filter(isHabitDueToday);
-  const pendingTasks = tasks.filter((t) => t.status === 'pendiente' || t.status === 'en_progreso');
-  const completedTasks = tasks.filter((t) => t.status === 'completada');
+  const pendingCount = tasks.filter((t) => t.status === 'pendiente').length;
 
-  // Featured goal: most progress or first active
-  const featuredGoal =
-    goals.length > 0 ? [...goals].sort((a, b) => (b.progress ?? 0) - (a.progress ?? 0))[0] : null;
+  const filteredTasks =
+    taskStatusFilter === 'todas' ? tasks : tasks.filter((t) => t.status === taskStatusFilter);
+
+  const tasksByCategory = filteredTasks.reduce<
+    Record<string, { label: string; color?: string; icon?: string; tasks: Task[] }>
+  >((acc, task) => {
+    const key = task.categoryId ?? '__none__';
+    if (!acc[key]) {
+      acc[key] = {
+        label: task.categoryName ?? 'Sin categoría',
+        color: task.categoryColor,
+        icon: task.categoryIcon,
+        tasks: [],
+      };
+    }
+    acc[key].tasks.push(task);
+    return acc;
+  }, {});
+
+  const categoryEntries = Object.entries(tasksByCategory).sort(([a], [b]) =>
+    a === '__none__' ? 1 : b === '__none__' ? -1 : 0
+  );
 
   const onRefresh = useCallback(async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: habitKeys.all }),
       queryClient.invalidateQueries({ queryKey: taskKeys.all }),
       queryClient.invalidateQueries({ queryKey: goalKeys.all }),
+      queryClient.invalidateQueries({ queryKey: goalKeys.featured }),
     ]);
   }, [queryClient]);
 
@@ -799,7 +842,7 @@ export default function FocoScreen() {
           <Chip
             label="Tareas"
             active={activeTab === 'tareas'}
-            badge={pendingTasks.length || undefined}
+            badge={pendingCount || undefined}
             onPress={() => setActiveTab('tareas')}
           />
           <Chip
@@ -824,60 +867,71 @@ export default function FocoScreen() {
             {/* Featured goal */}
             {featuredGoal && <GoalCard goal={featuredGoal} />}
 
-            {/* Por hacer header */}
+            {/* Header */}
             <View style={styles.sectionRow}>
-              <Text style={styles.sectionTitle}>Por hacer</Text>
+              <Text style={styles.sectionTitle}>Tareas</Text>
               <TouchableOpacity onPress={() => setShowCreateTask(true)} activeOpacity={0.7}>
                 <Text style={styles.sectionLink}>+ Nueva</Text>
               </TouchableOpacity>
             </View>
 
-            {/* Pending task cards */}
-            {pendingTasks.length === 0 ? (
+            {/* Status filter chips */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.taskFilterScroll}
+              contentContainerStyle={styles.taskFilterChips}
+            >
+              {(
+                [
+                  { key: 'pendiente', label: 'Pendiente' },
+                  { key: 'en_progreso', label: 'En progreso' },
+                  { key: 'completada', label: 'Completada' },
+                  { key: 'todas', label: 'Todas' },
+                ] as const
+              ).map(({ key, label }) => (
+                <Chip
+                  key={key}
+                  label={label}
+                  active={taskStatusFilter === key}
+                  onPress={() => setTaskStatusFilter(key)}
+                />
+              ))}
+            </ScrollView>
+
+            {/* Grouped by category */}
+            {filteredTasks.length === 0 ? (
               <Card solid style={styles.emptyCard}>
-                <Text style={styles.emptyText}>Sin tareas pendientes 🎯</Text>
+                <Text style={styles.emptyText}>Sin tareas 🎯</Text>
               </Card>
             ) : (
-              <View style={styles.taskList}>
-                {pendingTasks.map((t) => (
-                  <TaskCard
-                    key={t.id}
-                    task={t}
-                    onToggle={() => handleToggleTask(t)}
-                    onEdit={() => {
-                      setEditingTask(t);
-                      setShowCreateTask(true);
-                    }}
-                    onDelete={() => handleDeleteTask(t.id)}
-                    toggling={
-                      (toggleTask.isPending && toggleTask.variables === t.id) ||
-                      (deleteTask.isPending && deleteTask.variables === t.id)
-                    }
-                  />
-                ))}
-              </View>
-            )}
-
-            {/* Completed section */}
-            {completedTasks.length > 0 && (
-              <>
-                <Text style={styles.completedLabel}>Completadas · {completedTasks.length}</Text>
-                <View style={styles.taskList}>
-                  {completedTasks.slice(0, 3).map((t) => (
-                    <TaskCard
-                      key={t.id}
-                      task={t}
-                      onToggle={() => handleToggleTask(t)}
-                      onEdit={() => {
-                        setEditingTask(t);
-                        setShowCreateTask(true);
-                      }}
-                      onDelete={() => handleDeleteTask(t.id)}
-                      toggling={toggleTask.isPending && toggleTask.variables === t.id}
-                    />
-                  ))}
+              categoryEntries.map(([key, group]) => (
+                <View key={key} style={styles.categorySection}>
+                  <View style={styles.categoryHeader}>
+                    {group.icon ? <Text style={styles.categoryIcon}>{group.icon}</Text> : null}
+                    <Text style={styles.categoryLabel}>{group.label}</Text>
+                    <Text style={styles.categoryCount}>{group.tasks.length}</Text>
+                  </View>
+                  <View style={styles.taskList}>
+                    {group.tasks.map((t) => (
+                      <TaskCard
+                        key={t.id}
+                        task={t}
+                        onToggle={() => handleToggleTask(t)}
+                        onEdit={() => {
+                          setEditingTask(t);
+                          setShowCreateTask(true);
+                        }}
+                        onDelete={() => handleDeleteTask(t.id)}
+                        toggling={
+                          (toggleTask.isPending && toggleTask.variables === t.id) ||
+                          (deleteTask.isPending && deleteTask.variables === t.id)
+                        }
+                      />
+                    ))}
+                  </View>
                 </View>
-              </>
+              ))
             )}
           </>
         ) : // ─── HÁBITOS ──────────────────────────────────────
@@ -885,6 +939,9 @@ export default function FocoScreen() {
           <HabitView
             habits={todayHabits}
             stats={stats}
+            momentOrder={momentOrder}
+            momentLabels={momentLabels}
+            momentEmojis={momentEmojis}
             onToggle={handleToggleHabit}
             onEdit={handleEditHabit}
             onDelete={handleDeleteHabit}
@@ -921,6 +978,7 @@ export default function FocoScreen() {
                     goal={g}
                     onEdit={() => handleEditGoal(g)}
                     onDelete={() => handleDeleteGoal(g.id)}
+                    onFeature={() => featureGoal.mutate(g.id)}
                   />
                 ))}
               </View>
@@ -1214,6 +1272,33 @@ const styles = StyleSheet.create({
     color: Colors.vivid,
   },
 
+  // Task status filter
+  taskFilterScroll: { marginBottom: Spacing.md },
+  taskFilterChips: { gap: Spacing.xs, paddingRight: Spacing.sm },
+
+  // Category grouping
+  categorySection: { marginBottom: Spacing.lg },
+  categoryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: Spacing.sm,
+  },
+  categoryIcon: { fontSize: 14 },
+  categoryLabel: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 13,
+    color: Colors.muted,
+    letterSpacing: 0.4,
+    flex: 1,
+    textTransform: 'uppercase',
+  },
+  categoryCount: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 12,
+    color: Colors.muted,
+  },
+
   // Task list (individual cards)
   taskList: { gap: Spacing.sm, marginBottom: Spacing.lg },
   taskCard: {
@@ -1375,6 +1460,7 @@ const styles = StyleSheet.create({
 
   // Goal list item
   goalListItem: { marginBottom: Spacing.sm },
+  goalListItemFeatured: { borderColor: '#FCD34D', borderWidth: 1.5 },
   goalListTop: {
     flexDirection: 'row',
     alignItems: 'flex-start',

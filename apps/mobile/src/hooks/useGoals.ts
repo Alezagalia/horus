@@ -11,6 +11,7 @@ export const goalKeys = {
   all: ['goals'] as const,
   list: (status?: string) => [...goalKeys.all, 'list', status] as const,
   detail: (id: string) => [...goalKeys.all, 'detail', id] as const,
+  featured: ['goals', 'featured'] as const,
 };
 
 export function useGoals(status?: string) {
@@ -57,6 +58,25 @@ export function useGoal(id: string | undefined) {
     queryFn: () => goalApi.getById(id!),
     enabled: !!id,
     staleTime: 1000 * 60 * 2,
+  });
+}
+
+export function useFeaturedGoal() {
+  return useQuery({
+    queryKey: goalKeys.featured,
+    queryFn: () => goalApi.getFeaturedGoal(),
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+export function useFeatureGoal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => goalApi.featureGoal(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: goalKeys.all });
+      qc.invalidateQueries({ queryKey: goalKeys.featured });
+    },
   });
 }
 

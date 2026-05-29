@@ -42,6 +42,16 @@ export async function deleteGoal(id: string): Promise<void> {
   await axiosInstance.delete(`/goals/${id}`);
 }
 
+export async function featureGoal(id: string): Promise<GoalWithProgress> {
+  const response = await axiosInstance.put<{ data: GoalWithProgress }>(`/goals/${id}/feature`);
+  return response.data.data;
+}
+
+export async function getFeaturedGoal(): Promise<GoalWithProgress | null> {
+  const response = await axiosInstance.get<{ data: GoalWithProgress | null }>('/goals/featured');
+  return response.data.data;
+}
+
 export async function createKeyResult(
   goalId: string,
   data: CreateKeyResultDTO
@@ -69,8 +79,8 @@ export async function deleteKeyResult(goalId: string, krId: string): Promise<voi
   await axiosInstance.delete(`/goals/${goalId}/key-results/${krId}`);
 }
 
-export async function linkHabit(goalId: string, habitId: string): Promise<void> {
-  await axiosInstance.post(`/goals/${goalId}/habits/${habitId}`);
+export async function linkHabit(goalId: string, habitId: string, krId?: string): Promise<void> {
+  await axiosInstance.post(`/goals/${goalId}/habits/${habitId}`, krId ? { krId } : {});
 }
 
 export async function unlinkHabit(goalId: string, habitId: string): Promise<void> {

@@ -199,6 +199,24 @@ export const habitRecordService = {
       return updatedRecord!;
     });
 
+    // Auto-incrementar KRs vinculados a este hábito
+    if (completed) {
+      const links = await prisma.goalHabit.findMany({
+        where: { habitId, krId: { not: null } },
+        include: { goal: { select: { userId: true } } },
+      });
+
+      for (const link of links) {
+        if (link.goal.userId !== userId || !link.krId) continue;
+        // NUMERIC: suma el valor registrado; CHECK: suma 1
+        const increment = habit.type === 'NUMERIC' ? (value ?? 1) : 1;
+        await prisma.keyResult.update({
+          where: { id: link.krId },
+          data: { currentValue: { increment } },
+        });
+      }
+    }
+
     return record;
   },
 

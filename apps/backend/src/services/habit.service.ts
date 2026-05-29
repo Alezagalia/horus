@@ -5,7 +5,7 @@
  */
 
 import { prisma } from '../lib/prisma.js';
-import { HabitType, Periodicity, TimeOfDay } from '../generated/prisma/client.js';
+import { HabitType, Periodicity } from '../generated/prisma/client.js';
 import { NotFoundError, BadRequestError } from '../middlewares/error.middleware.js';
 import { parseISODateToNoonUTC } from '../utils/date.utils.js';
 
@@ -18,7 +18,7 @@ export interface CreateHabitData {
   unit?: string;
   periodicity: Periodicity;
   weekDays: number[];
-  timeOfDay: TimeOfDay;
+  timeOfDay: string;
   reminderTime?: string;
   color?: string;
   order: number;
@@ -33,7 +33,7 @@ export interface UpdateHabitData {
   unit?: string | null;
   periodicity?: Periodicity;
   weekDays?: number[];
-  timeOfDay?: TimeOfDay;
+  timeOfDay?: string;
   reminderTime?: string | null;
   color?: string | null;
   order?: number;
@@ -281,7 +281,7 @@ export const habitService = {
    *
    * Updates the order field for each habit based on the provided array order
    */
-  async reorderHabits(userId: string, timeOfDay: TimeOfDay, habitIds: string[]) {
+  async reorderHabits(userId: string, timeOfDay: string, habitIds: string[]) {
     // Verify all habits belong to user and have the specified timeOfDay
     const habits = await prisma.habit.findMany({
       where: {

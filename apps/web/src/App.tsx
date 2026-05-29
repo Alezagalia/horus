@@ -43,6 +43,9 @@ const CalendarPage = lazy(() =>
 const CategoriesPage = lazy(() =>
   import('@/pages/CategoriesPage').then((m) => ({ default: m.CategoriesPage }))
 );
+const HabitMomentsPage = lazy(() =>
+  import('@/pages/HabitMomentsPage').then((m) => ({ default: m.HabitMomentsPage }))
+);
 const GoogleCallbackPage = lazy(() =>
   import('@/pages/GoogleCallbackPage').then((m) => ({ default: m.GoogleCallbackPage }))
 );
@@ -195,6 +198,16 @@ function AppRoutes() {
             <ProtectedRoute>
               <MainLayout>
                 <CategoriesPage />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/habit-moments"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <HabitMomentsPage />
               </MainLayout>
             </ProtectedRoute>
           }

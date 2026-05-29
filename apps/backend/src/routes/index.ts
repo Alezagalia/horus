@@ -31,6 +31,7 @@ import recipeRoutes from './recipe.routes.js';
 import mealPlanRoutes from './mealPlan.routes.js';
 import nutritionLogRoutes from './nutritionLog.routes.js';
 import shoppingListRoutes from './shoppingList.routes.js';
+import habitMomentRoutes from './habitMoment.routes.js';
 
 const router: IRouter = Router();
 
@@ -66,6 +67,7 @@ router.use('/recipes', recipeRoutes);
 router.use('/meal-plans', mealPlanRoutes);
 router.use('/nutrition-logs', nutritionLogRoutes);
 router.use('/shopping-lists', shoppingListRoutes);
+router.use('/habit-moments', habitMomentRoutes);
 
 // Health check
 router.get('/health', (_req, res) => {

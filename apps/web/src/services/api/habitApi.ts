@@ -248,18 +248,10 @@ export async function getHabitDetailedStats(habitId: string): Promise<unknown> {
 
 // ==================== Reorder ====================
 
-export type TimeOfDay =
-  | 'AYUNO'
-  | 'MANANA'
-  | 'MEDIA_MANANA'
-  | 'TARDE'
-  | 'MEDIA_TARDE'
-  | 'NOCHE'
-  | 'ANTES_DORMIR'
-  | 'ANYTIME';
+export type TimeOfDay = string;
 
 export interface ReorderHabitsDTO {
-  timeOfDay: TimeOfDay;
+  timeOfDay: string;
   habitIds: string[];
 }
 

@@ -13,9 +13,11 @@ router.use(authMiddleware);
 
 // Goals CRUD
 router.get('/', goalController.list);
+router.get('/featured', goalController.getFeatured);
 router.get('/:id', goalController.getById);
 router.post('/', goalController.create);
 router.put('/:id', goalController.update);
+router.put('/:id/feature', goalController.feature);
 router.delete('/:id', goalController.remove);
 
 // Key Results

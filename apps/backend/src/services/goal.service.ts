@@ -16,17 +16,33 @@ import { prisma } from '../lib/prisma.js';
 
 // ─── Progress Calculation ─────────────────────────────────────────────────────
 
+/**
+ * Progreso calculado en 2 niveles:
+ * 1. Si hay KRs activos → promedio de (currentValue / targetValue) por KR (0–100)
+ * 2. Fallback sin KRs  → ratio de tareas completadas (o 0 si tampoco hay tareas)
+ */
 function calculateProgress(
-  goalTasks: Array<{ task: { status: string } }>,
-  goalHabits: Array<{ habit: { lastCompletedDate: Date | null } }>
+  keyResults: Array<{ targetValue: unknown; currentValue: unknown; isActive: boolean }>,
+  goalTasks: Array<{ task: { status: string } }>
 ): number {
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-  const completedTasks = goalTasks.filter((gt) => gt.task.status === 'completada').length;
-  const completedHabits = goalHabits.filter(
-    (gh) => gh.habit.lastCompletedDate && new Date(gh.habit.lastCompletedDate) >= sevenDaysAgo
-  ).length;
-  const total = goalTasks.length + goalHabits.length;
-  return total > 0 ? Math.round(((completedTasks + completedHabits) / total) * 100) : 0;
+  const activeKRs = keyResults.filter((kr) => kr.isActive);
+
+  if (activeKRs.length > 0) {
+    const avg =
+      activeKRs.reduce((sum, kr) => {
+        const target = Number(kr.targetValue);
+        const current = Number(kr.currentValue);
+        return sum + (target > 0 ? Math.min(current / target, 1) : 0);
+      }, 0) / activeKRs.length;
+    return Math.round(avg * 100);
+  }
+
+  if (goalTasks.length > 0) {
+    const done = goalTasks.filter((gt) => gt.task.status === 'completada').length;
+    return Math.round((done / goalTasks.length) * 100);
+  }
+
+  return 0;
 }
 
 // ─── Goal CRUD ────────────────────────────────────────────────────────────────
@@ -43,7 +59,9 @@ export const listGoals = async (userId: string, status?: string) => {
       keyResults: { where: { isActive: true }, orderBy: { createdAt: 'asc' } },
       goalHabits: {
         include: {
-          habit: { select: { id: true, name: true, color: true, lastCompletedDate: true } },
+          habit: {
+            select: { id: true, name: true, type: true, color: true, lastCompletedDate: true },
+          },
         },
       },
       goalTasks: {
@@ -62,7 +80,7 @@ export const listGoals = async (userId: string, status?: string) => {
       targetValue: Number(kr.targetValue),
       currentValue: Number(kr.currentValue),
     })),
-    progress: calculateProgress(g.goalTasks, g.goalHabits),
+    progress: calculateProgress(g.keyResults, g.goalTasks),
     linkedHabitsCount: g.goalHabits.length,
     linkedTasksCount: g.goalTasks.length,
   }));
@@ -77,7 +95,7 @@ export const getGoalById = async (goalId: string, userId: string) => {
       goalHabits: {
         include: {
           habit: {
-            select: { id: true, name: true, color: true, lastCompletedDate: true },
+            select: { id: true, name: true, type: true, color: true, lastCompletedDate: true },
           },
         },
       },
@@ -98,7 +116,7 @@ export const getGoalById = async (goalId: string, userId: string) => {
       targetValue: Number(kr.targetValue),
       currentValue: Number(kr.currentValue),
     })),
-    progress: calculateProgress(goal.goalTasks, goal.goalHabits),
+    progress: calculateProgress(goal.keyResults, goal.goalTasks),
     linkedHabitsCount: goal.goalHabits.length,
     linkedTasksCount: goal.goalTasks.length,
   };
@@ -190,7 +208,7 @@ export const updateGoal = async (goalId: string, userId: string, data: UpdateGoa
       targetValue: Number(kr.targetValue),
       currentValue: Number(kr.currentValue),
     })),
-    progress: calculateProgress(goal.goalTasks, goal.goalHabits),
+    progress: calculateProgress(goal.keyResults, goal.goalTasks),
     linkedHabitsCount: goal.goalHabits.length,
     linkedTasksCount: goal.goalTasks.length,
   };
@@ -200,6 +218,51 @@ export const deleteGoal = async (goalId: string, userId: string) => {
   const existing = await prisma.goal.findFirst({ where: { id: goalId, userId } });
   if (!existing) throw new Error('Meta no encontrada');
   return prisma.goal.update({ where: { id: goalId }, data: { isActive: false } });
+};
+
+export const featureGoal = async (goalId: string, userId: string) => {
+  const existing = await prisma.goal.findFirst({ where: { id: goalId, userId, isActive: true } });
+  if (!existing) throw new Error('Meta no encontrada');
+
+  const newFeatured = !existing.isFeatured;
+
+  // Unfeature all goals for this user first
+  await prisma.goal.updateMany({ where: { userId }, data: { isFeatured: false } });
+
+  // Toggle featured on this goal
+  return prisma.goal.update({ where: { id: goalId }, data: { isFeatured: newFeatured } });
+};
+
+export const getFeaturedGoal = async (userId: string) => {
+  const goal = await prisma.goal.findFirst({
+    where: { userId, isActive: true, isFeatured: true },
+    include: {
+      category: { select: { id: true, name: true, icon: true, color: true } },
+      keyResults: { where: { isActive: true }, orderBy: { createdAt: 'asc' } },
+      goalHabits: {
+        include: {
+          habit: { select: { id: true, name: true, color: true, lastCompletedDate: true } },
+        },
+      },
+      goalTasks: {
+        include: { task: { select: { id: true, title: true, status: true } } },
+      },
+    },
+  });
+
+  if (!goal) return null;
+
+  return {
+    ...goal,
+    keyResults: goal.keyResults.map((kr) => ({
+      ...kr,
+      targetValue: Number(kr.targetValue),
+      currentValue: Number(kr.currentValue),
+    })),
+    progress: calculateProgress(goal.keyResults, goal.goalTasks),
+    linkedHabitsCount: goal.goalHabits.length,
+    linkedTasksCount: goal.goalTasks.length,
+  };
 };
 
 // ─── Key Results ──────────────────────────────────────────────────────────────
@@ -262,17 +325,22 @@ export const deleteKeyResult = async (krId: string, goalId: string, userId: stri
 
 // ─── Link / Unlink Habits ─────────────────────────────────────────────────────
 
-export const linkHabit = async (goalId: string, userId: string, habitId: string) => {
+export const linkHabit = async (goalId: string, userId: string, habitId: string, krId?: string) => {
   const goal = await prisma.goal.findFirst({ where: { id: goalId, userId, isActive: true } });
   if (!goal) throw new Error('Meta no encontrada');
 
   const habit = await prisma.habit.findFirst({ where: { id: habitId, userId, isActive: true } });
   if (!habit) throw new Error('Hábito no encontrado');
 
+  if (krId) {
+    const kr = await prisma.keyResult.findFirst({ where: { id: krId, goalId, isActive: true } });
+    if (!kr) throw new Error('Key Result no encontrado');
+  }
+
   return prisma.goalHabit.upsert({
     where: { goalId_habitId: { goalId, habitId } },
-    create: { goalId, habitId },
-    update: {},
+    create: { goalId, habitId, krId: krId ?? null },
+    update: { krId: krId ?? null },
   });
 };
 

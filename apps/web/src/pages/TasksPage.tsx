@@ -37,7 +37,7 @@ export function TasksPage() {
   });
 
   // State para filtros
-  const [statusFilter, setStatusFilter] = useState<TaskFilterStatus>('all');
+  const [statusFilter, setStatusFilter] = useState<TaskFilterStatus>('pending');
   const [priorityFilter, setPriorityFilter] = useState<TaskFilterPriority>('all');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<TaskSortOption>('dueDate');
@@ -66,7 +66,7 @@ export function TasksPage() {
   const toggleCompleteMutation = useToggleTaskComplete();
   const toggleChecklistItemMutation = useToggleChecklistItem();
 
-  // Ordenamiento local (los filtros ya se aplican en la API)
+  // Ordenamiento local y agrupación por categoría
   const sortedTasks = useMemo(() => {
     const sorted = [...tasks].sort((a, b) => {
       switch (sortBy) {
@@ -93,6 +93,27 @@ export function TasksPage() {
       return 0;
     });
   }, [tasks, sortBy]);
+
+  const tasksByCategory = useMemo(() => {
+    const groups: Record<string, { label: string; icon?: string; color?: string; tasks: Task[] }> =
+      {};
+    for (const task of sortedTasks) {
+      const key = task.categoryId || '__none__';
+      if (!groups[key]) {
+        groups[key] = {
+          label: task.categoryName || 'Sin categoría',
+          icon: task.categoryIcon,
+          color: task.categoryColor,
+          tasks: [],
+        };
+      }
+      groups[key].tasks.push(task);
+    }
+    // "Sin categoría" siempre al final
+    return Object.entries(groups).sort(([a], [b]) =>
+      a === '__none__' ? 1 : b === '__none__' ? -1 : 0
+    );
+  }, [sortedTasks]);
 
   const handleCreateTask = () => {
     setEditingTask(null);
@@ -241,17 +262,31 @@ export function TasksPage() {
           </div>
         </div>
       ) : (
-        <div className="space-y-3">
-          {sortedTasks.map((task) => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              onToggleComplete={handleToggleComplete}
-              onEdit={handleEditTask}
-              onDelete={handleDeleteTask}
-              onViewDetails={handleViewDetails}
-              onToggleChecklistItem={handleToggleChecklistItem}
-            />
+        <div className="space-y-6">
+          {tasksByCategory.map(([key, group]) => (
+            <div key={key}>
+              {/* Category header */}
+              <div className="flex items-center gap-2 mb-3">
+                {group.icon && <span className="text-base">{group.icon}</span>}
+                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                  {group.label}
+                </h3>
+                <span className="text-xs text-gray-400 font-medium">{group.tasks.length}</span>
+              </div>
+              <div className="space-y-3">
+                {group.tasks.map((task) => (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    onToggleComplete={handleToggleComplete}
+                    onEdit={handleEditTask}
+                    onDelete={handleDeleteTask}
+                    onViewDetails={handleViewDetails}
+                    onToggleChecklistItem={handleToggleChecklistItem}
+                  />
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       )}
