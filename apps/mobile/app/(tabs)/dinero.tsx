@@ -62,11 +62,19 @@ import {
   useDeleteBudget,
   budgetKeys,
 } from '@/hooks/useBudgets';
+import {
+  useSavingsGoals,
+  useCreateSavingsGoal,
+  useUpdateSavingsGoal,
+  useDeleteSavingsGoal,
+  savingsGoalKeys,
+} from '@/hooks/useSavingsGoals';
 import type { Transaction, TransactionType } from '@/services/api/transactionApi';
 import type { Account } from '@/services/api/accountApi';
 import type { RecurringExpense } from '@/services/api/recurringExpenseApi';
 import type { MonthlyExpense } from '@/services/api/monthlyExpenseApi';
 import type { BudgetSummary } from '@/services/api/budgetApi';
+import type { SavingsGoalWithProgress } from '@/services/api/savingsGoalApi';
 import type { CreateRecurringExpenseDTO } from '@horus/shared';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -1047,9 +1055,291 @@ function BudgetFormModal({
   );
 }
 
+// ─── Savings goal components ──────────────────────────────────────────────────
+
+function SavingsGoalCard({
+  goal,
+  onEdit,
+  onDelete,
+  onComplete,
+}: {
+  goal: SavingsGoalWithProgress;
+  onEdit: () => void;
+  onDelete: () => void;
+  onComplete: () => void;
+}) {
+  const pct = Math.min(goal.progress, 100);
+  const isCompleted = goal.status === 'completada';
+  const isCancelled = goal.status === 'cancelada';
+  const barColor = isCompleted
+    ? '#22c55e'
+    : goal.progress >= 75
+      ? Colors.vivid
+      : goal.progress >= 40
+        ? '#f59e0b'
+        : Colors.muted;
+  const dotColor = goal.account?.color ?? Colors.vivid;
+  const currency = goal.account?.currency ?? 'ARS';
+
+  return (
+    <Card solid style={{ marginBottom: Spacing.md, opacity: isCancelled ? 0.55 : 1 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+        <View
+          style={[
+            styles.catDot,
+            { backgroundColor: dotColor, width: 12, height: 12, borderRadius: 6 },
+          ]}
+        />
+        <View style={{ flex: 1, marginLeft: 8 }}>
+          <Text style={styles.txConcept}>{goal.name}</Text>
+          <Text style={styles.txMeta}>{goal.account?.name}</Text>
+        </View>
+        {isCompleted && <Text style={{ fontSize: 16, marginRight: 4 }}>✅</Text>}
+        {!isCompleted && !isCancelled && goal.progress >= 100 && (
+          <TouchableOpacity
+            onPress={onComplete}
+            hitSlop={8}
+            style={[styles.payBtn, { marginRight: 6 }]}
+          >
+            <Text style={styles.payBtnLabel}>Completar</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity onPress={onEdit} hitSlop={8} style={{ marginLeft: 4 }}>
+          <Pencil size={15} color={Colors.muted} strokeWidth={1.5} />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={onDelete} hitSlop={8} style={{ marginLeft: 10 }}>
+          <Trash2 size={15} color={Colors.muted} strokeWidth={1.5} />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.progressBar}>
+        <View
+          style={[styles.progressFill, { width: `${pct}%` as any, backgroundColor: barColor }]}
+        />
+      </View>
+
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
+        <Text style={styles.txMeta}>
+          {formatMoney(goal.savedAmount, currency)} de {formatMoney(goal.targetAmount, currency)}
+        </Text>
+        <Text style={[styles.budgetPct, { fontSize: 12, color: barColor }]}>
+          {Math.round(goal.progress)}%
+        </Text>
+      </View>
+
+      {goal.targetDate && (
+        <Text style={[styles.txMeta, { marginTop: 4 }]}>
+          Meta: {format(new Date(goal.targetDate), "d 'de' MMMM yyyy", { locale: es })}
+        </Text>
+      )}
+    </Card>
+  );
+}
+
+function SavingsGoalFormModal({
+  visible,
+  goal,
+  accounts,
+  onClose,
+}: {
+  visible: boolean;
+  goal: SavingsGoalWithProgress | null;
+  accounts: Account[];
+  onClose: () => void;
+}) {
+  const isEditing = !!goal;
+  const [name, setName] = useState('');
+  const [accountId, setAccountId] = useState('');
+  const [targetAmount, setTargetAmount] = useState('');
+  const [targetDate, setTargetDate] = useState('');
+  const [notes, setNotes] = useState('');
+
+  const createGoal = useCreateSavingsGoal();
+  const updateGoal = useUpdateSavingsGoal();
+
+  useEffect(() => {
+    if (visible) {
+      if (goal) {
+        setName(goal.name);
+        setAccountId(goal.accountId);
+        setTargetAmount(String(goal.targetAmount));
+        setTargetDate(goal.targetDate ? goal.targetDate.split('T')[0] : '');
+        setNotes(goal.notes ?? '');
+      } else {
+        setName('');
+        setAccountId(accounts[0]?.id ?? '');
+        setTargetAmount('');
+        setTargetDate('');
+        setNotes('');
+      }
+    }
+  }, [visible, goal, accounts]);
+
+  const handleClose = () => {
+    setName('');
+    setTargetAmount('');
+    setTargetDate('');
+    setNotes('');
+    onClose();
+  };
+
+  const canSubmit =
+    name.trim() !== '' && parseFloat(targetAmount) > 0 && (isEditing || !!accountId);
+
+  const handleSubmit = () => {
+    if (!canSubmit) return;
+    const targetDateISO = targetDate.trim()
+      ? new Date(`${targetDate}T12:00:00`).toISOString()
+      : null;
+
+    if (isEditing && goal) {
+      updateGoal.mutate(
+        {
+          id: goal.id,
+          data: {
+            name: name.trim(),
+            targetAmount: parseFloat(targetAmount),
+            targetDate: targetDateISO,
+            notes: notes.trim() || null,
+          },
+        },
+        { onSuccess: handleClose }
+      );
+    } else {
+      createGoal.mutate(
+        {
+          name: name.trim(),
+          accountId,
+          targetAmount: parseFloat(targetAmount),
+          targetDate: targetDateISO,
+          notes: notes.trim() || null,
+        },
+        { onSuccess: handleClose }
+      );
+    }
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.modalOverlay}
+      >
+        <TouchableOpacity
+          style={StyleSheet.absoluteFillObject}
+          activeOpacity={1}
+          onPress={handleClose}
+        />
+        <View style={styles.modalSheet}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>
+              {isEditing ? 'Editar meta de ahorro' : 'Nueva meta de ahorro'}
+            </Text>
+            <TouchableOpacity
+              onPress={handleClose}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <X size={20} color={Colors.muted} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <TextInput
+              style={styles.conceptInput}
+              value={name}
+              onChangeText={setName}
+              placeholder="Nombre de la meta (ej. Vacaciones)"
+              placeholderTextColor={Colors.muted}
+              autoFocus={!isEditing}
+              returnKeyType="next"
+            />
+
+            {!isEditing && (
+              <>
+                <Text style={styles.pickerLabel}>CUENTA *</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.pickerScroll}
+                  contentContainerStyle={{ gap: Spacing.sm }}
+                >
+                  {accounts.map((a) => (
+                    <TouchableOpacity
+                      key={a.id}
+                      style={[styles.pickerChip, accountId === a.id && styles.pickerChipActive]}
+                      onPress={() => setAccountId(a.id)}
+                    >
+                      {a.color && (
+                        <View style={[styles.accountDot, { backgroundColor: a.color }]} />
+                      )}
+                      <Text
+                        style={[
+                          styles.pickerChipLabel,
+                          { color: accountId === a.id ? '#fff' : Colors.ink },
+                        ]}
+                      >
+                        {a.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </>
+            )}
+
+            {isEditing && (
+              <Text style={[styles.txMeta, { marginBottom: Spacing.md, fontSize: 13 }]}>
+                Cuenta: {goal?.account?.name}
+              </Text>
+            )}
+
+            <Text style={styles.pickerLabel}>MONTO OBJETIVO *</Text>
+            <TextInput
+              style={[styles.conceptInput, { marginBottom: Spacing.lg }]}
+              value={targetAmount}
+              onChangeText={setTargetAmount}
+              placeholder="Ej. 500000"
+              placeholderTextColor={Colors.muted}
+              keyboardType="numeric"
+              returnKeyType="next"
+            />
+
+            <Text style={styles.pickerLabel}>FECHA OBJETIVO (AAAA-MM-DD, opcional)</Text>
+            <TextInput
+              style={[styles.conceptInput, { marginBottom: Spacing.lg }]}
+              value={targetDate}
+              onChangeText={setTargetDate}
+              placeholder="2025-12-31"
+              placeholderTextColor={Colors.muted}
+              returnKeyType="next"
+            />
+
+            <Text style={styles.pickerLabel}>NOTAS (opcional)</Text>
+            <TextInput
+              style={[styles.conceptInput, { minHeight: 56, textAlignVertical: 'top' }]}
+              value={notes}
+              onChangeText={setNotes}
+              placeholder="Comentarios…"
+              placeholderTextColor={Colors.muted}
+              multiline
+            />
+
+            <Button
+              label={isEditing ? 'Guardar cambios' : 'Crear meta de ahorro'}
+              onPress={handleSubmit}
+              loading={createGoal.isPending || updateGoal.isPending}
+              disabled={!canSubmit}
+              style={{ marginTop: Spacing.sm, marginBottom: Spacing.md }}
+            />
+          </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
 // ─── screen ───────────────────────────────────────────────────────────────────
 
-type DineroTab = 'movimientos' | 'fijos' | 'mensuales' | 'presupuestos';
+type DineroTab = 'movimientos' | 'fijos' | 'mensuales' | 'presupuestos' | 'ahorro';
 
 export default function DineroScreen() {
   const now = new Date();
@@ -1063,6 +1353,8 @@ export default function DineroScreen() {
   const [selectedExpense, setSelectedExpense] = useState<MonthlyExpense | null>(null);
   const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [budgetEditing, setBudgetEditing] = useState<BudgetSummary | null>(null);
+  const [showSavingsModal, setShowSavingsModal] = useState(false);
+  const [savingsEditing, setSavingsEditing] = useState<SavingsGoalWithProgress | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -1112,6 +1404,13 @@ export default function DineroScreen() {
   const deleteBudgetMutation = useDeleteBudget();
   const budgetSummary = budgetSummaryData?.summary ?? [];
 
+  const { data: savingsData, isLoading: savingsLoading } = useSavingsGoals();
+  const deleteSavingsMutation = useDeleteSavingsGoal();
+  const completeSavingsMutation = useUpdateSavingsGoal();
+  const savingsGoals = savingsData?.savingsGoals ?? [];
+  const activeSavings = savingsGoals.filter((g) => g.status === 'en_progreso');
+  const completedSavings = savingsGoals.filter((g) => g.status === 'completada');
+
   const monthlyExpenses = monthlyData?.monthlyExpenses ?? [];
   const pendingExpenses = useMemo(
     () => monthlyExpenses.filter((e) => e.status === 'pendiente'),
@@ -1141,6 +1440,7 @@ export default function DineroScreen() {
       queryClient.invalidateQueries({ queryKey: recurringKeys.all }),
       queryClient.invalidateQueries({ queryKey: monthlyExpenseKeys.all }),
       queryClient.invalidateQueries({ queryKey: budgetKeys.all }),
+      queryClient.invalidateQueries({ queryKey: savingsGoalKeys.all }),
     ]);
   }, [queryClient]);
 
@@ -1212,6 +1512,12 @@ export default function DineroScreen() {
             active={activeTab === 'presupuestos'}
             badge={budgetSummary.length || undefined}
             onPress={() => setActiveTab('presupuestos')}
+          />
+          <Chip
+            label="Ahorro"
+            active={activeTab === 'ahorro'}
+            badge={activeSavings.length || undefined}
+            onPress={() => setActiveTab('ahorro')}
           />
         </ScrollView>
 
@@ -1426,7 +1732,7 @@ export default function DineroScreen() {
               </Card>
             )}
           </>
-        ) : (
+        ) : activeTab === 'presupuestos' ? (
           <>
             {budgetLoading ? (
               <ActivityIndicator color={Colors.vivid} style={{ marginVertical: 24 }} />
@@ -1469,18 +1775,116 @@ export default function DineroScreen() {
               ))
             )}
           </>
+        ) : (
+          <>
+            {/* EN PROGRESO */}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>EN PROGRESO</Text>
+              {activeSavings.length > 0 && (
+                <View style={styles.sectionBadge}>
+                  <Text style={styles.sectionBadgeText}>{activeSavings.length}</Text>
+                </View>
+              )}
+            </View>
+
+            {savingsLoading ? (
+              <ActivityIndicator color={Colors.vivid} style={{ marginVertical: 24 }} />
+            ) : activeSavings.length === 0 ? (
+              <Card solid>
+                <Text style={styles.emptyText}>Sin metas de ahorro activas 🐷</Text>
+                <Button
+                  label="+ Nueva meta"
+                  onPress={() => {
+                    setSavingsEditing(null);
+                    setShowSavingsModal(true);
+                  }}
+                  style={{ marginTop: Spacing.md }}
+                />
+              </Card>
+            ) : (
+              activeSavings.map((g) => (
+                <SavingsGoalCard
+                  key={g.id}
+                  goal={g}
+                  onEdit={() => {
+                    setSavingsEditing(g);
+                    setShowSavingsModal(true);
+                  }}
+                  onDelete={() =>
+                    Alert.alert('Eliminar meta', `¿Eliminar "${g.name}"?`, [
+                      { text: 'Cancelar', style: 'cancel' },
+                      {
+                        text: 'Eliminar',
+                        style: 'destructive',
+                        onPress: () => deleteSavingsMutation.mutate(g.id),
+                      },
+                    ])
+                  }
+                  onComplete={() =>
+                    Alert.alert('Completar meta', `¿Marcar "${g.name}" como completada?`, [
+                      { text: 'Cancelar', style: 'cancel' },
+                      {
+                        text: 'Completar',
+                        onPress: () =>
+                          completeSavingsMutation.mutate({
+                            id: g.id,
+                            data: { status: 'completada' },
+                          }),
+                      },
+                    ])
+                  }
+                />
+              ))
+            )}
+
+            {/* COMPLETADAS */}
+            {completedSavings.length > 0 && (
+              <>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>COMPLETADAS</Text>
+                  <View style={styles.sectionBadge}>
+                    <Text style={styles.sectionBadgeText}>{completedSavings.length}</Text>
+                  </View>
+                </View>
+                {completedSavings.map((g) => (
+                  <SavingsGoalCard
+                    key={g.id}
+                    goal={g}
+                    onEdit={() => {
+                      setSavingsEditing(g);
+                      setShowSavingsModal(true);
+                    }}
+                    onDelete={() =>
+                      Alert.alert('Eliminar meta', `¿Eliminar "${g.name}"?`, [
+                        { text: 'Cancelar', style: 'cancel' },
+                        {
+                          text: 'Eliminar',
+                          style: 'destructive',
+                          onPress: () => deleteSavingsMutation.mutate(g.id),
+                        },
+                      ])
+                    }
+                    onComplete={() => {}}
+                  />
+                ))}
+              </>
+            )}
+          </>
         )}
 
         <View style={{ height: Layout.tabBarHeight + Layout.tabBarOffset + 16 }} />
       </ScreenContainer>
 
-      {(activeTab === 'movimientos' || activeTab === 'presupuestos') && (
+      {(activeTab === 'movimientos' || activeTab === 'presupuestos' || activeTab === 'ahorro') && (
         <TouchableOpacity
           style={styles.fab}
           onPress={() => {
             if (activeTab === 'presupuestos') {
               setBudgetEditing(null);
               setShowBudgetModal(true);
+            } else if (activeTab === 'ahorro') {
+              setSavingsEditing(null);
+              setShowSavingsModal(true);
             } else {
               setShowModal(true);
             }
@@ -1515,6 +1919,15 @@ export default function DineroScreen() {
         onClose={() => {
           setShowBudgetModal(false);
           setBudgetEditing(null);
+        }}
+      />
+      <SavingsGoalFormModal
+        visible={showSavingsModal}
+        goal={savingsEditing}
+        accounts={accounts}
+        onClose={() => {
+          setShowSavingsModal(false);
+          setSavingsEditing(null);
         }}
       />
     </View>
