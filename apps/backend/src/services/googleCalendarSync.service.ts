@@ -79,6 +79,20 @@ function convertFromGoogleEvent(googleEvent: any, userId: string, defaultCategor
 }
 
 /**
+ * Formats a UTC Date as a dateTime string with Buenos Aires offset (-03:00).
+ * Argentina is always UTC-3 (no DST).
+ *
+ * Using the explicit offset avoids the ambiguity that arises when a UTC "Z"
+ * datetime is combined with a separate timeZone field — Google Calendar may
+ * otherwise use the UTC calendar date instead of the local date for display.
+ */
+function toBuenosAiresDateTimeString(utcDate: Date): string {
+  const offsetMs = -3 * 60 * 60 * 1000; // -3 h
+  const local = new Date(utcDate.getTime() + offsetMs);
+  return local.toISOString().slice(0, -1) + '-03:00';
+}
+
+/**
  * Converts local Event to Google Calendar event format
  */
 function convertToGoogleEvent(event: any): any {
@@ -90,12 +104,15 @@ function convertToGoogleEvent(event: any): any {
 
   // Handle all-day events
   if (event.isAllDay) {
-    // Google uses date format (YYYY-MM-DD) for all-day events
+    // Google uses date format (YYYY-MM-DD) for all-day events.
+    // All-day startDateTime is stored as noon UTC so toISOString().split('T')[0]
+    // always yields the correct calendar date.
     const startDate = new Date(event.startDateTime);
     const endDate = new Date(event.endDateTime);
 
-    // Add 1 day to end date for Google Calendar (exclusive end date)
-    endDate.setDate(endDate.getDate() + 1);
+    // Add 1 day to end date for Google Calendar (exclusive end date).
+    // Use UTC methods to avoid local-time surprises on the server.
+    endDate.setUTCDate(endDate.getUTCDate() + 1);
 
     googleEvent.start = {
       date: startDate.toISOString().split('T')[0],
@@ -106,13 +123,14 @@ function convertToGoogleEvent(event: any): any {
       timeZone: 'America/Argentina/Buenos_Aires',
     };
   } else {
-    // Timed events use dateTime format
+    // Timed events: send with Buenos Aires offset so Google unambiguously
+    // places the event on the correct local calendar date.
     googleEvent.start = {
-      dateTime: event.startDateTime.toISOString(),
+      dateTime: toBuenosAiresDateTimeString(new Date(event.startDateTime)),
       timeZone: 'America/Argentina/Buenos_Aires',
     };
     googleEvent.end = {
-      dateTime: event.endDateTime.toISOString(),
+      dateTime: toBuenosAiresDateTimeString(new Date(event.endDateTime)),
       timeZone: 'America/Argentina/Buenos_Aires',
     };
   }
