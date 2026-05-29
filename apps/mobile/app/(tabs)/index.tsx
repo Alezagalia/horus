@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Bell, Check, CheckCircle2, Circle } from 'lucide-react-native';
+import { Bell, Check, CheckCircle2, Circle, BarChart2 } from 'lucide-react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Card } from '@/components/ui/Card';
@@ -175,11 +175,13 @@ function SectionRow({
 function HabitCheckRow({
   habit,
   onToggle,
+  onStats,
   toggling,
   isLast,
 }: {
   habit: Habit;
   onToggle: () => void;
+  onStats: () => void;
   toggling: boolean;
   isLast?: boolean;
 }) {
@@ -217,6 +219,15 @@ function HabitCheckRow({
           <Text style={styles.streakNum}>{habit.currentStreak}</Text>
         </View>
       )}
+
+      {/* Stats button */}
+      <TouchableOpacity
+        onPress={onStats}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        activeOpacity={0.6}
+      >
+        <BarChart2 size={15} color={Colors.muted} strokeWidth={1.5} />
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 }
@@ -430,6 +441,12 @@ export default function HoyScreen() {
               key={h.id}
               habit={h}
               onToggle={() => handleToggleHabit(h)}
+              onStats={() =>
+                router.push({
+                  pathname: '/habit-stats',
+                  params: { id: h.id, name: h.name, color: h.color ?? '', type: h.type },
+                })
+              }
               toggling={toggleHabit.isPending && toggleHabit.variables?.habitId === h.id}
               isLast={i === todayHabits.length - 1}
             />

@@ -45,6 +45,24 @@ export interface HabitStats {
   streaks: { currentBest: number; longestEver: number };
 }
 
+export interface HabitDetailedStats {
+  currentStreak: number;
+  longestStreak: number;
+  totalCompletions: number;
+  overallCompletionRate: number;
+  last30DaysRate: number;
+  last30DaysData: Array<{
+    date: string;
+    completed: boolean;
+    value: number | null;
+    shouldComplete: boolean;
+  }>;
+  averageValue?: number | null;
+  minValue?: number | null;
+  maxValue?: number | null;
+  last30DaysValues?: Array<{ date: string; value: number | null }>;
+}
+
 interface GeneralStatsResponse {
   completionRateToday: number;
   totalHabitsToday: number;
@@ -94,5 +112,10 @@ export const habitApi = {
 
   updateNumericProgress: async (habitId: string, date: string, value: number): Promise<void> => {
     await axiosInstance.post(`/habits/${habitId}/records`, { date, completed: true, value });
+  },
+
+  getDetailedStats: async (id: string): Promise<HabitDetailedStats> => {
+    const { data } = await axiosInstance.get(`/habits/${id}/stats`);
+    return data;
   },
 };

@@ -7,6 +7,7 @@ export const habitKeys = {
   all: ['habits'] as const,
   list: () => [...habitKeys.all, 'list'] as const,
   stats: () => [...habitKeys.all, 'stats'] as const,
+  detail: (id: string) => [...habitKeys.all, 'detail', id] as const,
 };
 
 export function useHabits() {
@@ -22,6 +23,15 @@ export function useHabitStats() {
     queryKey: habitKeys.stats(),
     queryFn: habitApi.getStats,
     staleTime: 1000 * 60,
+  });
+}
+
+export function useHabitDetailedStats(habitId: string) {
+  return useQuery({
+    queryKey: habitKeys.detail(habitId),
+    queryFn: () => habitApi.getDetailedStats(habitId),
+    staleTime: 5 * 60 * 1000,
+    enabled: !!habitId,
   });
 }
 
