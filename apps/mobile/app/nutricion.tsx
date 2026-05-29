@@ -36,8 +36,10 @@ import {
   useAddLogItem,
   useRemoveLogItem,
   useCreateFood,
+  useUpdateFood,
+  useDeleteFood,
 } from '@/hooks/useNutrition';
-import type { MealTime, Food, NutritionLogItem, CreateFoodDTO } from '@horus/shared';
+import type { MealTime, Food, NutritionLogItem, CreateFoodDTO, UpdateFoodDTO } from '@horus/shared';
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
@@ -50,6 +52,8 @@ const MEAL_TIMES: { key: MealTime; label: string; emoji: string }[] = [
 ];
 
 const MACRO_TARGETS = { calories: 2000, protein: 150, carbs: 250, fat: 65 };
+
+type Tab = 'log' | 'foods';
 
 // ─── macro pill ───────────────────────────────────────────────────────────────
 
@@ -326,9 +330,173 @@ function AddFoodModal({
   );
 }
 
+// ─── edit food modal ──────────────────────────────────────────────────────────
+
+function EditFoodModal({ food, onClose }: { food: Food; onClose: () => void }) {
+  const [name, setName] = useState(food.name);
+  const [cal, setCal] = useState(String(food.calories));
+  const [prot, setProt] = useState(String(food.protein));
+  const [carbs, setCarbs] = useState(String(food.carbs));
+  const [fat, setFat] = useState(String(food.fat));
+  const updateFood = useUpdateFood();
+
+  const handleSave = async () => {
+    if (!name.trim()) return Alert.alert('Error', 'El nombre es requerido.');
+    const dto: UpdateFoodDTO = {
+      name: name.trim(),
+      calories: parseFloat(cal) || 0,
+      protein: parseFloat(prot) || 0,
+      carbs: parseFloat(carbs) || 0,
+      fat: parseFloat(fat) || 0,
+    };
+    try {
+      await updateFood.mutateAsync({ id: food.id, dto });
+      onClose();
+    } catch {
+      Alert.alert('Error', 'No se pudo actualizar el alimento.');
+    }
+  };
+
+  return (
+    <Modal visible animationType="slide" transparent onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Editar alimento</Text>
+              <TouchableOpacity onPress={onClose} hitSlop={8}>
+                <X size={20} color={Colors.ink} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 380 }}>
+              {(
+                [
+                  { label: 'Nombre *', val: name, set: setName, kb: 'default' },
+                  { label: 'Calorías (kcal)', val: cal, set: setCal, kb: 'numeric' },
+                  { label: 'Proteínas (g)', val: prot, set: setProt, kb: 'numeric' },
+                  { label: 'Carbohidratos (g)', val: carbs, set: setCarbs, kb: 'numeric' },
+                  { label: 'Grasas (g)', val: fat, set: setFat, kb: 'numeric' },
+                ] as const
+              ).map(({ label, val, set, kb }) => (
+                <View key={label} style={{ marginBottom: Spacing.sm }}>
+                  <Text style={styles.formLabel}>{label}</Text>
+                  <TextInput
+                    value={val}
+                    onChangeText={set as (v: string) => void}
+                    keyboardType={kb as any}
+                    style={styles.formInput}
+                    placeholderTextColor={Colors.muted}
+                  />
+                </View>
+              ))}
+              <Button label="Guardar" onPress={handleSave} loading={updateFood.isPending} />
+            </ScrollView>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+// ─── foods view ───────────────────────────────────────────────────────────────
+
+function FoodsView() {
+  const [search, setSearch] = useState('');
+  const [editFood, setEditFood] = useState<Food | null>(null);
+  const { data: foods = [], isLoading } = useFoods(
+    search.length >= 2 ? { search, isActive: true } : { isActive: true }
+  );
+  const deleteFood = useDeleteFood();
+
+  const handleDelete = (food: Food) => {
+    Alert.alert('Eliminar alimento', `¿Eliminar "${food.name}"?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: () =>
+          deleteFood.mutate(food.id, {
+            onError: () => Alert.alert('Error', 'No se pudo eliminar.'),
+          }),
+      },
+    ]);
+  };
+
+  return (
+    <View style={{ flex: 1 }}>
+      <View style={styles.searchRow}>
+        <Search size={16} color={Colors.muted} />
+        <TextInput
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Buscar alimento…"
+          placeholderTextColor={Colors.muted}
+          style={styles.searchInput}
+        />
+        {search.length > 0 && (
+          <TouchableOpacity onPress={() => setSearch('')} hitSlop={8}>
+            <X size={14} color={Colors.muted} />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {isLoading ? (
+        <ActivityIndicator color={Colors.vivid} style={{ marginTop: Spacing.xl }} />
+      ) : (
+        <FlatList
+          data={foods}
+          keyExtractor={(f) => f.id}
+          contentContainerStyle={{ paddingHorizontal: Spacing.lg, paddingBottom: 60 }}
+          ListEmptyComponent={
+            <Text style={[styles.emptyText, { marginTop: Spacing.xl }]}>
+              {search.length >= 2 ? 'Sin resultados' : 'Sin alimentos registrados'}
+            </Text>
+          }
+          renderItem={({ item }) => (
+            <View style={styles.manageFoodRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.foodName} numberOfLines={1}>
+                  {item.name}
+                </Text>
+                {item.brand && (
+                  <Text style={[styles.foodMeta, { marginBottom: 2 }]}>{item.brand}</Text>
+                )}
+                <Text style={styles.foodMeta}>
+                  {Math.round(item.calories)} kcal · P:{Math.round(item.protein)}g · C:
+                  {Math.round(item.carbs)}g · G:{Math.round(item.fat)}g
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setEditFood(item)}
+                hitSlop={8}
+                style={styles.foodActionBtn}
+              >
+                <Zap size={15} color={Colors.vivid} strokeWidth={1.5} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => handleDelete(item)}
+                hitSlop={8}
+                style={styles.foodActionBtn}
+              >
+                <Trash2 size={15} color={Colors.muted} strokeWidth={1.5} />
+              </TouchableOpacity>
+            </View>
+          )}
+        />
+      )}
+
+      {editFood && <EditFoodModal food={editFood} onClose={() => setEditFood(null)} />}
+    </View>
+  );
+}
+
 // ─── main screen ──────────────────────────────────────────────────────────────
 
 export default function NutricionScreen() {
+  const [activeTab, setActiveTab] = useState<Tab>('log');
   const [date, setDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
   const [activeMeal, setActiveMeal] = useState<MealTime | null>(null);
   const isToday = date === format(new Date(), 'yyyy-MM-dd');
@@ -355,7 +523,10 @@ export default function NutricionScreen() {
   return (
     <View style={styles.root}>
       {/* Header */}
-      <LinearGradient colors={Gradients.hero} style={styles.header}>
+      <LinearGradient
+        colors={activeTab === 'log' ? Gradients.hero : Gradients.nudge}
+        style={styles.header}
+      >
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
             <X size={22} color="#fff" strokeWidth={2} />
@@ -364,69 +535,91 @@ export default function NutricionScreen() {
           <View style={{ width: 22 }} />
         </View>
 
-        <View style={styles.dateRow}>
-          <TouchableOpacity
-            onPress={() => setDate((d) => format(subDays(parseISO(d), 1), 'yyyy-MM-dd'))}
-            hitSlop={8}
-          >
-            <ChevronLeft size={20} color="rgba(255,255,255,0.8)" />
-          </TouchableOpacity>
-          <Text style={styles.dateText}>
-            {isToday
-              ? 'Hoy'
-              : format(parseISO(date), "EEEE d 'de' MMMM", { locale: es }).replace(/^\w/, (c) =>
-                  c.toUpperCase()
-                )}
-          </Text>
-          <TouchableOpacity
-            onPress={() => {
-              const next = format(addDays(parseISO(date), 1), 'yyyy-MM-dd');
-              if (next <= format(new Date(), 'yyyy-MM-dd')) setDate(next);
-            }}
-            hitSlop={8}
-            disabled={isToday}
-          >
-            <ChevronRight
-              size={20}
-              color={isToday ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.8)'}
-            />
-          </TouchableOpacity>
+        {/* Tab switcher */}
+        <View style={styles.tabBar}>
+          {(['log', 'foods'] as Tab[]).map((t) => (
+            <TouchableOpacity
+              key={t}
+              onPress={() => setActiveTab(t)}
+              style={[styles.tabChip, activeTab === t && styles.tabChipActive]}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.tabLabel, activeTab === t && styles.tabLabelActive]}>
+                {t === 'log' ? 'Registro' : 'Mis Alimentos'}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
-        {/* Macro summary */}
-        <View style={styles.macroRow}>
-          <MacroPill
-            label="Calorías"
-            value={dayMacros.calories}
-            target={MACRO_TARGETS.calories}
-            unit=" kcal"
-            color="#f59e0b"
-          />
-          <MacroPill
-            label="Proteínas"
-            value={dayMacros.protein}
-            target={MACRO_TARGETS.protein}
-            unit="g"
-            color="#ef4444"
-          />
-          <MacroPill
-            label="Carbos"
-            value={dayMacros.carbs}
-            target={MACRO_TARGETS.carbs}
-            unit="g"
-            color="#6366f1"
-          />
-          <MacroPill
-            label="Grasas"
-            value={dayMacros.fat}
-            target={MACRO_TARGETS.fat}
-            unit="g"
-            color="#10b981"
-          />
-        </View>
+        {activeTab === 'log' && (
+          <>
+            <View style={styles.dateRow}>
+              <TouchableOpacity
+                onPress={() => setDate((d) => format(subDays(parseISO(d), 1), 'yyyy-MM-dd'))}
+                hitSlop={8}
+              >
+                <ChevronLeft size={20} color="rgba(255,255,255,0.8)" />
+              </TouchableOpacity>
+              <Text style={styles.dateText}>
+                {isToday
+                  ? 'Hoy'
+                  : format(parseISO(date), "EEEE d 'de' MMMM", { locale: es }).replace(/^\w/, (c) =>
+                      c.toUpperCase()
+                    )}
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  const next = format(addDays(parseISO(date), 1), 'yyyy-MM-dd');
+                  if (next <= format(new Date(), 'yyyy-MM-dd')) setDate(next);
+                }}
+                hitSlop={8}
+                disabled={isToday}
+              >
+                <ChevronRight
+                  size={20}
+                  color={isToday ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.8)'}
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* Macro summary */}
+            <View style={styles.macroRow}>
+              <MacroPill
+                label="Calorías"
+                value={dayMacros.calories}
+                target={MACRO_TARGETS.calories}
+                unit=" kcal"
+                color="#f59e0b"
+              />
+              <MacroPill
+                label="Proteínas"
+                value={dayMacros.protein}
+                target={MACRO_TARGETS.protein}
+                unit="g"
+                color="#ef4444"
+              />
+              <MacroPill
+                label="Carbos"
+                value={dayMacros.carbs}
+                target={MACRO_TARGETS.carbs}
+                unit="g"
+                color="#6366f1"
+              />
+              <MacroPill
+                label="Grasas"
+                value={dayMacros.fat}
+                target={MACRO_TARGETS.fat}
+                unit="g"
+                color="#10b981"
+              />
+            </View>
+          </>
+        )}
       </LinearGradient>
 
-      {isLoading ? (
+      {activeTab === 'foods' ? (
+        <FoodsView />
+      ) : isLoading ? (
         <ActivityIndicator color={Colors.vivid} style={{ marginTop: Spacing.xl }} />
       ) : (
         <ScrollView
@@ -682,6 +875,48 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   selectedMeta: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.muted },
+
+  // tab bar
+  tabBar: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  tabChip: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 6,
+    borderRadius: Radius.pill,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+  },
+  tabChipActive: {
+    backgroundColor: 'rgba(255,255,255,0.9)',
+  },
+  tabLabel: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.75)',
+  },
+  tabLabelActive: {
+    color: Colors.ink,
+    fontWeight: '600',
+  },
+
+  // manage foods
+  manageFoodRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.line,
+    gap: Spacing.sm,
+  },
+  foodActionBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   // form
   formLabel: {
