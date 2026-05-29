@@ -29,6 +29,7 @@ import {
   ClipboardCheck,
   Salad,
   Scale,
+  History,
 } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
@@ -604,6 +605,12 @@ export default function YoScreen() {
           onPress={() => router.push('/revision-semanal')}
         />
         <View style={styles.divider} />
+        <View style={styles.divider} />
+        <SettingRow
+          icon={<History size={16} color={Colors.vivid} />}
+          label="Mi Historia"
+          onPress={() => router.push('/timeline')}
+        />
         <View style={styles.divider} />
         <SettingRow
           icon={<Scale size={16} color="#F43F5E" />}
