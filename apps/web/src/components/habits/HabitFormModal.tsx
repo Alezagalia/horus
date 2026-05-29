@@ -83,7 +83,7 @@ export function HabitFormModal({
         unit: editingHabit.unit || '',
         periodicity: editingHabit.periodicity,
         weekDays: editingHabit.weekDays || [],
-        timeOfDay: editingHabit.timeOfDay,
+        timeOfDay: editingHabit.timeOfDay as HabitFormSchema['timeOfDay'],
         color: editingHabit.color ?? undefined,
       });
     } else {
