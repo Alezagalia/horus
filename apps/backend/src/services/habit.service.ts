@@ -302,11 +302,11 @@ export const habitService = {
       );
     }
 
-    // Update order for each habit in a transaction
+    // Update order for each habit in a transaction — userId in WHERE prevents cross-user updates
     await prisma.$transaction(
       habitIds.map((id, index) =>
         prisma.habit.update({
-          where: { id },
+          where: { id, userId },
           data: { order: index },
         })
       )

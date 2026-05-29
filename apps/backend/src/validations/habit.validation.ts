@@ -7,16 +7,8 @@ import { z } from 'zod';
 
 export const habitTypeEnum = z.enum(['CHECK', 'NUMERIC']);
 export const periodicityEnum = z.enum(['DAILY', 'WEEKLY', 'MONTHLY', 'CUSTOM']);
-export const timeOfDayEnum = z.enum([
-  'AYUNO',
-  'MANANA',
-  'MEDIA_MANANA',
-  'TARDE',
-  'MEDIA_TARDE',
-  'NOCHE',
-  'ANTES_DORMIR',
-  'ANYTIME',
-]);
+// Dynamic string — validated against user's HabitMoment keys (not a fixed enum)
+export const timeOfDayEnum = z.string().min(1).max(50);
 
 export const createHabitSchema = z
   .object({

@@ -9,6 +9,7 @@ import { Request, Response, NextFunction } from 'express';
 import { microsoftAuthService } from '../services/microsoftAuth.service.js';
 import { microsoftCalendarSyncService } from '../services/microsoftCalendarSync.service.js';
 import { UnauthorizedError } from '../middlewares/error.middleware.js';
+import { prisma } from '../lib/prisma.js';
 
 export const calendarConnectionController = {
   /**
@@ -51,6 +52,17 @@ export const calendarConnectionController = {
       }
 
       const userId = state as string;
+
+      // Validate that the state corresponds to a real user — prevents userId spoofing
+      const userExists = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true },
+      });
+      if (!userExists) {
+        res.status(200).send(buildCallbackHtml('error', 'Invalid state parameter'));
+        return;
+      }
+
       await microsoftAuthService.exchangeCodeForTokens(userId, code as string);
 
       res.status(200).send(buildCallbackHtml('success'));

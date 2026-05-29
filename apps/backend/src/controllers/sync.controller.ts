@@ -9,6 +9,7 @@ import { Request, Response, NextFunction } from 'express';
 import { googleAuthService } from '../services/googleAuth.service.js';
 import { googleCalendarSyncService } from '../services/googleCalendarSync.service.js';
 import { UnauthorizedError } from '../middlewares/error.middleware.js';
+import { prisma } from '../lib/prisma.js';
 
 export const syncController = {
   /**
@@ -54,6 +55,16 @@ export const syncController = {
       }
 
       const userId = state as string;
+
+      // Validate that the state corresponds to a real user — prevents userId spoofing
+      const userExists = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true },
+      });
+      if (!userExists) {
+        res.status(400).json({ success: false, message: 'Invalid state parameter' });
+        return;
+      }
 
       await googleAuthService.exchangeCodeForTokens(userId, code as string);
 

@@ -8,6 +8,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
 import { format } from 'date-fns';
+import { LayoutList, ListChecks } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -27,6 +28,7 @@ import {
 import { DateSelector } from '@/components/habits/DateSelector';
 import { ProgressBar } from '@/components/habits/ProgressBar';
 import { SortableHabitCard } from '@/components/habits/SortableHabitCard';
+import { RoutineStepRow } from '@/components/habits/RoutineStepRow';
 import {
   useHabits,
   useToggleHabitComplete,
@@ -74,6 +76,14 @@ function isHabitScheduledForDate(
 
 export function HabitsTodayPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [viewMode, setViewMode] = useState<'cards' | 'routine'>(
+    () => (localStorage.getItem('habits-view-mode') as 'cards' | 'routine') ?? 'cards'
+  );
+  const toggleViewMode = () => {
+    const next = viewMode === 'cards' ? 'routine' : 'cards';
+    setViewMode(next);
+    localStorage.setItem('habits-view-mode', next);
+  };
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
 
   // API queries
@@ -318,14 +328,33 @@ export function HabitsTodayPage() {
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-3xl font-bold text-gray-900">Hábitos del Día</h1>
-          {!isToday && (
+          <div className="flex items-center gap-3">
             <button
-              onClick={goToToday}
-              className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
+              onClick={toggleViewMode}
+              title={viewMode === 'cards' ? 'Cambiar a modo rutina' : 'Cambiar a modo tarjetas'}
+              className="flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-indigo-600 transition-colors px-2 py-1 rounded-md hover:bg-indigo-50"
             >
-              Ir a hoy
+              {viewMode === 'cards' ? (
+                <>
+                  <ListChecks className="w-4 h-4" />
+                  <span className="hidden sm:inline">Modo rutina</span>
+                </>
+              ) : (
+                <>
+                  <LayoutList className="w-4 h-4" />
+                  <span className="hidden sm:inline">Modo tarjetas</span>
+                </>
+              )}
             </button>
-          )}
+            {!isToday && (
+              <button
+                onClick={goToToday}
+                className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
+              >
+                Ir a hoy
+              </button>
+            )}
+          </div>
         </div>
         <DateSelector selectedDate={selectedDate} onDateChange={setSelectedDate} />
       </div>
@@ -376,6 +405,35 @@ export function HabitsTodayPage() {
           ].map((timeOfDay) => {
             const habitsInSection = groupedHabits[timeOfDay];
             if (!habitsInSection || habitsInSection.length === 0) return null;
+
+            if (viewMode === 'routine') {
+              const completedCount = habitsInSection.filter((h) => h.completed).length;
+              const firstIncompleteIndex = habitsInSection.findIndex((h) => !h.completed);
+
+              return (
+                <div key={timeOfDay}>
+                  <h2 className="text-lg font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                    {momentIcons[timeOfDay] ?? '⏰'}
+                    {momentLabels[timeOfDay] ?? timeOfDay}
+                    <span className="text-xs font-normal text-gray-400 ml-1">
+                      {completedCount} / {habitsInSection.length} pasos
+                    </span>
+                  </h2>
+                  <div className="bg-white rounded-lg border border-gray-200 divide-y divide-gray-100">
+                    {habitsInSection.map((habit, index) => (
+                      <RoutineStepRow
+                        key={habit.id}
+                        habit={habit}
+                        stepNumber={index + 1}
+                        isActive={index === firstIncompleteIndex}
+                        onToggleComplete={isFuture ? undefined : handleToggleComplete}
+                        disabled={isFuture}
+                      />
+                    ))}
+                  </div>
+                </div>
+              );
+            }
 
             return (
               <div key={timeOfDay}>

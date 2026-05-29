@@ -93,7 +93,7 @@ export const categoryService = {
     }
 
     return prisma.category.update({
-      where: { id },
+      where: { id, userId },
       data,
     });
   },
@@ -126,7 +126,7 @@ export const categoryService = {
 
     // Soft delete (sets isActive to false, doesn't delete from database)
     return prisma.category.update({
-      where: { id },
+      where: { id, userId },
       data: { isActive: false },
     });
   },
@@ -147,7 +147,7 @@ export const categoryService = {
 
     // Set new default
     return prisma.category.update({
-      where: { id },
+      where: { id, userId },
       data: { isDefault: true },
     });
   },

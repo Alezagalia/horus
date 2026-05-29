@@ -23,21 +23,7 @@ export const habitSchema = z
       required_error: 'La periodicidad es obligatoria',
     }),
     weekDays: z.array(z.number().min(0).max(6)).default([]),
-    timeOfDay: z.enum(
-      [
-        'AYUNO',
-        'MANANA',
-        'MEDIA_MANANA',
-        'TARDE',
-        'MEDIA_TARDE',
-        'NOCHE',
-        'ANTES_DORMIR',
-        'ANYTIME',
-      ],
-      {
-        required_error: 'El momento del día es obligatorio',
-      }
-    ),
+    timeOfDay: z.string().min(1, 'El momento del día es obligatorio'),
     color: z.string().optional(),
   })
   .superRefine((data, ctx) => {

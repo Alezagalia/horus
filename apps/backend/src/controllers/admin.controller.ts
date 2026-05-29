@@ -6,7 +6,8 @@
  */
 
 import type { Request, Response } from 'express';
-import { generateMonthlyExpenses } from '../services/monthlyExpenseGeneration.service.js';
+import { generateMonthlyExpensesForUser } from '../services/monthlyExpenseGeneration.service.js';
+import { UnauthorizedError } from '../middlewares/error.middleware.js';
 
 /**
  * POST /api/admin/generate-monthly-expenses
@@ -17,6 +18,11 @@ import { generateMonthlyExpenses } from '../services/monthlyExpenseGeneration.se
  */
 export const generateMonthlyExpensesManual = async (req: Request, res: Response): Promise<void> => {
   try {
+    const user = req.user;
+    if (!user) {
+      throw new UnauthorizedError('User not found');
+    }
+
     const now = new Date();
     const month = req.query.month ? parseInt(req.query.month as string, 10) : now.getMonth() + 1;
     const year = req.query.year ? parseInt(req.query.year as string, 10) : now.getFullYear();
@@ -36,9 +42,12 @@ export const generateMonthlyExpensesManual = async (req: Request, res: Response)
       return;
     }
 
-    console.log(`[ADMIN] Generación manual solicitada para ${month}/${year}`);
+    console.log(
+      `[ADMIN] Generación manual solicitada para ${month}/${year} por usuario ${user.id}`
+    );
 
-    const result = await generateMonthlyExpenses(month, year);
+    // Scoped to authenticated user only — does not touch other users' data
+    const result = await generateMonthlyExpensesForUser(user.id, month, year);
 
     res.status(200).json({
       message: 'Monthly expenses generation completed',
