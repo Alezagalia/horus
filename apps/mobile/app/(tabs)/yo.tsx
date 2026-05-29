@@ -28,6 +28,7 @@ import {
   Trash2,
   ClipboardCheck,
   Salad,
+  Scale,
 } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
@@ -601,6 +602,13 @@ export default function YoScreen() {
           icon={<ClipboardCheck size={16} color={Colors.vivid} />}
           label="Revisión Semanal"
           onPress={() => router.push('/revision-semanal')}
+        />
+        <View style={styles.divider} />
+        <View style={styles.divider} />
+        <SettingRow
+          icon={<Scale size={16} color="#F43F5E" />}
+          label="Deuda de Vida"
+          onPress={() => router.push('/deuda-de-vida')}
         />
         <View style={styles.divider} />
         <SettingRow
