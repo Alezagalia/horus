@@ -15,11 +15,18 @@ export interface ReviewQuestion {
 export interface WeeklyStats {
   weekStart: string;
   weekEnd: string;
-  habits: { completed: number; total: number; rate: number };
+  habits: { completed: number; total: number; possible: number; rate: number };
   tasks: { completed: number };
-  finance: { income: number; expenses: number; balance: number };
+  finance: { byCurrency: WeeklyStatsFinanceCurrency[] };
   goals: Array<{ id: string; title: string; progress: number; status: string }>;
   events: { completed: number; total: number };
+}
+
+export interface WeeklyStatsFinanceCurrency {
+  currency: string;
+  income: number;
+  expenses: number;
+  balance: number;
 }
 
 export interface WeeklyReviewAnswer {

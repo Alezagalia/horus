@@ -2,7 +2,8 @@
  * WeekStats - Cards de estadísticas de la semana (F-03)
  */
 
-import type { WeeklyStats } from '@horus/shared';
+import type { WeeklyStats, Currency } from '@horus/shared';
+import { formatCurrency } from '@/utils/currency';
 
 interface WeekStatsProps {
   stats: WeeklyStats;
@@ -24,10 +25,7 @@ export function WeekStats({ stats }: WeekStatsProps) {
         </div>
         <p className="text-2xl font-bold text-gray-900 mb-2">
           {habits.completed}
-          <span className="text-base font-normal text-gray-400">
-            {' '}
-            / {habits.total * 7} posibles
-          </span>
+          <span className="text-base font-normal text-gray-400"> / {habits.possible} posibles</span>
         </p>
         <div className="w-full bg-gray-100 rounded-full h-2">
           <div
@@ -56,29 +54,40 @@ export function WeekStats({ stats }: WeekStatsProps) {
           <span className="text-xl">💸</span>
           <h3 className="text-sm font-semibold text-gray-700">Finanzas</h3>
         </div>
-        <div className="space-y-2">
-          <div className="flex justify-between items-center">
-            <span className="text-xs text-gray-500">Ingresos</span>
-            <span className="text-sm font-semibold text-green-600">
-              +${finance.income.toLocaleString('es', { minimumFractionDigits: 2 })}
-            </span>
+        {finance.byCurrency.length === 0 ? (
+          <p className="text-sm text-gray-400">Sin movimientos esta semana</p>
+        ) : (
+          <div className="space-y-4">
+            {finance.byCurrency.map((f) => (
+              <div key={f.currency} className="space-y-2">
+                {finance.byCurrency.length > 1 && (
+                  <p className="text-xs font-semibold text-gray-400">{f.currency}</p>
+                )}
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-gray-500">Ingresos</span>
+                  <span className="text-sm font-semibold text-green-600">
+                    +{formatCurrency(f.income, f.currency as Currency)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-gray-500">Egresos</span>
+                  <span className="text-sm font-semibold text-red-500">
+                    -{formatCurrency(f.expenses, f.currency as Currency)}
+                  </span>
+                </div>
+                <div className="border-t border-gray-100 pt-2 flex justify-between items-center">
+                  <span className="text-xs font-semibold text-gray-600">Balance</span>
+                  <span
+                    className={`text-sm font-bold ${f.balance >= 0 ? 'text-green-600' : 'text-red-500'}`}
+                  >
+                    {f.balance >= 0 ? '+' : ''}
+                    {formatCurrency(f.balance, f.currency as Currency)}
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
-          <div className="flex justify-between items-center">
-            <span className="text-xs text-gray-500">Egresos</span>
-            <span className="text-sm font-semibold text-red-500">
-              -${finance.expenses.toLocaleString('es', { minimumFractionDigits: 2 })}
-            </span>
-          </div>
-          <div className="border-t border-gray-100 pt-2 flex justify-between items-center">
-            <span className="text-xs font-semibold text-gray-600">Balance</span>
-            <span
-              className={`text-sm font-bold ${finance.balance >= 0 ? 'text-green-600' : 'text-red-500'}`}
-            >
-              {finance.balance >= 0 ? '+' : ''}$
-              {finance.balance.toLocaleString('es', { minimumFractionDigits: 2 })}
-            </span>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Metas */}

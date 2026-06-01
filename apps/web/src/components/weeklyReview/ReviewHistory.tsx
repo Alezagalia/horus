@@ -35,6 +35,9 @@ export function ReviewHistory({ reviews }: ReviewHistoryProps) {
         {completed.map((review) => {
           const isOpen = openId === review.id;
           const snap = review.statsSnapshot;
+          const primaryFinance = snap?.finance?.byCurrency?.[0] ?? null;
+          const balance = primaryFinance?.balance ?? 0;
+          const multiCurrency = (snap?.finance?.byCurrency?.length ?? 0) > 1;
           return (
             <div
               key={review.id}
@@ -83,18 +86,22 @@ export function ReviewHistory({ reviews }: ReviewHistoryProps) {
                         <p className="text-xs text-amber-500">Tareas</p>
                       </div>
                       <div
-                        className={`rounded-xl p-3 text-center ${snap.finance.balance >= 0 ? 'bg-green-50' : 'bg-red-50'}`}
+                        className={`rounded-xl p-3 text-center ${balance >= 0 ? 'bg-green-50' : 'bg-red-50'}`}
                       >
                         <p
-                          className={`text-lg font-bold ${snap.finance.balance >= 0 ? 'text-green-700' : 'text-red-600'}`}
+                          className={`text-lg font-bold ${balance >= 0 ? 'text-green-700' : 'text-red-600'}`}
                         >
-                          {snap.finance.balance >= 0 ? '+' : ''}
-                          {snap.finance.balance.toLocaleString('es', { maximumFractionDigits: 0 })}
+                          {primaryFinance
+                            ? `${balance >= 0 ? '+' : ''}${balance.toLocaleString('es', {
+                                maximumFractionDigits: 0,
+                              })}`
+                            : '—'}
                         </p>
                         <p
-                          className={`text-xs ${snap.finance.balance >= 0 ? 'text-green-500' : 'text-red-400'}`}
+                          className={`text-xs ${balance >= 0 ? 'text-green-500' : 'text-red-400'}`}
                         >
                           Balance
+                          {primaryFinance && multiCurrency ? ` ${primaryFinance.currency}` : ''}
                         </p>
                       </div>
                     </div>
