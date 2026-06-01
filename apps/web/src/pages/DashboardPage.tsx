@@ -41,62 +41,6 @@ function _useAnimatedCounter(end: number, duration: number = 1000) {
 }
 void _useAnimatedCounter; // Reserved for future use
 
-// Progress Ring Component
-function _ProgressRing({
-  percentage,
-  size = 160,
-  strokeWidth = 12,
-  className = '',
-}: {
-  percentage: number;
-  size?: number;
-  strokeWidth?: number;
-  className?: string;
-}) {
-  const radius = (size - strokeWidth) / 2;
-  const circumference = radius * 2 * Math.PI;
-  const offset = circumference - (percentage / 100) * circumference;
-
-  return (
-    <div className={`relative ${className}`} style={{ width: size, height: size }}>
-      <svg className="transform -rotate-90" width={size} height={size}>
-        <defs>
-          <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#6366f1" />
-            <stop offset="50%" stopColor="#8b5cf6" />
-            <stop offset="100%" stopColor="#ec4899" />
-          </linearGradient>
-        </defs>
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke="currentColor"
-          strokeWidth={strokeWidth}
-          fill="none"
-          className="text-gray-200/50"
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke="url(#progressGradient)"
-          strokeWidth={strokeWidth}
-          fill="none"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          className="progress-ring"
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-4xl font-bold text-gradient">{Math.round(percentage)}%</span>
-        <span className="text-sm text-gray-500">completado</span>
-      </div>
-    </div>
-  );
-}
-
 // Helper to check if habit is scheduled for today — mirrors backend debiaRealizarseEnFecha
 function isHabitScheduledForToday(habit: {
   periodicity: string;
