@@ -7,11 +7,13 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { format, addDays, startOfDay, endOfDay, isToday, isTomorrow, isSameDay } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { format, addDays, startOfDay, endOfDay, isToday } from 'date-fns';
 import { Toaster, toast } from 'react-hot-toast';
 import { useAuthStore } from '@/stores/authStore';
 import { useHabits, useToggleHabitComplete } from '@/hooks/useHabits';
+import { useActivities, useToggleActivityRecord } from '@/hooks/useActivities';
+import { useHabitMoments } from '@/hooks/useHabitMoments';
+import { DailyTimeline } from '@/components/dashboard/DailyTimeline';
 import { useFeaturedGoal } from '@/hooks/useGoals';
 import { useTasks } from '@/hooks/useTasks';
 import { useCalendarEvents } from '@/hooks/useCalendarEvents';
@@ -40,7 +42,7 @@ function _useAnimatedCounter(end: number, duration: number = 1000) {
 void _useAnimatedCounter; // Reserved for future use
 
 // Progress Ring Component
-function ProgressRing({
+function _ProgressRing({
   percentage,
   size = 160,
   strokeWidth = 12,
@@ -157,6 +159,11 @@ export function DashboardPage() {
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
 
+  // Activities and habit moments for DailyTimeline
+  const { data: activitiesData } = useActivities(todayStr);
+  const { data: habitMomentsData } = useHabitMoments();
+  const toggleActivityMutation = useToggleActivityRecord();
+
   // Process habits for today
   const todayHabits = useMemo(() => {
     if (!habitsData) return [];
@@ -178,16 +185,15 @@ export function DashboardPage() {
           currentStreak: habit.currentStreak,
           type: habit.type,
           targetValue: habit.targetValue,
+          timeOfDay: habit.timeOfDay ?? '',
         };
       });
   }, [habitsData, todayStr]);
 
-  // Handler for toggling habit completion
-  const handleToggleHabit = (habitId: string, currentlyCompleted: boolean) => {
+  // Handler for toggling habit completion (newCompleted = desired new state)
+  const handleToggleHabit = (habitId: string, newCompleted: boolean) => {
     const habit = todayHabits.find((h) => h.id === habitId);
     if (!habit) return;
-
-    const newCompleted = !currentlyCompleted;
 
     toggleCompleteMutation.mutate(
       {
@@ -222,107 +228,16 @@ export function DashboardPage() {
     );
   };
 
-  // Unified agenda: tasks with due date + calendar events
-  type AgendaItem = {
-    id: string;
-    type: 'task' | 'event';
-    title: string;
-    date: Date;
-    priority?: 'alta' | 'media' | 'baja';
-    time?: string; // For events: "14:00 - 15:00"
-    location?: string | null;
-    isAllDay?: boolean;
-    categoryIcon?: string;
+  // Today's events for DailyTimeline
+  const todayEvents = useMemo(() => {
+    if (!eventsData) return [];
+    return eventsData.filter((e) => isToday(new Date(e.startDateTime)));
+  }, [eventsData]);
+
+  // Handler for toggling activity completion
+  const handleToggleActivity = (activityId: string, completed: boolean) => {
+    toggleActivityMutation.mutate({ activityId, data: { date: todayStr, completed, notes: null } });
   };
-
-  const upcomingAgenda = useMemo(() => {
-    const items: AgendaItem[] = [];
-    const now = new Date();
-    const maxDate = addDays(now, 7);
-
-    // Add tasks with due date
-    if (tasksData) {
-      tasksData
-        .filter((t) => t.status !== 'completed' && t.dueDate)
-        .forEach((task) => {
-          const dueDate = new Date(task.dueDate!);
-          if (dueDate <= maxDate) {
-            items.push({
-              id: task.id,
-              type: 'task',
-              title: task.title,
-              date: dueDate,
-              priority: task.priority,
-              categoryIcon: task.categoryIcon,
-            });
-          }
-        });
-    }
-
-    // Add calendar events
-    if (eventsData) {
-      eventsData
-        .filter((e) => e.status !== 'cancelado')
-        .forEach((event) => {
-          const eventDate = new Date(event.startDateTime);
-          const endDate = new Date(event.endDateTime);
-
-          // Format time for non-all-day events
-          let timeStr: string | undefined;
-          if (!event.isAllDay) {
-            const startTime = format(eventDate, 'HH:mm');
-            const endTime = format(endDate, 'HH:mm');
-            timeStr = `${startTime} - ${endTime}`;
-          }
-
-          items.push({
-            id: event.id,
-            type: 'event',
-            title: event.title,
-            date: eventDate,
-            time: timeStr,
-            location: event.location,
-            isAllDay: event.isAllDay,
-            categoryIcon: event.category?.icon || '📅',
-          });
-        });
-    }
-
-    // Sort by date/time
-    items.sort((a, b) => a.date.getTime() - b.date.getTime());
-
-    return items.slice(0, 6);
-  }, [tasksData, eventsData]);
-
-  // Group agenda items by day
-  const groupedAgenda = useMemo(() => {
-    const groups: { label: string; date: Date; items: AgendaItem[] }[] = [];
-
-    upcomingAgenda.forEach((item) => {
-      const itemDate = startOfDay(item.date);
-      let group = groups.find((g) => isSameDay(g.date, itemDate));
-
-      if (!group) {
-        let label: string;
-        if (isToday(itemDate)) {
-          label = 'Hoy';
-        } else if (isTomorrow(itemDate)) {
-          label = 'Mañana';
-        } else {
-          label = format(itemDate, "EEEE d 'de' MMMM", { locale: es });
-          // Capitalize first letter
-          label = label.charAt(0).toUpperCase() + label.slice(1);
-        }
-
-        group = { label, date: itemDate, items: [] };
-        groups.push(group);
-      }
-
-      group.items.push(item);
-    });
-
-    return groups;
-  }, [upcomingAgenda]);
 
   // Calculate stats
   const stats = useMemo(() => {
@@ -337,28 +252,9 @@ export function DashboardPage() {
     return { activeHabits, pendingTasks, overdueTasks };
   }, [habitsData, tasksData, todayStr]);
 
-  // Best streak
-  const bestStreak = useMemo(() => {
-    if (!habitsData || habitsData.length === 0) return null;
-
-    const habitsWithStreak = habitsData.filter((h) => h.currentStreak > 0);
-    if (habitsWithStreak.length === 0) return null;
-
-    const best = habitsWithStreak.reduce((prev, curr) =>
-      curr.currentStreak > prev.currentStreak ? curr : prev
-    );
-
-    return {
-      habitName: best.name,
-      streakDays: best.currentStreak,
-    };
-  }, [habitsData]);
-
-  // Completion percentage
+  // Completion percentage (used in hero section quick stats)
   const completedCount = todayHabits.filter((h) => h.completed).length;
   const totalCount = todayHabits.length;
-  const habitsCompletionPercentage =
-    totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -381,15 +277,6 @@ export function DashboardPage() {
     return { text: `En ${diffDays}d`, urgent: false };
   };
   void _getRelativeDate; // Reserved for future use
-
-  const getPriorityStyles = (priority: 'alta' | 'media' | 'baja') => {
-    const styles = {
-      alta: 'bg-gradient-to-r from-red-500 to-orange-500 text-white',
-      media: 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white',
-      baja: 'bg-gradient-to-r from-green-500 to-emerald-500 text-white',
-    };
-    return styles[priority];
-  };
 
   // Pending monthly expenses (sorted: no due day first, then by due day ascending)
   const pendingExpenses = useMemo(() => {
@@ -512,12 +399,6 @@ export function DashboardPage() {
               </p>
             </div>
             <div className="bg-white/20 backdrop-blur-sm rounded-2xl px-5 py-3 border border-white/30">
-              <p className="text-white/70 text-sm">Racha maxima</p>
-              <p className="text-2xl font-bold flex items-center gap-1">
-                <span className="streak-fire">🔥</span> {bestStreak?.streakDays || 0}
-              </p>
-            </div>
-            <div className="bg-white/20 backdrop-blur-sm rounded-2xl px-5 py-3 border border-white/30">
               <p className="text-white/70 text-sm">Tareas urgentes</p>
               <p className="text-2xl font-bold">{stats.overdueTasks}</p>
             </div>
@@ -603,292 +484,16 @@ export function DashboardPage() {
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Habits Progress Card */}
-        <div
-          className="glass-card p-6 animate-slide-up opacity-0 delay-200"
-          style={{ animationFillMode: 'forwards' }}
-        >
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">Habitos de Hoy</h2>
-              <p className="text-sm text-gray-500">Tu progreso del dia</p>
-            </div>
-            <button
-              onClick={() => navigate('/habits/today')}
-              className="text-sm font-medium text-indigo-600 hover:text-indigo-700 flex items-center gap-1 group"
-            >
-              Ver todos
-              <svg
-                className="w-4 h-4 transition-transform group-hover:translate-x-1"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </button>
-          </div>
-
-          <div className="flex items-center gap-8">
-            <ProgressRing percentage={habitsCompletionPercentage} />
-
-            <div className="flex-1 space-y-3">
-              {todayHabits.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">No tienes habitos para hoy</p>
-                  <button
-                    onClick={() => navigate('/habits')}
-                    className="text-sm text-indigo-600 hover:text-indigo-500 mt-2"
-                  >
-                    Crear un habito
-                  </button>
-                </div>
-              ) : (
-                todayHabits.slice(0, 4).map((habit, index) => (
-                  <button
-                    key={habit.id}
-                    onClick={() => handleToggleHabit(habit.id, habit.completed)}
-                    disabled={toggleCompleteMutation.isPending}
-                    className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-200 text-left group ${
-                      habit.completed
-                        ? 'bg-green-50 border border-green-100 hover:bg-green-100'
-                        : 'bg-gray-50 hover:bg-gray-100 hover:shadow-sm'
-                    } ${toggleCompleteMutation.isPending ? 'opacity-70 cursor-wait' : 'cursor-pointer'}`}
-                    style={{ animationDelay: `${(index + 3) * 100}ms` }}
-                  >
-                    <div
-                      className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 ${
-                        habit.completed
-                          ? 'bg-green-500 text-white scale-100'
-                          : 'bg-white border-2 border-gray-200 group-hover:border-green-400 group-hover:scale-105'
-                      }`}
-                    >
-                      {habit.completed ? (
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                      ) : (
-                        <svg
-                          className="w-4 h-4 text-gray-300 group-hover:text-green-400 transition-colors"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                      )}
-                    </div>
-                    <span className="text-lg">{habit.categoryIcon}</span>
-                    <span
-                      className={`flex-1 text-sm font-medium transition-colors ${
-                        habit.completed
-                          ? 'text-gray-400 line-through'
-                          : 'text-gray-700 group-hover:text-gray-900'
-                      }`}
-                    >
-                      {habit.name}
-                    </span>
-                    {habit.currentStreak > 0 && (
-                      <span className="badge-gradient text-xs">🔥 {habit.currentStreak}</span>
-                    )}
-                  </button>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Unified Agenda Card */}
-        <div
-          className="glass-card p-6 animate-slide-up opacity-0 delay-300"
-          style={{ animationFillMode: 'forwards' }}
-        >
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">Próximamente</h2>
-              <p className="text-sm text-gray-500">Tu agenda de los próximos días</p>
-            </div>
-            <button
-              onClick={() => navigate('/calendar')}
-              className="text-sm font-medium text-indigo-600 hover:text-indigo-700 flex items-center gap-1 group"
-            >
-              Ver calendario
-              <svg
-                className="w-4 h-4 transition-transform group-hover:translate-x-1"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </button>
-          </div>
-
-          <div className="space-y-4">
-            {groupedAgenda.length === 0 ? (
-              <div className="text-center py-8">
-                <div className="text-4xl mb-3 opacity-50">📅</div>
-                <p className="text-gray-500">No tienes eventos ni tareas próximas</p>
-                <div className="flex justify-center gap-3 mt-4">
-                  <button
-                    onClick={() => navigate('/tasks')}
-                    className="text-sm text-indigo-600 hover:text-indigo-500"
-                  >
-                    Crear tarea
-                  </button>
-                  <span className="text-gray-300">|</span>
-                  <button
-                    onClick={() => navigate('/calendar')}
-                    className="text-sm text-indigo-600 hover:text-indigo-500"
-                  >
-                    Crear evento
-                  </button>
-                </div>
-              </div>
-            ) : (
-              groupedAgenda.map((group, _groupIndex) => (
-                <div key={group.label}>
-                  {/* Day Header */}
-                  <div className="flex items-center gap-2 mb-2">
-                    <span
-                      className={`text-xs font-semibold uppercase tracking-wider ${
-                        group.label === 'Hoy' ? 'text-indigo-600' : 'text-gray-500'
-                      }`}
-                    >
-                      {group.label}
-                    </span>
-                    <div className="flex-1 h-px bg-gray-200" />
-                  </div>
-
-                  {/* Items for this day */}
-                  <div className="space-y-2">
-                    {group.items.map((item) => (
-                      <div
-                        key={`${item.type}-${item.id}`}
-                        onClick={() => navigate(item.type === 'task' ? '/tasks' : '/calendar')}
-                        className={`flex items-start gap-3 p-3 rounded-xl transition-all duration-200 cursor-pointer ${
-                          item.type === 'event'
-                            ? 'bg-purple-50 hover:bg-purple-100 border border-purple-100'
-                            : 'bg-gray-50 hover:bg-gray-100'
-                        }`}
-                      >
-                        {/* Icon */}
-                        <div
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                            item.type === 'event'
-                              ? 'bg-purple-500 text-white'
-                              : 'bg-amber-500 text-white'
-                          }`}
-                        >
-                          <span className="text-sm">{item.type === 'event' ? '📅' : '📝'}</span>
-                        </div>
-
-                        {/* Content */}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-800 truncate">{item.title}</p>
-                          <div className="flex items-center gap-2 mt-1 flex-wrap">
-                            {/* Event time */}
-                            {item.type === 'event' && item.time && (
-                              <span className="text-xs text-purple-600 font-medium">
-                                🕐 {item.time}
-                              </span>
-                            )}
-                            {/* Event all day */}
-                            {item.type === 'event' && item.isAllDay && (
-                              <span className="text-xs text-purple-600 font-medium">
-                                Todo el día
-                              </span>
-                            )}
-                            {/* Event location */}
-                            {item.type === 'event' && item.location && (
-                              <span className="text-xs text-gray-500 truncate max-w-[120px]">
-                                📍 {item.location}
-                              </span>
-                            )}
-                            {/* Task priority */}
-                            {item.type === 'task' && item.priority && (
-                              <span
-                                className={`text-xs px-2 py-0.5 rounded-full font-medium ${getPriorityStyles(item.priority)}`}
-                              >
-                                {item.priority.charAt(0).toUpperCase() + item.priority.slice(1)}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Type indicator */}
-                        <span
-                          className={`text-xs px-2 py-1 rounded-full font-medium ${
-                            item.type === 'event'
-                              ? 'bg-purple-100 text-purple-700'
-                              : 'bg-amber-100 text-amber-700'
-                          }`}
-                        >
-                          {item.type === 'event' ? 'Evento' : 'Tarea'}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Best Streak Card */}
-        <div
-          className="glass-card p-6 animate-slide-up opacity-0 delay-400"
-          style={{ animationFillMode: 'forwards' }}
-        >
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Tu Mejor Racha</h2>
-
-          {bestStreak ? (
-            <div className="text-center py-4">
-              <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-orange-400 via-red-500 to-pink-500 shadow-2xl shadow-orange-500/30 mb-6 float-animation">
-                <span className="text-5xl streak-fire">🔥</span>
-              </div>
-              <div className="mb-4">
-                <p className="text-6xl font-bold text-gradient-warm">{bestStreak.streakDays}</p>
-                <p className="text-gray-500 uppercase tracking-wider text-sm font-medium mt-1">
-                  dias consecutivos
-                </p>
-              </div>
-              <p className="text-lg font-medium text-gray-700">{bestStreak.habitName}</p>
-              <p className="text-sm text-gray-500 mt-2">Sigue asi!</p>
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <div className="text-5xl opacity-30 mb-4">🔥</div>
-              <p className="text-gray-500">Aun no tienes rachas</p>
-              <p className="text-sm text-gray-400 mt-1">Completa habitos diarios para comenzar</p>
-            </div>
-          )}
-        </div>
+        {/* Daily Timeline */}
+        <DailyTimeline
+          habits={todayHabits}
+          activities={activitiesData ?? []}
+          events={todayEvents}
+          habitMoments={habitMomentsData ?? []}
+          onToggleHabit={handleToggleHabit}
+          onToggleActivity={handleToggleActivity}
+          isToggling={toggleCompleteMutation.isPending || toggleActivityMutation.isPending}
+        />
 
         {/* Pending Monthly Expenses Card */}
         <div

@@ -32,6 +32,7 @@ import mealPlanRoutes from './mealPlan.routes.js';
 import nutritionLogRoutes from './nutritionLog.routes.js';
 import shoppingListRoutes from './shoppingList.routes.js';
 import habitMomentRoutes from './habitMoment.routes.js';
+import activityRoutes from './activity.routes.js';
 
 const router: IRouter = Router();
 
@@ -68,6 +69,7 @@ router.use('/meal-plans', mealPlanRoutes);
 router.use('/nutrition-logs', nutritionLogRoutes);
 router.use('/shopping-lists', shoppingListRoutes);
 router.use('/habit-moments', habitMomentRoutes);
+router.use('/activities', activityRoutes);
 
 // Health check
 router.get('/health', (_req, res) => {

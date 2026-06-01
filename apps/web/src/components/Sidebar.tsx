@@ -66,6 +66,12 @@ const menuSections: MenuSection[] = [
         icon: '📋',
         gradient: 'from-violet-500 to-purple-500',
       },
+      {
+        name: 'Actividades',
+        path: '/activities',
+        icon: '⚡',
+        gradient: 'from-violet-500 to-purple-600',
+      },
       { name: 'Calendario', path: '/calendar', icon: '📅', gradient: 'from-pink-500 to-rose-500' },
       {
         name: 'Conocimiento',

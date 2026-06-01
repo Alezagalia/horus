@@ -150,6 +150,17 @@ enum CalendarProvider {
   MICROSOFT
 }
 
+enum ActivityPeriodicity {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum ActivityTimeMode {
+  FIXED
+  AFTER_ACTIVITY
+}
+
 model User {
   id                   String                   @id @default(uuid())
   email                String                   @unique
@@ -192,6 +203,8 @@ model User {
   nutritionLogs        NutritionLog[]
   shoppingLists        ShoppingList[]
   habitMoments         HabitMoment[]
+  activities           Activity[]       @relation("UserActivities")
+  activityRecords      ActivityRecord[] @relation("UserActivityRecords")
 
   @@index([email])
   @@map("users")
@@ -1643,6 +1656,63 @@ model ShoppingListItem {
 
   @@index([shoppingListId])
   @@map("shopping_list_items")
+}
+
+/// Activity: Actividad de rutina diaria/semanal/mensual con soporte para encadenamiento.
+model Activity {
+  id              String              @id @default(uuid())
+  userId          String
+  name            String              @db.VarChar(100)
+  description     String?             @db.VarChar(500)
+  content         String?             @db.Text
+
+  periodicity     ActivityPeriodicity @default(DAILY)
+  weekDays        Int[]
+  timesPerMonth   Int?
+
+  timeMode        ActivityTimeMode    @default(FIXED)
+  fixedHour       Int?
+  fixedMinute     Int?
+  afterActivityId String?
+
+  durationMinutes Int?
+  emoji           String?             @db.VarChar(10)
+  color           String?             @db.VarChar(20)
+  order           Int                 @default(0)
+  isActive        Boolean             @default(true)
+
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  user            User                @relation("UserActivities", fields: [userId], references: [id], onDelete: Cascade)
+  afterActivity   Activity?           @relation("ActivitySequence", fields: [afterActivityId], references: [id], onDelete: SetNull)
+  nextActivities  Activity[]          @relation("ActivitySequence")
+  records         ActivityRecord[]
+
+  @@index([userId, isActive])
+  @@index([userId, periodicity])
+  @@map("activities")
+}
+
+model ActivityRecord {
+  id          String    @id @default(uuid())
+  activityId  String
+  userId      String
+  date        DateTime  @db.Date
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  skipped     Boolean   @default(false)
+  notes       String?   @db.VarChar(500)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  activity    Activity  @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user        User      @relation("UserActivityRecords", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([activityId, userId, date])
+  @@index([userId, date])
+  @@map("activity_records")
 }
 
 /// HabitMoment: Momento del día configurable por el usuario para agrupar hábitos.

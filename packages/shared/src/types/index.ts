@@ -24,3 +24,4 @@ export * from './timeline.types.js';
 export * from './lifeDebt.types.js';
 export * from './insight.types.js';
 export * from './nutrition.types.js';
+export * from './activity.types.js';
