@@ -14,6 +14,8 @@ import { useHabits, useToggleHabitComplete } from '@/hooks/useHabits';
 import { useActivities, useToggleActivityRecord } from '@/hooks/useActivities';
 import { useHabitMoments } from '@/hooks/useHabitMoments';
 import { DailyTimeline } from '@/components/dashboard/DailyTimeline';
+import { WeekAhead } from '@/components/dashboard/WeekAhead';
+import { FinanceSummary } from '@/components/dashboard/FinanceSummary';
 import { useFeaturedGoal } from '@/hooks/useGoals';
 import { useTasks } from '@/hooks/useTasks';
 import { useCalendarEvents } from '@/hooks/useCalendarEvents';
@@ -267,9 +269,12 @@ export function DashboardPage() {
     }
   };
 
+  // Total estimado de TODOS los gastos pendientes del mes (no solo los 5 mostrados)
   const totalPending = useMemo(() => {
-    return pendingExpenses.reduce((sum, e) => sum + (e.previousAmount || 0), 0);
-  }, [pendingExpenses]);
+    const allPending =
+      monthlyExpensesData?.monthlyExpenses?.filter((e) => e.status === 'pendiente') ?? [];
+    return allPending.reduce((sum, e) => sum + Number(e.previousAmount || 0), 0);
+  }, [monthlyExpensesData]);
 
   // Ensure accounts is an array
   const accountsList = Array.isArray(accounts) ? accounts : [];
@@ -538,6 +543,12 @@ export function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Resumen de la semana */}
+      <WeekAhead tasks={tasksData ?? []} events={eventsData ?? []} />
+
+      {/* Salud financiera */}
+      <FinanceSummary />
 
       {/* Pay Modal */}
       {payingExpense && (
