@@ -10,7 +10,12 @@
     "build:preview": "eas build --profile preview --platform android",
     "build:production": "eas build --profile production --platform android",
     "type-check": "tsc --noEmit",
-    "ios": "expo run:ios"
+    "ios": "expo run:ios",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:e2e": "detox test --configuration android.emu.debug",
+    "test:e2e:build": "detox build --configuration android.emu.debug"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "~0.2.3",
@@ -55,7 +60,14 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
+    "@config-plugins/detox": "^11.0.0",
+    "@testing-library/jest-native": "^5.4.3",
+    "@testing-library/react-native": "^13.3.3",
+    "@types/jest": "^30.0.0",
     "@types/react": "~18.3.12",
+    "detox": "^20.51.3",
+    "jest-circus": "^30.4.2",
+    "jest-expo": "^56.0.4",
     "typescript": "^5.9.3"
   }
 }

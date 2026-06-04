@@ -58,6 +58,10 @@ export default function RootLayout() {
             name="meta-detalle"
             options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
+          <Stack.Screen
+            name="actividades"
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+          />
         </Stack>
       </QueryClientProvider>
     </GestureHandlerRootView>

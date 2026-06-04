@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Bell, Check, CheckCircle2, Circle, BarChart2 } from 'lucide-react-native';
+import { Bell, Check, CheckCircle2, Circle, BarChart2, Zap } from 'lucide-react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Card } from '@/components/ui/Card';
@@ -24,7 +24,9 @@ import {
 import type { Habit } from '@/services/api/habitApi';
 import type { Task } from '@/services/api/taskApi';
 import type { UpcomingEvent } from '@/services/api/eventApi';
-import type { GoalWithProgress } from '@horus/shared';
+import type { GoalWithProgress, Activity } from '@horus/shared';
+import { ActivityTimeMode } from '@horus/shared';
+import { useActivities, useToggleActivityRecord, activityKeys } from '@/hooks/useActivities';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -346,6 +348,50 @@ function FeaturedGoalCard({ goal }: { goal: GoalWithProgress }) {
   );
 }
 
+// ─── ActivityCheckRow ─────────────────────────────────────────────────────────
+
+function ActivityCheckRow({
+  activity,
+  onToggle,
+  toggling,
+  isLast,
+}: {
+  activity: Activity;
+  onToggle: () => void;
+  toggling: boolean;
+  isLast: boolean;
+}) {
+  const isCompleted = activity.record?.completed ?? false;
+  const timeLabel =
+    activity.timeMode === ActivityTimeMode.FIXED && activity.fixedHour != null
+      ? `${String(activity.fixedHour).padStart(2, '0')}:${String(activity.fixedMinute ?? 0).padStart(2, '0')}`
+      : null;
+
+  return (
+    <View style={[styles.checkRow, !isLast && styles.checkRowBorder]}>
+      <TouchableOpacity
+        style={[styles.checkBtn, isCompleted && styles.checkBtnDone]}
+        onPress={onToggle}
+        disabled={toggling}
+        activeOpacity={0.75}
+      >
+        {toggling ? (
+          <ActivityIndicator size="small" color={isCompleted ? '#fff' : Colors.muted} />
+        ) : isCompleted ? (
+          <Check size={12} color="#fff" strokeWidth={2.5} />
+        ) : null}
+      </TouchableOpacity>
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.checkLabel, isCompleted && styles.checkLabelDone]} numberOfLines={1}>
+          {activity.emoji ? `${activity.emoji} ` : ''}
+          {activity.name}
+        </Text>
+        {timeLabel && <Text style={styles.checkSublabel}>{timeLabel}</Text>}
+      </View>
+    </View>
+  );
+}
+
 // ─── screen ───────────────────────────────────────────────────────────────────
 
 export default function HoyScreen() {
@@ -358,9 +404,11 @@ export default function HoyScreen() {
   const { data: financeStats } = useFinanceStats();
   const { data: recurringCount = 0 } = useRecurringExpensesCount();
   const { data: upcomingEvents = [] } = useUpcomingEvents(3);
+  const { data: todayActivities = [] } = useActivities(TODAY);
 
   const toggleHabit = useToggleHabitComplete();
   const toggleTask = useToggleTaskComplete();
+  const toggleActivity = useToggleActivityRecord();
 
   const todayHabits = habits.filter(isHabitDueToday).slice(0, 5);
   const pendingTasks = tasks.filter(isPending).slice(0, 4);
@@ -378,6 +426,7 @@ export default function HoyScreen() {
       queryClient.invalidateQueries({ queryKey: eventKeys.all }),
       queryClient.invalidateQueries({ queryKey: recurringKeys.all }),
       queryClient.invalidateQueries({ queryKey: goalKeys.featured }),
+      queryClient.invalidateQueries({ queryKey: activityKeys.all }),
     ]);
   }, [queryClient]);
 
@@ -394,6 +443,16 @@ export default function HoyScreen() {
       onError: () => Alert.alert('Error', 'No se pudo actualizar la tarea'),
     });
   };
+
+  const handleToggleActivity = (activity: Activity) => {
+    const isDone = activity.record?.completed ?? false;
+    toggleActivity.mutate(
+      { id: activity.id, dto: { date: TODAY, completed: !isDone } },
+      { onError: () => Alert.alert('Error', 'No se pudo actualizar la actividad') }
+    );
+  };
+
+  const visibleActivities = todayActivities.slice(0, 4);
 
   const isLoading = habitsLoading && tasksLoading;
 
@@ -452,6 +511,28 @@ export default function HoyScreen() {
             />
           ))}
         </Card>
+      )}
+
+      {/* ─── Actividades ──────────────────────────────────────── */}
+      {visibleActivities.length > 0 && (
+        <>
+          <SectionRow
+            title="Actividades de hoy"
+            linkLabel="Ver todas"
+            onPress={() => router.push('/actividades')}
+          />
+          <Card padding={0} solid>
+            {visibleActivities.map((a, i) => (
+              <ActivityCheckRow
+                key={a.id}
+                activity={a}
+                onToggle={() => handleToggleActivity(a)}
+                toggling={toggleActivity.isPending && toggleActivity.variables?.id === a.id}
+                isLast={i === visibleActivities.length - 1}
+              />
+            ))}
+          </Card>
+        </>
       )}
 
       {/* ─── Tareas ───────────────────────────────────────────── */}
@@ -796,5 +877,46 @@ const styles = StyleSheet.create({
     color: Colors.muted,
     textAlign: 'center',
     paddingVertical: Spacing.sm,
+  },
+
+  // Activity check row (shared style for simple toggle rows)
+  checkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 12,
+    gap: Spacing.sm,
+  },
+  checkRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.line,
+  },
+  checkBtn: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: Colors.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkBtnDone: {
+    backgroundColor: Colors.vivid,
+    borderColor: Colors.vivid,
+  },
+  checkLabel: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 14,
+    color: Colors.ink,
+  },
+  checkLabelDone: {
+    color: Colors.muted,
+    textDecorationLine: 'line-through',
+  },
+  checkSublabel: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 11,
+    color: Colors.muted,
+    marginTop: 1,
   },
 });

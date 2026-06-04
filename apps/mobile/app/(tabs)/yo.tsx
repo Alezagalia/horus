@@ -32,6 +32,7 @@ import {
   History,
   Tag,
   BarChart2,
+  Zap,
 } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
@@ -636,6 +637,12 @@ export default function YoScreen() {
           icon={<Salad size={16} color="#22c55e" />}
           label="Nutrición"
           onPress={() => router.push('/nutricion')}
+        />
+        <View style={styles.divider} />
+        <SettingRow
+          icon={<Zap size={16} color="#f59e0b" />}
+          label="Actividades"
+          onPress={() => router.push('/actividades')}
         />
       </Card>
 

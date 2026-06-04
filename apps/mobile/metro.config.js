@@ -18,6 +18,27 @@ config.resolver.nodeModulesPaths = [
 // Support package.exports (pnpm)
 config.resolver.unstable_enablePackageExports = true;
 
+// Fix: resolve .js imports to .ts/.tsx for TypeScript ESM packages (e.g. @horus/shared)
+const defaultResolver = config.resolver.resolveRequest;
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  // When a .js import fails, retry with .ts and .tsx
+  try {
+    return context.resolveRequest(context, moduleName, platform);
+  } catch (e) {
+    if (moduleName.endsWith('.js')) {
+      const tsName = moduleName.slice(0, -3) + '.ts';
+      try {
+        return context.resolveRequest(context, tsName, platform);
+      } catch {}
+      const tsxName = moduleName.slice(0, -3) + '.tsx';
+      try {
+        return context.resolveRequest(context, tsxName, platform);
+      } catch {}
+    }
+    throw e;
+  }
+};
+
 // Fix: override server root to project root (not monorepo root)
 // When Gradle builds the APK, it passes --entry-file as a relative path from apps/mobile.
 // Expo's getDefaultConfig sets unstable_serverRoot to the monorepo root, which causes Metro
