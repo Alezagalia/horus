@@ -4,7 +4,7 @@ import React from 'react';
 
 jest.mock('../../services/api/habitApi');
 jest.mock('../../services/api/categoryApi');
-jest.mock('./useGoals', () => ({ goalKeys: { all: ['goals'] } }));
+jest.mock('../useGoals', () => ({ goalKeys: { all: ['goals'] } }));
 
 import { habitApi } from '../../services/api/habitApi';
 import { useHabits, useToggleHabitComplete, useCreateHabit } from '../useHabits';
