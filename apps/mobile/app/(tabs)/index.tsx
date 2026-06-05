@@ -2,35 +2,38 @@ import { useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { format, parseISO } from 'date-fns';
+import { format, startOfDay, endOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Bell, Check, CheckCircle2, Circle, BarChart2, Zap } from 'lucide-react-native';
+import { Bell, Check } from 'lucide-react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Card } from '@/components/ui/Card';
 import { ProgressRing } from '@/components/ui/ProgressRing';
+import { DailyTimeline } from '@/components/dashboard/DailyTimeline';
 import { Colors, Spacing, Radius, Gradients, Shadows } from '@/tokens';
 import { useAuthStore } from '@/store/authStore';
 import { useHabits, useHabitStats, useToggleHabitComplete, habitKeys } from '@/hooks/useHabits';
+import { useHabitMoments } from '@/hooks/useHabitMoments';
 import { useTasks, useToggleTaskComplete, taskKeys } from '@/hooks/useTasks';
 import { useFeaturedGoal, goalKeys } from '@/hooks/useGoals';
 import { useFinanceStats, accountKeys } from '@/hooks/useAccounts';
 import {
-  useUpcomingEvents,
+  useCalendarEvents,
   useRecurringExpensesCount,
   eventKeys,
+  calendarEventKeys,
   recurringKeys,
 } from '@/hooks/useEvents';
 import type { Habit } from '@/services/api/habitApi';
 import type { Task } from '@/services/api/taskApi';
-import type { UpcomingEvent } from '@/services/api/eventApi';
-import type { GoalWithProgress, Activity } from '@horus/shared';
-import { ActivityTimeMode } from '@horus/shared';
+import type { GoalWithProgress } from '@horus/shared';
 import { useActivities, useToggleActivityRecord, activityKeys } from '@/hooks/useActivities';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 const TODAY = format(new Date(), 'yyyy-MM-dd');
+const TODAY_START = startOfDay(new Date()).toISOString();
+const TODAY_END = endOfDay(new Date()).toISOString();
 
 function isHabitDueToday(h: Habit): boolean {
   if (!h.isActive) return false;
@@ -172,68 +175,6 @@ function SectionRow({
   );
 }
 
-// ─── HabitCheckRow ────────────────────────────────────────────────────────────
-
-function HabitCheckRow({
-  habit,
-  onToggle,
-  onStats,
-  toggling,
-  isLast,
-}: {
-  habit: Habit;
-  onToggle: () => void;
-  onStats: () => void;
-  toggling: boolean;
-  isLast?: boolean;
-}) {
-  const done = isCompletedToday(habit);
-  const icon = habit.category?.icon ?? '·';
-
-  return (
-    <TouchableOpacity
-      style={[styles.habitRow, !isLast && styles.rowDivider]}
-      onPress={onToggle}
-      disabled={toggling}
-      activeOpacity={0.65}
-    >
-      {/* Checkbox */}
-      {toggling ? (
-        <ActivityIndicator size="small" color={Colors.vivid} style={styles.checkbox} />
-      ) : (
-        <View style={[styles.checkbox, done && styles.checkboxDone]}>
-          {done && <Check size={13} color="#fff" strokeWidth={3} />}
-        </View>
-      )}
-
-      {/* Category icon */}
-      <Text style={styles.habitIcon}>{icon}</Text>
-
-      {/* Name */}
-      <Text style={[styles.habitName, done && styles.habitNameDone]} numberOfLines={1}>
-        {habit.name}
-      </Text>
-
-      {/* Streak */}
-      {habit.currentStreak > 0 && (
-        <View style={styles.streakBadge}>
-          <View style={styles.streakDot} />
-          <Text style={styles.streakNum}>{habit.currentStreak}</Text>
-        </View>
-      )}
-
-      {/* Stats button */}
-      <TouchableOpacity
-        onPress={onStats}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        activeOpacity={0.6}
-      >
-        <BarChart2 size={15} color={Colors.muted} strokeWidth={1.5} />
-      </TouchableOpacity>
-    </TouchableOpacity>
-  );
-}
-
 // ─── TaskCheckRow ─────────────────────────────────────────────────────────────
 
 function TaskCheckRow({
@@ -285,30 +226,6 @@ function TaskCheckRow({
   );
 }
 
-// ─── EventRow ─────────────────────────────────────────────────────────────────
-
-function EventRow({ event, isLast }: { event: UpcomingEvent; isLast: boolean }) {
-  const time = event.isAllDay ? 'Todo el día' : format(parseISO(event.startDateTime), 'HH:mm');
-
-  return (
-    <View style={[styles.eventRow, !isLast && styles.rowDivider]}>
-      <View
-        style={[
-          styles.eventAccent,
-          event.category?.color ? { backgroundColor: event.category.color } : null,
-        ]}
-      />
-      <View style={styles.eventInfo}>
-        <Text style={styles.eventTime}>{time}</Text>
-        <Text style={styles.eventTitle} numberOfLines={1}>
-          {event.title}
-        </Text>
-        {event.category && <Text style={styles.eventCategory}>{event.category.name}</Text>}
-      </View>
-    </View>
-  );
-}
-
 // ─── FeaturedGoalCard ─────────────────────────────────────────────────────────
 
 function FeaturedGoalCard({ goal }: { goal: GoalWithProgress }) {
@@ -348,50 +265,6 @@ function FeaturedGoalCard({ goal }: { goal: GoalWithProgress }) {
   );
 }
 
-// ─── ActivityCheckRow ─────────────────────────────────────────────────────────
-
-function ActivityCheckRow({
-  activity,
-  onToggle,
-  toggling,
-  isLast,
-}: {
-  activity: Activity;
-  onToggle: () => void;
-  toggling: boolean;
-  isLast: boolean;
-}) {
-  const isCompleted = activity.record?.completed ?? false;
-  const timeLabel =
-    activity.timeMode === ActivityTimeMode.FIXED && activity.fixedHour != null
-      ? `${String(activity.fixedHour).padStart(2, '0')}:${String(activity.fixedMinute ?? 0).padStart(2, '0')}`
-      : null;
-
-  return (
-    <View style={[styles.checkRow, !isLast && styles.checkRowBorder]}>
-      <TouchableOpacity
-        style={[styles.checkBtn, isCompleted && styles.checkBtnDone]}
-        onPress={onToggle}
-        disabled={toggling}
-        activeOpacity={0.75}
-      >
-        {toggling ? (
-          <ActivityIndicator size="small" color={isCompleted ? '#fff' : Colors.muted} />
-        ) : isCompleted ? (
-          <Check size={12} color="#fff" strokeWidth={2.5} />
-        ) : null}
-      </TouchableOpacity>
-      <View style={{ flex: 1 }}>
-        <Text style={[styles.checkLabel, isCompleted && styles.checkLabelDone]} numberOfLines={1}>
-          {activity.emoji ? `${activity.emoji} ` : ''}
-          {activity.name}
-        </Text>
-        {timeLabel && <Text style={styles.checkSublabel}>{timeLabel}</Text>}
-      </View>
-    </View>
-  );
-}
-
 // ─── screen ───────────────────────────────────────────────────────────────────
 
 export default function HoyScreen() {
@@ -399,18 +272,19 @@ export default function HoyScreen() {
 
   const { data: habits = [], isLoading: habitsLoading } = useHabits();
   const { data: stats } = useHabitStats();
+  const { data: habitMoments = [] } = useHabitMoments();
   const { data: tasks = [], isLoading: tasksLoading } = useTasks();
   const { data: featuredGoal } = useFeaturedGoal();
   const { data: financeStats } = useFinanceStats();
   const { data: recurringCount = 0 } = useRecurringExpensesCount();
-  const { data: upcomingEvents = [] } = useUpcomingEvents(3);
+  const { data: todayEvents = [] } = useCalendarEvents(TODAY_START, TODAY_END);
   const { data: todayActivities = [] } = useActivities(TODAY);
 
   const toggleHabit = useToggleHabitComplete();
   const toggleTask = useToggleTaskComplete();
   const toggleActivity = useToggleActivityRecord();
 
-  const todayHabits = habits.filter(isHabitDueToday).slice(0, 5);
+  const todayHabits = habits.filter(isHabitDueToday);
   const pendingTasks = tasks.filter(isPending).slice(0, 4);
 
   const pct = stats?.today.percentage ?? 0;
@@ -424,16 +298,19 @@ export default function HoyScreen() {
       queryClient.invalidateQueries({ queryKey: taskKeys.all }),
       queryClient.invalidateQueries({ queryKey: accountKeys.all }),
       queryClient.invalidateQueries({ queryKey: eventKeys.all }),
+      queryClient.invalidateQueries({ queryKey: calendarEventKeys.all }),
       queryClient.invalidateQueries({ queryKey: recurringKeys.all }),
       queryClient.invalidateQueries({ queryKey: goalKeys.featured }),
       queryClient.invalidateQueries({ queryKey: activityKeys.all }),
     ]);
   }, [queryClient]);
 
-  const handleToggleHabit = (habit: Habit) => {
+  const handleToggleHabit = (habitId: string) => {
+    const habit = habits.find((h) => h.id === habitId);
+    if (!habit) return;
     const isDone = isCompletedToday(habit);
     toggleHabit.mutate(
-      { habitId: habit.id, date: TODAY, completed: !isDone },
+      { habitId, date: TODAY, completed: !isDone },
       { onError: () => Alert.alert('Error', 'No se pudo actualizar el hábito') }
     );
   };
@@ -444,15 +321,15 @@ export default function HoyScreen() {
     });
   };
 
-  const handleToggleActivity = (activity: Activity) => {
+  const handleToggleActivity = (activityId: string) => {
+    const activity = todayActivities.find((a) => a.id === activityId);
+    if (!activity) return;
     const isDone = activity.record?.completed ?? false;
     toggleActivity.mutate(
-      { id: activity.id, dto: { date: TODAY, completed: !isDone } },
+      { id: activityId, dto: { date: TODAY, completed: !isDone } },
       { onError: () => Alert.alert('Error', 'No se pudo actualizar la actividad') }
     );
   };
-
-  const visibleActivities = todayActivities.slice(0, 4);
 
   const isLoading = habitsLoading && tasksLoading;
 
@@ -480,59 +357,44 @@ export default function HoyScreen() {
         <StatCard value={String(recurringCount)} label="Por pagar" />
       </View>
 
-      {/* ─── Hábitos ──────────────────────────────────────────── */}
-      <SectionRow
-        title="Hábitos de hoy"
-        linkLabel="Ver todos"
-        onPress={() => router.push('/(tabs)/foco')}
-      />
+      {/* ─── Agenda del día ───────────────────────────────────── */}
+      <View style={styles.agendaHeader}>
+        <Text style={styles.sectionTitle}>Agenda del día</Text>
+        <View style={styles.agendaLinks}>
+          <TouchableOpacity
+            onPress={() =>
+              router.navigate({ pathname: '/(tabs)/foco', params: { tab: 'habitos' } })
+            }
+            activeOpacity={0.7}
+          >
+            <Text style={styles.agendaLink}>🔄 Hábitos</Text>
+          </TouchableOpacity>
+          <Text style={styles.agendaSep}>·</Text>
+          <TouchableOpacity onPress={() => router.push('/actividades')} activeOpacity={0.7}>
+            <Text style={styles.agendaLink}>⚡ Actividades</Text>
+          </TouchableOpacity>
+          <Text style={styles.agendaSep}>·</Text>
+          <TouchableOpacity onPress={() => router.push('/agenda')} activeOpacity={0.7}>
+            <Text style={styles.agendaLink}>📅 Agenda</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       {isLoading ? (
         <ActivityIndicator color={Colors.vivid} style={{ marginVertical: 16 }} />
-      ) : todayHabits.length === 0 ? (
-        <Card solid>
-          <Text style={styles.emptyText}>Sin hábitos para hoy 🎉</Text>
-        </Card>
       ) : (
         <Card padding={0} solid>
-          {todayHabits.map((h, i) => (
-            <HabitCheckRow
-              key={h.id}
-              habit={h}
-              onToggle={() => handleToggleHabit(h)}
-              onStats={() =>
-                router.push({
-                  pathname: '/habit-stats',
-                  params: { id: h.id, name: h.name, color: h.color ?? '', type: h.type },
-                })
-              }
-              toggling={toggleHabit.isPending && toggleHabit.variables?.habitId === h.id}
-              isLast={i === todayHabits.length - 1}
-            />
-          ))}
-        </Card>
-      )}
-
-      {/* ─── Actividades ──────────────────────────────────────── */}
-      {visibleActivities.length > 0 && (
-        <>
-          <SectionRow
-            title="Actividades de hoy"
-            linkLabel="Ver todas"
-            onPress={() => router.push('/actividades')}
+          <DailyTimeline
+            habits={todayHabits}
+            activities={todayActivities}
+            events={todayEvents}
+            habitMoments={habitMoments}
+            onToggleHabit={handleToggleHabit}
+            onToggleActivity={handleToggleActivity}
+            togglingHabitId={toggleHabit.isPending ? toggleHabit.variables?.habitId : undefined}
+            togglingActivityId={toggleActivity.isPending ? toggleActivity.variables?.id : undefined}
           />
-          <Card padding={0} solid>
-            {visibleActivities.map((a, i) => (
-              <ActivityCheckRow
-                key={a.id}
-                activity={a}
-                onToggle={() => handleToggleActivity(a)}
-                toggling={toggleActivity.isPending && toggleActivity.variables?.id === a.id}
-                isLast={i === visibleActivities.length - 1}
-              />
-            ))}
-          </Card>
-        </>
+        </Card>
       )}
 
       {/* ─── Tareas ───────────────────────────────────────────── */}
@@ -558,26 +420,6 @@ export default function HoyScreen() {
             />
           ))}
         </Card>
-      )}
-
-      {/* ─── Próximamente ─────────────────────────────────────── */}
-      {upcomingEvents.length > 0 && (
-        <>
-          <SectionRow
-            title="Próximamente"
-            linkLabel="Agenda"
-            onPress={() => router.push('/agenda')}
-          />
-          <Card padding={0} solid>
-            {upcomingEvents.slice(0, 4).map((ev, i) => (
-              <EventRow
-                key={ev.id}
-                event={ev}
-                isLast={i === Math.min(upcomingEvents.length, 4) - 1}
-              />
-            ))}
-          </Card>
-        </>
       )}
     </ScreenContainer>
   );
@@ -714,19 +556,39 @@ const styles = StyleSheet.create({
     color: Colors.vivid,
   },
 
-  // Divider shared
-  rowDivider: {
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.line,
+  // Agenda header with quick links
+  agendaHeader: {
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.sm,
+    gap: 6,
+  },
+  agendaLinks: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  agendaLink: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 12,
+    color: Colors.vivid,
+  },
+  agendaSep: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    color: Colors.muted,
   },
 
-  // Habit check row
+  // Task check row
   habitRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.lg,
     paddingVertical: 13,
     gap: Spacing.sm,
+  },
+  rowDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.line,
   },
   checkbox: {
     width: 24,
@@ -756,61 +618,12 @@ const styles = StyleSheet.create({
     color: Colors.muted,
     textDecorationLine: 'line-through',
   },
-  streakBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  streakDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.vivid,
-  },
-  streakNum: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 13,
-    color: Colors.vivid,
-  },
 
   // Task-specific
   taskCategory: {
     fontFamily: 'Inter_400Regular',
     fontSize: 11,
     color: Colors.muted,
-  },
-
-  // Event row
-  eventRow: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: 13,
-    gap: Spacing.md,
-  },
-  eventAccent: {
-    width: 3,
-    borderRadius: 2,
-    backgroundColor: Colors.vivid,
-    minHeight: 36,
-  },
-  eventInfo: { flex: 1 },
-  eventTime: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 12,
-    color: Colors.ink,
-    marginBottom: 2,
-  },
-  eventTitle: {
-    fontFamily: 'Inter_500Medium',
-    fontSize: 14,
-    color: Colors.ink,
-  },
-  eventCategory: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 11,
-    color: Colors.muted,
-    marginTop: 2,
   },
 
   // Featured goal
@@ -877,46 +690,5 @@ const styles = StyleSheet.create({
     color: Colors.muted,
     textAlign: 'center',
     paddingVertical: Spacing.sm,
-  },
-
-  // Activity check row (shared style for simple toggle rows)
-  checkRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: 12,
-    gap: Spacing.sm,
-  },
-  checkRowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.line,
-  },
-  checkBtn: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: Colors.line,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkBtnDone: {
-    backgroundColor: Colors.vivid,
-    borderColor: Colors.vivid,
-  },
-  checkLabel: {
-    fontFamily: 'Inter_500Medium',
-    fontSize: 14,
-    color: Colors.ink,
-  },
-  checkLabelDone: {
-    color: Colors.muted,
-    textDecorationLine: 'line-through',
-  },
-  checkSublabel: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 11,
-    color: Colors.muted,
-    marginTop: 1,
   },
 });

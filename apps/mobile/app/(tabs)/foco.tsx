@@ -56,7 +56,7 @@ import type { Task, CreateTaskDTO } from '@/services/api/taskApi';
 import type { GoalWithProgress, CreateGoalDTO, UpdateGoalDTO, GoalPriority } from '@horus/shared';
 import { LinearGradient } from 'expo-linear-gradient';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
@@ -707,7 +707,14 @@ function NumericSheet({ habit, onClose }: { habit: Habit | null; onClose: () => 
 type Tab = 'tareas' | 'habitos' | 'metas';
 
 export default function FocoScreen() {
+  const { tab } = useLocalSearchParams<{ tab?: Tab }>();
   const [activeTab, setActiveTab] = useState<Tab>('tareas');
+
+  useEffect(() => {
+    if (tab === 'habitos' || tab === 'tareas' || tab === 'metas') {
+      setActiveTab(tab);
+    }
+  }, [tab]);
   const [taskStatusFilter, setTaskStatusFilter] = useState<
     'pendiente' | 'en_progreso' | 'completada' | 'todas'
   >('pendiente');

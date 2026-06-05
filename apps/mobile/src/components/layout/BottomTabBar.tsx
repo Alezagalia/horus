@@ -1,16 +1,7 @@
 import { useRef, useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Animated,
-  Dimensions,
-  Modal,
-  Pressable,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, Modal, Pressable } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { router, useSegments } from 'expo-router';
+import { router } from 'expo-router';
 import { Home, CheckSquare, Wallet, Dumbbell, User, Plus, X } from 'lucide-react-native';
 import { Colors, Typography, Radius, Layout, Shadows, Spacing } from '@/tokens';
 
@@ -42,7 +33,7 @@ export function BottomTabBar({ activeIndex }: Props) {
   const openFAB = () => {
     setFabOpen(true);
     Animated.parallel([
-      Animated.spring(fabScale, { toValue: 0.94, useNativeDriver: true }),
+      Animated.spring(fabScale, { toValue: 0.9, useNativeDriver: true }),
       Animated.spring(sheetY, { toValue: 0, tension: 300, friction: 28, useNativeDriver: true }),
     ]).start();
   };
@@ -53,9 +44,6 @@ export function BottomTabBar({ activeIndex }: Props) {
       Animated.timing(sheetY, { toValue: 300, duration: 200, useNativeDriver: true }),
     ]).start(() => setFabOpen(false));
   };
-
-  const screenWidth = Dimensions.get('window').width;
-  const tabWidth = (screenWidth - Layout.tabBarSide * 2 - Layout.fabSize) / TABS.length;
 
   return (
     <>
@@ -82,16 +70,34 @@ export function BottomTabBar({ activeIndex }: Props) {
         </Animated.View>
       </Modal>
 
-      {/* Tab bar */}
+      {/* Wrapper: no captura toques propios, solo los hijos lo hacen */}
       <View style={styles.wrapper} pointerEvents="box-none">
+        {/* Botón + flotante — pointerEvents="box-none" en el contenedor
+            para que los toques pasen a las tabs debajo */}
+        <View style={styles.fabContainer} pointerEvents="box-none">
+          <Animated.View style={{ transform: [{ scale: fabScale }] }}>
+            <TouchableOpacity
+              style={styles.fab}
+              onPress={fabOpen ? closeFAB : openFAB}
+              activeOpacity={0.85}
+            >
+              {fabOpen ? (
+                <X size={18} color="#fff" strokeWidth={2.5} />
+              ) : (
+                <Plus size={18} color="#fff" strokeWidth={2.5} />
+              )}
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+
+        {/* Tab bar con las 5 tabs */}
         <BlurView intensity={70} tint="light" style={styles.bar}>
-          {/* First 2 tabs */}
-          {TABS.slice(0, 2).map((tab, i) => {
+          {TABS.map((tab, i) => {
             const active = activeIndex === i;
             return (
               <TouchableOpacity
                 key={tab.name}
-                style={[styles.tabItem, { width: tabWidth }]}
+                style={styles.tabItem}
                 onPress={() => router.push(tab.route as any)}
                 activeOpacity={0.7}
               >
@@ -103,45 +109,7 @@ export function BottomTabBar({ activeIndex }: Props) {
                 <Text style={[styles.tabLabel, { color: active ? Colors.vivid : Colors.muted }]}>
                   {tab.name}
                 </Text>
-              </TouchableOpacity>
-            );
-          })}
-
-          {/* FAB slot */}
-          <View style={styles.fabSlot}>
-            <Animated.View style={{ transform: [{ scale: fabScale }] }}>
-              <TouchableOpacity
-                style={styles.fab}
-                onPress={fabOpen ? closeFAB : openFAB}
-                activeOpacity={1}
-              >
-                {fabOpen ? (
-                  <X size={22} color="#fff" strokeWidth={2.4} />
-                ) : (
-                  <Plus size={22} color="#fff" strokeWidth={2.4} />
-                )}
-              </TouchableOpacity>
-            </Animated.View>
-          </View>
-
-          {/* Last 3 tabs */}
-          {TABS.slice(2).map((tab, i) => {
-            const active = activeIndex === i + 2;
-            return (
-              <TouchableOpacity
-                key={tab.name}
-                style={[styles.tabItem, { width: tabWidth }]}
-                onPress={() => router.push(tab.route as any)}
-                activeOpacity={0.7}
-              >
-                <tab.Icon
-                  size={20}
-                  color={active ? Colors.vivid : Colors.muted}
-                  strokeWidth={active ? 2.2 : 1.7}
-                />
-                <Text style={[styles.tabLabel, { color: active ? Colors.vivid : Colors.muted }]}>
-                  {tab.name}
-                </Text>
+                {active && <View style={styles.activeDot} />}
               </TouchableOpacity>
             );
           })}
@@ -158,18 +126,21 @@ const styles = StyleSheet.create({
     left: Layout.tabBarSide,
     right: Layout.tabBarSide,
   },
+
+  /* Tab bar */
   bar: {
     height: Layout.tabBarHeight,
     borderRadius: Radius.nav,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.xs,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.9)',
     overflow: 'hidden',
     ...Shadows.nav,
   },
   tabItem: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: Spacing.xs,
@@ -179,21 +150,34 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_500Medium',
     ...Typography.tabLabel,
   },
-  fabSlot: {
-    width: Layout.fabSize,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: -(Layout.tabBarHeight / 2) + 4,
+  activeDot: {
+    position: 'absolute',
+    bottom: 2,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.vivid,
+  },
+
+  /* FAB flotante — pequeño, arriba-derecha del tab bar */
+  fabContainer: {
+    position: 'absolute',
+    right: Spacing.md,
+    bottom: Layout.tabBarHeight + Spacing.sm,
+    zIndex: 10,
+    elevation: 25,
   },
   fab: {
-    width: Layout.fabSize,
-    height: Layout.fabSize,
-    borderRadius: Radius.fab,
-    backgroundColor: Colors.black,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.vivid,
     alignItems: 'center',
     justifyContent: 'center',
     ...Shadows.fab,
   },
+
+  /* Bottom sheet */
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(10, 14, 31, 0.4)',
