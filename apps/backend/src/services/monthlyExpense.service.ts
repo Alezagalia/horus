@@ -7,6 +7,7 @@
 
 import { ExpenseStatus } from '../generated/prisma/client.js';
 import { prisma } from '../lib/prisma.js';
+import { checkBudgetThreshold } from './budget-alert.service.js';
 
 /**
  * Get monthly expense instances for a specific month/year
@@ -229,7 +230,16 @@ export const payMonthlyExpense = async (
     return {
       monthlyExpense: updatedExpense,
       transaction,
+      currency: account.currency,
     };
+  });
+
+  // Alerta de presupuesto (80%/100%) — no bloqueante
+  void checkBudgetThreshold({
+    userId,
+    categoryId: result.transaction.categoryId,
+    currency: result.currency,
+    date: result.transaction.date,
   });
 
   return result;

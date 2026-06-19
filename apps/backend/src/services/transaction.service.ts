@@ -13,6 +13,7 @@ import {
   CreateTransferInput,
   UpdateTransferInput,
 } from '../validations/transaction.validation.js';
+import { checkBudgetThreshold } from './budget-alert.service.js';
 
 export const transactionService = {
   /**
@@ -320,6 +321,16 @@ export const transactionService = {
       return { transaction, updatedAccount };
     });
 
+    // Alerta de presupuesto (80%/100%) si es un egreso — no bloqueante
+    if (result.transaction.type === 'egreso' && !result.transaction.isTransfer) {
+      void checkBudgetThreshold({
+        userId,
+        categoryId: result.transaction.categoryId,
+        currency: result.transaction.account.currency,
+        date: result.transaction.date,
+      });
+    }
+
     return {
       transaction: {
         id: result.transaction.id,
@@ -447,6 +458,16 @@ export const transactionService = {
 
       return { transaction, updatedAccount };
     });
+
+    // Alerta de presupuesto (80%/100%) si es un egreso — no bloqueante
+    if (result.transaction.type === 'egreso' && !result.transaction.isTransfer) {
+      void checkBudgetThreshold({
+        userId,
+        categoryId: result.transaction.categoryId,
+        currency: result.transaction.account.currency,
+        date: result.transaction.date,
+      });
+    }
 
     return {
       transaction: {
