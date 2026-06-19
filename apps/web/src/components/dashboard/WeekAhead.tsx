@@ -50,6 +50,17 @@ function pad(n: number) {
   return String(n).padStart(2, '0');
 }
 
+/**
+ * Devuelve el icono solo si es un emoji válido. Algunos datos antiguos guardan
+ * el icono como nombre de componente lucide (p. ej. "Briefcase"), que no se
+ * renderiza como icono; en ese caso (o si está vacío) usa el fallback.
+ */
+function resolveEmojiIcon(icon: string | null | undefined, fallback: string): string {
+  const value = icon?.trim();
+  if (!value) return fallback;
+  return /^[A-Za-z]/.test(value) ? fallback : value;
+}
+
 /** Etiqueta del día: "Hoy", "Mañana" o "lun 3 jun". */
 function dayLabel(date: Date): string {
   if (isToday(date)) return 'Hoy';
@@ -79,7 +90,7 @@ export function WeekAhead({ tasks, events }: WeekAheadProps) {
         id: task.id,
         title: task.title,
         date,
-        icon: task.categoryIcon || '✅',
+        icon: resolveEmojiIcon(task.categoryIcon, '✅'),
         priority: task.priority,
       });
     });
@@ -96,7 +107,7 @@ export function WeekAhead({ tasks, events }: WeekAheadProps) {
         id: event.id,
         title: event.title,
         date,
-        icon: event.category?.icon || '📅',
+        icon: resolveEmojiIcon(event.category?.icon, '📅'),
         timeLabel: event.isAllDay ? undefined : `${pad(date.getHours())}:${pad(date.getMinutes())}`,
         location: event.location,
       });
