@@ -11,6 +11,8 @@ interface Props {
   onRefresh?: () => void;
   refreshing?: boolean;
   style?: object;
+  /** Ancho máximo del contenido (centrado). Por defecto 600; subir para layouts tablet de 2 columnas. */
+  maxContentWidth?: number;
 }
 
 export function ScreenContainer({
@@ -19,6 +21,7 @@ export function ScreenContainer({
   onRefresh,
   refreshing = false,
   style,
+  maxContentWidth = 600,
 }: Props) {
   const insets = useSafeAreaInsets();
 
@@ -29,6 +32,7 @@ export function ScreenContainer({
         {
           paddingTop: insets.top + 20,
           paddingBottom: Layout.tabBarHeight + Layout.tabBarOffset + 20,
+          maxWidth: maxContentWidth,
         },
         style,
       ]}
@@ -68,5 +72,11 @@ const styles = StyleSheet.create({
   gradient: { flex: 1 },
   scroll: { flex: 1 },
   scrollContent: { flexGrow: 1 },
-  inner: { paddingHorizontal: Spacing.screenX },
+  inner: {
+    paddingHorizontal: Spacing.screenX,
+    // Responsive: el contenido se mantiene a un ancho cómodo y centrado
+    // (controlado por la prop maxContentWidth), en vez de estirarse a todo el ancho.
+    width: '100%',
+    alignSelf: 'center',
+  },
 });

@@ -1,22 +1,33 @@
 import { useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
+  useWindowDimensions,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { format, startOfDay, endOfDay } from 'date-fns';
+import { format, startOfDay, endOfDay, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Bell, Check } from 'lucide-react-native';
+import { Bell } from 'lucide-react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Card } from '@/components/ui/Card';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { DailyTimeline } from '@/components/dashboard/DailyTimeline';
+import { WeekAhead } from '@/components/dashboard/WeekAhead';
+import { PendingExpenses } from '@/components/dashboard/PendingExpenses';
 import { Colors, Spacing, Radius, Gradients, Shadows } from '@/tokens';
 import { useAuthStore } from '@/store/authStore';
 import { useHabits, useHabitStats, useToggleHabitComplete, habitKeys } from '@/hooks/useHabits';
 import { useHabitMoments } from '@/hooks/useHabitMoments';
-import { useTasks, useToggleTaskComplete, taskKeys } from '@/hooks/useTasks';
+import { useTasks, taskKeys } from '@/hooks/useTasks';
 import { useFeaturedGoal, goalKeys } from '@/hooks/useGoals';
-import { useFinanceStats, accountKeys } from '@/hooks/useAccounts';
+import { useAccounts, useFinanceStats, accountKeys } from '@/hooks/useAccounts';
+import { useMonthlyExpenses, monthlyExpenseKeys } from '@/hooks/useMonthlyExpenses';
 import {
   useCalendarEvents,
   useRecurringExpensesCount,
@@ -31,9 +42,21 @@ import { useActivities, useToggleActivityRecord, activityKeys } from '@/hooks/us
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
-const TODAY = format(new Date(), 'yyyy-MM-dd');
-const TODAY_START = startOfDay(new Date()).toISOString();
-const TODAY_END = endOfDay(new Date()).toISOString();
+// IMPORTANTE: estas fechas deben calcularse en cada render, NO a nivel de módulo.
+// En React Native el bundle JS sobrevive al minimizar/restaurar la app, así que
+// una constante de módulo quedaría congelada en el día en que se abrió la app por
+// primera vez y mostraría hábitos de "ayer" como completados hoy (bug de agenda).
+function getTodayDates() {
+  const now = new Date();
+  return {
+    TODAY: format(now, 'yyyy-MM-dd'),
+    TODAY_START: startOfDay(now).toISOString(),
+    TODAY_END: endOfDay(now).toISOString(),
+    WEEK_END: endOfDay(addDays(now, 7)).toISOString(),
+    CUR_MONTH: now.getMonth() + 1, // API usa mes 1-indexado
+    CUR_YEAR: now.getFullYear(),
+  };
+}
 
 function isHabitDueToday(h: Habit): boolean {
   if (!h.isActive) return false;
@@ -42,8 +65,8 @@ function isHabitDueToday(h: Habit): boolean {
   return true;
 }
 
-function isCompletedToday(h: Habit): boolean {
-  return !!h.lastCompletedDate && h.lastCompletedDate.startsWith(TODAY);
+function isCompletedToday(h: Habit, today: string): boolean {
+  return !!h.lastCompletedDate && h.lastCompletedDate.startsWith(today);
 }
 
 function isPending(t: Task): boolean {
@@ -154,78 +177,6 @@ function StatCard({ value, label, accent }: { value: string; label: string; acce
   );
 }
 
-// ─── SectionRow ───────────────────────────────────────────────────────────────
-
-function SectionRow({
-  title,
-  linkLabel,
-  onPress,
-}: {
-  title: string;
-  linkLabel: string;
-  onPress: () => void;
-}) {
-  return (
-    <View style={styles.sectionRow}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
-        <Text style={styles.sectionLink}>{linkLabel} →</Text>
-      </TouchableOpacity>
-    </View>
-  );
-}
-
-// ─── TaskCheckRow ─────────────────────────────────────────────────────────────
-
-function TaskCheckRow({
-  task,
-  onToggle,
-  toggling,
-  isLast,
-}: {
-  task: Task;
-  onToggle: () => void;
-  toggling: boolean;
-  isLast?: boolean;
-}) {
-  const done = task.status === 'completada';
-  const priorityColor =
-    task.priority === 'alta' ? '#EF4444' : task.priority === 'media' ? '#F97316' : Colors.muted;
-
-  return (
-    <TouchableOpacity
-      style={[styles.habitRow, !isLast && styles.rowDivider]}
-      onPress={onToggle}
-      disabled={toggling}
-      activeOpacity={0.65}
-    >
-      {toggling ? (
-        <ActivityIndicator size="small" color={Colors.vivid} style={styles.checkbox} />
-      ) : done ? (
-        <View style={[styles.checkbox, styles.checkboxDone]}>
-          <Check size={13} color="#fff" strokeWidth={3} />
-        </View>
-      ) : (
-        <View style={[styles.checkbox, { borderColor: priorityColor }]} />
-      )}
-
-      <Text style={styles.habitIcon}>
-        {task.priority === 'alta' ? '🔴' : task.priority === 'media' ? '🟡' : '⚪'}
-      </Text>
-
-      <Text style={[styles.habitName, done && styles.habitNameDone]} numberOfLines={1}>
-        {task.title}
-      </Text>
-
-      {task.categoryName && (
-        <Text style={styles.taskCategory} numberOfLines={1}>
-          {task.categoryName}
-        </Text>
-      )}
-    </TouchableOpacity>
-  );
-}
-
 // ─── FeaturedGoalCard ─────────────────────────────────────────────────────────
 
 function FeaturedGoalCard({ goal }: { goal: GoalWithProgress }) {
@@ -270,6 +221,9 @@ function FeaturedGoalCard({ goal }: { goal: GoalWithProgress }) {
 export default function HoyScreen() {
   const queryClient = useQueryClient();
 
+  // Recalculado en cada render para no quedar congelado tras minimizar/restaurar.
+  const { TODAY, TODAY_START, TODAY_END, WEEK_END, CUR_MONTH, CUR_YEAR } = getTodayDates();
+
   const { data: habits = [], isLoading: habitsLoading } = useHabits();
   const { data: stats } = useHabitStats();
   const { data: habitMoments = [] } = useHabitMoments();
@@ -278,14 +232,20 @@ export default function HoyScreen() {
   const { data: financeStats } = useFinanceStats();
   const { data: recurringCount = 0 } = useRecurringExpensesCount();
   const { data: todayEvents = [] } = useCalendarEvents(TODAY_START, TODAY_END);
+  const { data: weekEvents = [] } = useCalendarEvents(TODAY_START, WEEK_END);
   const { data: todayActivities = [] } = useActivities(TODAY);
+  const { data: accountsData } = useAccounts();
+  const { data: monthlyData } = useMonthlyExpenses(CUR_MONTH, CUR_YEAR);
 
   const toggleHabit = useToggleHabitComplete();
-  const toggleTask = useToggleTaskComplete();
   const toggleActivity = useToggleActivityRecord();
 
   const todayHabits = habits.filter(isHabitDueToday);
   const pendingTasks = tasks.filter(isPending).slice(0, 4);
+  // Igual que dinero.tsx: usar las cuentas tal cual vienen (no filtrar por isActive,
+  // que puede no venir en la respuesta y dejaría el selector de cuenta vacío).
+  const activeAccounts = accountsData?.accounts ?? [];
+  const monthlyExpenses = monthlyData?.monthlyExpenses ?? [];
 
   const pct = stats?.today.percentage ?? 0;
   const done = stats?.today.completed ?? 0;
@@ -302,23 +262,18 @@ export default function HoyScreen() {
       queryClient.invalidateQueries({ queryKey: recurringKeys.all }),
       queryClient.invalidateQueries({ queryKey: goalKeys.featured }),
       queryClient.invalidateQueries({ queryKey: activityKeys.all }),
+      queryClient.invalidateQueries({ queryKey: monthlyExpenseKeys.all }),
     ]);
   }, [queryClient]);
 
   const handleToggleHabit = (habitId: string) => {
     const habit = habits.find((h) => h.id === habitId);
     if (!habit) return;
-    const isDone = isCompletedToday(habit);
+    const isDone = isCompletedToday(habit, TODAY);
     toggleHabit.mutate(
       { habitId, date: TODAY, completed: !isDone },
       { onError: () => Alert.alert('Error', 'No se pudo actualizar el hábito') }
     );
-  };
-
-  const handleToggleTask = (task: Task) => {
-    toggleTask.mutate(task.id, {
-      onError: () => Alert.alert('Error', 'No se pudo actualizar la tarea'),
-    });
   };
 
   const handleToggleActivity = (activityId: string) => {
@@ -333,31 +288,13 @@ export default function HoyScreen() {
 
   const isLoading = habitsLoading && tasksLoading;
 
-  return (
-    <ScreenContainer onRefresh={onRefresh} refreshing={false}>
-      {/* ─── Header ───────────────────────────────────────────── */}
-      <PageHeader />
+  // Responsive: en ventanas anchas (tablet / multiventana) usamos 2 columnas.
+  const { width } = useWindowDimensions();
+  const isWide = width >= 720;
 
-      {/* ─── Hero ─────────────────────────────────────────────── */}
-      <HeroCard pct={pct} done={done} total={total} longestStreak={longestStreak} />
-
-      {/* ─── Featured Goal ────────────────────────────────────── */}
-      {featuredGoal && <FeaturedGoalCard goal={featuredGoal} />}
-
-      {/* ─── Quick stats ──────────────────────────────────────── */}
-      <View style={styles.statsRow}>
-        <StatCard value={String(pendingTasks.length)} label="Tareas hoy" />
-        <StatCard
-          value={
-            financeStats ? formatCompactBalance(financeStats.balance, financeStats.currency) : '—'
-          }
-          label="Saldo total"
-          accent
-        />
-        <StatCard value={String(recurringCount)} label="Por pagar" />
-      </View>
-
-      {/* ─── Agenda del día ───────────────────────────────────── */}
+  // ─── Sección Agenda (timeline) ───────────────────────────────
+  const agendaSection = (
+    <>
       <View style={styles.agendaHeader}>
         <Text style={styles.sectionTitle}>Agenda del día</Text>
         <View style={styles.agendaLinks}>
@@ -393,33 +330,56 @@ export default function HoyScreen() {
             onToggleActivity={handleToggleActivity}
             togglingHabitId={toggleHabit.isPending ? toggleHabit.variables?.habitId : undefined}
             togglingActivityId={toggleActivity.isPending ? toggleActivity.variables?.id : undefined}
+            maxHeight={480}
           />
         </Card>
       )}
+    </>
+  );
 
-      {/* ─── Tareas ───────────────────────────────────────────── */}
-      <SectionRow
-        title="Tareas de hoy"
-        linkLabel="Ver todas"
-        onPress={() => router.push('/(tabs)/foco')}
-      />
+  // ─── Sección Gastos Pendientes ───────────────────────────────
+  const pendingSection = <PendingExpenses expenses={monthlyExpenses} accounts={activeAccounts} />;
 
-      {pendingTasks.length === 0 && !tasksLoading ? (
-        <Card solid>
-          <Text style={styles.emptyText}>No hay tareas pendientes 🎯</Text>
-        </Card>
+  // ─── Sección Esta semana (tareas + eventos, próximos 7 días) ──
+  const weekSection = <WeekAhead tasks={tasks} events={weekEvents} />;
+
+  return (
+    <ScreenContainer onRefresh={onRefresh} refreshing={false} maxContentWidth={isWide ? 960 : 600}>
+      {/* ─── Header ───────────────────────────────────────────── */}
+      <PageHeader />
+
+      {/* ─── Hero + Meta destacada (apiladas, ancho completo) ─── */}
+      <HeroCard pct={pct} done={done} total={total} longestStreak={longestStreak} />
+      {featuredGoal && <FeaturedGoalCard goal={featuredGoal} />}
+
+      {/* ─── Quick stats ──────────────────────────────────────── */}
+      <View style={styles.statsRow}>
+        <StatCard value={String(pendingTasks.length)} label="Tareas hoy" />
+        <StatCard
+          value={
+            financeStats ? formatCompactBalance(financeStats.balance, financeStats.currency) : '—'
+          }
+          label="Saldo total"
+          accent
+        />
+        <StatCard value={String(recurringCount)} label="Por pagar" />
+      </View>
+
+      {/* ─── Agenda ‖ Gastos (2 col en tablet); Esta semana abajo a ancho completo ─── */}
+      {isWide ? (
+        <>
+          <View style={styles.twoCol}>
+            <View style={styles.col}>{agendaSection}</View>
+            <View style={styles.col}>{pendingSection}</View>
+          </View>
+          {weekSection}
+        </>
       ) : (
-        <Card padding={0} solid>
-          {pendingTasks.map((t, i) => (
-            <TaskCheckRow
-              key={t.id}
-              task={t}
-              onToggle={() => handleToggleTask(t)}
-              toggling={toggleTask.isPending && toggleTask.variables === t.id}
-              isLast={i === pendingTasks.length - 1}
-            />
-          ))}
-        </Card>
+        <>
+          {agendaSection}
+          {pendingSection}
+          {weekSection}
+        </>
       )}
     </ScreenContainer>
   );
@@ -507,6 +467,14 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)',
   },
 
+  // Responsive 2-column (tablet)
+  twoCol: {
+    flexDirection: 'row',
+    gap: Spacing.lg,
+    alignItems: 'flex-start',
+  },
+  col: { flex: 1 },
+
   // Quick stats
   statsRow: {
     flexDirection: 'row',
@@ -536,24 +504,11 @@ const styles = StyleSheet.create({
     color: Colors.muted,
   },
 
-  // Section row
-  sectionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.sm,
-    marginTop: Spacing.lg,
-  },
   sectionTitle: {
     fontFamily: 'Inter_700Bold',
     fontSize: 16,
     color: Colors.ink,
     letterSpacing: -0.2,
-  },
-  sectionLink: {
-    fontFamily: 'Inter_500Medium',
-    fontSize: 13,
-    color: Colors.vivid,
   },
 
   // Agenda header with quick links
@@ -575,54 +530,6 @@ const styles = StyleSheet.create({
   agendaSep: {
     fontFamily: 'Inter_400Regular',
     fontSize: 12,
-    color: Colors.muted,
-  },
-
-  // Task check row
-  habitRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: 13,
-    gap: Spacing.sm,
-  },
-  rowDivider: {
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.line,
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 7,
-    borderWidth: 1.5,
-    borderColor: Colors.line,
-    backgroundColor: Colors.ice,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxDone: {
-    backgroundColor: Colors.black,
-    borderColor: Colors.black,
-  },
-  habitIcon: {
-    fontSize: 18,
-    lineHeight: 22,
-  },
-  habitName: {
-    flex: 1,
-    fontFamily: 'Inter_500Medium',
-    fontSize: 14,
-    color: Colors.ink,
-  },
-  habitNameDone: {
-    color: Colors.muted,
-    textDecorationLine: 'line-through',
-  },
-
-  // Task-specific
-  taskCategory: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 11,
     color: Colors.muted,
   },
 
@@ -681,14 +588,5 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     fontSize: 12,
     color: Colors.muted,
-  },
-
-  // Empty
-  emptyText: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 14,
-    color: Colors.muted,
-    textAlign: 'center',
-    paddingVertical: Spacing.sm,
   },
 });

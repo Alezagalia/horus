@@ -4,7 +4,14 @@
  */
 
 import { useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  ScrollView,
+} from 'react-native';
 import { format } from 'date-fns';
 import { Check } from 'lucide-react-native';
 import { Colors, Spacing, Radius } from '@/tokens';
@@ -13,8 +20,6 @@ import type { CalendarEvent } from '@/services/api/eventApi';
 import type { HabitMoment } from '@/services/api/habitMomentApi';
 import type { Activity } from '@horus/shared';
 import { ActivityTimeMode } from '@horus/shared';
-
-const TODAY = format(new Date(), 'yyyy-MM-dd');
 
 // ─── Internal types ───────────────────────────────────────────────────────────
 
@@ -88,6 +93,8 @@ interface Props {
   onToggleActivity: (id: string) => void;
   togglingHabitId?: string;
   togglingActivityId?: string;
+  /** Si se define, la lista de slots scrollea internamente con este alto máximo (como la web). */
+  maxHeight?: number;
 }
 
 // ─── ItemRow ──────────────────────────────────────────────────────────────────
@@ -193,10 +200,14 @@ export function DailyTimeline({
   onToggleActivity,
   togglingHabitId,
   togglingActivityId,
+  maxHeight,
 }: Props) {
   const momentMap = useMemo(() => new Map(habitMoments.map((m) => [m.key, m])), [habitMoments]);
 
   const slots = useMemo<TimeSlot[]>(() => {
+    // Calculado dentro del memo (no a nivel de módulo) para que no quede congelado
+    // en el día en que se cargó el bundle al minimizar/restaurar la app.
+    const TODAY = format(new Date(), 'yyyy-MM-dd');
     const slotMap = new Map<string, TimeSlot>();
 
     const getOrCreate = (key: string, label: string, sortValue: number): TimeSlot => {
@@ -320,6 +331,40 @@ export function DailyTimeline({
     );
   }
 
+  const slotsContent = slots.map((slot, si) => (
+    <View key={slot.timeLabel} style={si > 0 && styles.slotGap}>
+      {/* Time separator */}
+      <View style={styles.timeSeparator}>
+        <Text
+          style={[
+            styles.timeLabel,
+            slot.sortValue === -1
+              ? { color: Colors.ceilDark }
+              : slot.sortValue === Infinity
+                ? { color: Colors.muted }
+                : { color: Colors.vivid },
+          ]}
+        >
+          {slot.timeLabel}
+        </Text>
+        <View style={styles.timeLine} />
+      </View>
+
+      {/* Items */}
+      {slot.items.map((item, ii) => (
+        <View key={item.key} style={ii < slot.items.length - 1 ? styles.itemDivider : undefined}>
+          <ItemRow
+            item={item}
+            onToggleHabit={onToggleHabit}
+            onToggleActivity={onToggleActivity}
+            togglingHabitId={togglingHabitId}
+            togglingActivityId={togglingActivityId}
+          />
+        </View>
+      ))}
+    </View>
+  ));
+
   return (
     <View>
       {/* Legend + counter */}
@@ -343,43 +388,19 @@ export function DailyTimeline({
         )}
       </View>
 
-      {/* Time slots */}
-      {slots.map((slot, si) => (
-        <View key={slot.timeLabel} style={si > 0 && styles.slotGap}>
-          {/* Time separator */}
-          <View style={styles.timeSeparator}>
-            <Text
-              style={[
-                styles.timeLabel,
-                slot.sortValue === -1
-                  ? { color: Colors.ceilDark }
-                  : slot.sortValue === Infinity
-                    ? { color: Colors.muted }
-                    : { color: Colors.vivid },
-              ]}
-            >
-              {slot.timeLabel}
-            </Text>
-            <View style={styles.timeLine} />
-          </View>
-
-          {/* Items */}
-          {slot.items.map((item, ii) => (
-            <View
-              key={item.key}
-              style={ii < slot.items.length - 1 ? styles.itemDivider : undefined}
-            >
-              <ItemRow
-                item={item}
-                onToggleHabit={onToggleHabit}
-                onToggleActivity={onToggleActivity}
-                togglingHabitId={togglingHabitId}
-                togglingActivityId={togglingActivityId}
-              />
-            </View>
-          ))}
-        </View>
-      ))}
+      {/* Time slots — con scroll interno si maxHeight está definido (como la web) */}
+      {maxHeight ? (
+        <ScrollView
+          style={{ maxHeight }}
+          nestedScrollEnabled
+          showsVerticalScrollIndicator
+          contentContainerStyle={styles.scrollContent}
+        >
+          {slotsContent}
+        </ScrollView>
+      ) : (
+        slotsContent
+      )}
     </View>
   );
 }
@@ -419,6 +440,9 @@ const styles = StyleSheet.create({
   },
 
   // Slots
+  scrollContent: {
+    paddingBottom: Spacing.md,
+  },
   slotGap: {
     marginTop: Spacing.lg,
   },
