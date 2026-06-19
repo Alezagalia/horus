@@ -7,7 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "horus",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
@@ -20,7 +20,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#F0F4FB"
+        "backgroundColor": "#1A2547"
       },
       "package": "com.horus.app",
       "intentFilters": [
