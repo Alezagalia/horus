@@ -39,6 +39,7 @@ import type { Habit } from '@/services/api/habitApi';
 import type { Task } from '@/services/api/taskApi';
 import type { GoalWithProgress } from '@horus/shared';
 import { useActivities, useToggleActivityRecord, activityKeys } from '@/hooks/useActivities';
+import { apiErrorMessage } from '@/lib/apiError';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -60,13 +61,19 @@ function getTodayDates() {
 
 function isHabitDueToday(h: Habit): boolean {
   if (!h.isActive) return false;
-  if (h.periodicity === 'DAILY') return true;
-  if (h.periodicity === 'WEEKLY') return h.weekDays.includes(new Date().getDay());
+  const dow = new Date().getDay();
+  // Espejo de la validación del backend: MONTHLY siempre; WEEKLY exige weekDays;
+  // DAILY/CUSTOM respetan weekDays si están configurados (si no, todos los días).
+  if (h.periodicity === 'MONTHLY') return true;
+  if (h.periodicity === 'WEEKLY') return h.weekDays.includes(dow);
+  if (h.weekDays.length > 0) return h.weekDays.includes(dow);
   return true;
 }
 
-function isCompletedToday(h: Habit, today: string): boolean {
-  return !!h.lastCompletedDate && h.lastCompletedDate.startsWith(today);
+// Estado real del día desde el registro (no desde lastCompletedDate, que no se
+// limpia al desmarcar). Requiere haber pedido los hábitos con ?date=.
+function isCompletedToday(h: Habit): boolean {
+  return h.records?.[0]?.completed === true;
 }
 
 function isPending(t: Task): boolean {
@@ -224,7 +231,7 @@ export default function HoyScreen() {
   // Recalculado en cada render para no quedar congelado tras minimizar/restaurar.
   const { TODAY, TODAY_START, TODAY_END, WEEK_END, CUR_MONTH, CUR_YEAR } = getTodayDates();
 
-  const { data: habits = [], isLoading: habitsLoading } = useHabits();
+  const { data: habits = [], isLoading: habitsLoading } = useHabits(TODAY);
   const { data: stats } = useHabitStats();
   const { data: habitMoments = [] } = useHabitMoments();
   const { data: tasks = [], isLoading: tasksLoading } = useTasks();
@@ -269,10 +276,20 @@ export default function HoyScreen() {
   const handleToggleHabit = (habitId: string) => {
     const habit = habits.find((h) => h.id === habitId);
     if (!habit) return;
-    const isDone = isCompletedToday(habit, TODAY);
+    const isDone = isCompletedToday(habit);
+    // Los hábitos NUMERIC requieren un valor: no se pueden marcar con un simple
+    // check (el backend lo rechaza). Derivamos a Foco → hábitos, que tiene la
+    // hoja de entrada numérica.
+    if (habit.type === 'NUMERIC' && !isDone) {
+      router.navigate({ pathname: '/(tabs)/foco', params: { tab: 'habitos' } });
+      return;
+    }
     toggleHabit.mutate(
       { habitId, date: TODAY, completed: !isDone },
-      { onError: () => Alert.alert('Error', 'No se pudo actualizar el hábito') }
+      {
+        onError: (err) =>
+          Alert.alert('Error', apiErrorMessage(err, 'No se pudo actualizar el hábito')),
+      }
     );
   };
 
@@ -328,7 +345,8 @@ export default function HoyScreen() {
             habitMoments={habitMoments}
             onToggleHabit={handleToggleHabit}
             onToggleActivity={handleToggleActivity}
-            togglingHabitId={toggleHabit.isPending ? toggleHabit.variables?.habitId : undefined}
+            // Sin spinner para hábitos: el update optimista ya refleja el cambio al instante.
+            togglingHabitId={undefined}
             togglingActivityId={toggleActivity.isPending ? toggleActivity.variables?.id : undefined}
             maxHeight={480}
           />

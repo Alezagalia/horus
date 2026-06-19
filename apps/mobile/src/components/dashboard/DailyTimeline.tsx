@@ -12,7 +12,6 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
-import { format } from 'date-fns';
 import { Check } from 'lucide-react-native';
 import { Colors, Spacing, Radius } from '@/tokens';
 import type { Habit } from '@/services/api/habitApi';
@@ -205,9 +204,6 @@ export function DailyTimeline({
   const momentMap = useMemo(() => new Map(habitMoments.map((m) => [m.key, m])), [habitMoments]);
 
   const slots = useMemo<TimeSlot[]>(() => {
-    // Calculado dentro del memo (no a nivel de módulo) para que no quede congelado
-    // en el día en que se cargó el bundle al minimizar/restaurar la app.
-    const TODAY = format(new Date(), 'yyyy-MM-dd');
     const slotMap = new Map<string, TimeSlot>();
 
     const getOrCreate = (key: string, label: string, sortValue: number): TimeSlot => {
@@ -233,7 +229,7 @@ export function DailyTimeline({
         type: 'habit',
         id: habit.id,
         title: habit.name,
-        completed: !!habit.lastCompletedDate && habit.lastCompletedDate.startsWith(TODAY),
+        completed: habit.records?.[0]?.completed === true,
         toggleable: true,
         icon: habit.category?.icon ?? '🔄',
         streak: habit.currentStreak > 0 ? habit.currentStreak : undefined,

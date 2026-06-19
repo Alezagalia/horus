@@ -1,5 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { habitApi, type CreateHabitDTO, type UpdateHabitDTO } from '@/services/api/habitApi';
+import {
+  habitApi,
+  type CreateHabitDTO,
+  type UpdateHabitDTO,
+  type Habit,
+} from '@/services/api/habitApi';
 import { categoryApi } from '@/services/api/categoryApi';
 import { goalKeys } from './useGoals';
 
@@ -10,10 +15,12 @@ export const habitKeys = {
   detail: (id: string) => [...habitKeys.all, 'detail', id] as const,
 };
 
-export function useHabits() {
+export function useHabits(date?: string) {
   return useQuery({
-    queryKey: habitKeys.list(),
-    queryFn: habitApi.list,
+    // El date entra en la key para refetchear por día; invalidar habitKeys.list()
+    // matchea por prefijo, así que sigue invalidando esta query.
+    queryKey: date ? [...habitKeys.list(), date] : habitKeys.list(),
+    queryFn: () => habitApi.list(date),
     staleTime: 1000 * 60 * 3,
   });
 }
@@ -55,7 +62,36 @@ export function useToggleHabitComplete() {
       date: string;
       completed: boolean;
     }) => habitApi.toggleRecord(habitId, date, completed),
-    onSuccess: (_, variables) => {
+    // Update optimista: el check cambia al instante y se revierte si falla de verdad
+    // (tras agotar los reintentos de red). Hace inmediato el toggle ante latencia.
+    onMutate: async ({ habitId, date, completed }) => {
+      const key = [...habitKeys.list(), date];
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<Habit[]>(key);
+      queryClient.setQueryData<Habit[]>(key, (old) =>
+        old?.map((h) =>
+          h.id === habitId
+            ? {
+                ...h,
+                records: [
+                  {
+                    id: h.records?.[0]?.id ?? '',
+                    habitId,
+                    completed,
+                    value: h.records?.[0]?.value ?? null,
+                    notes: h.records?.[0]?.notes ?? null,
+                  },
+                ],
+              }
+            : h
+        )
+      );
+      return { previous, key };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous) queryClient.setQueryData(ctx.key, ctx.previous);
+    },
+    onSettled: (_data, _err, variables) => {
       queryClient.invalidateQueries({ queryKey: habitKeys.list() });
       queryClient.invalidateQueries({ queryKey: habitKeys.stats() });
       if (variables.completed) {

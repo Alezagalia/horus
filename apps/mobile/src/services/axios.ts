@@ -5,7 +5,8 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://10.0.2.2:3000/api';
 
 export const axiosInstance = axios.create({
   baseURL: API_URL,
-  timeout: 10_000,
+  // 25s: cubre los cold starts de Railway (el contenedor puede tardar en despertar).
+  timeout: 25_000,
   headers: { 'Content-Type': 'application/json' },
 });
 

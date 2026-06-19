@@ -23,6 +23,16 @@ export interface Habit {
   longestStreak: number;
   lastCompletedDate?: string;
   category?: HabitCategory;
+  /** Registro del día consultado (solo presente si se pidió list(date)). */
+  records?: HabitRecord[];
+}
+
+export interface HabitRecord {
+  id: string;
+  habitId: string;
+  completed: boolean;
+  value: number | null;
+  notes: string | null;
 }
 
 export interface CreateHabitDTO {
@@ -72,8 +82,12 @@ interface GeneralStatsResponse {
 }
 
 export const habitApi = {
-  list: async (): Promise<Habit[]> => {
-    const { data } = await axiosInstance.get('/habits');
+  list: async (date?: string): Promise<Habit[]> => {
+    // Con `date`, el backend incluye records:[{completed,...}] del día → permite
+    // saber el estado real (marcado/desmarcado) sin depender de lastCompletedDate.
+    const { data } = await axiosInstance.get('/habits', {
+      params: date ? { date } : undefined,
+    });
     return data.habits ?? data;
   },
 

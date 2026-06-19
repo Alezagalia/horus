@@ -57,10 +57,9 @@ import type { GoalWithProgress, CreateGoalDTO, UpdateGoalDTO, GoalPriority } fro
 import { LinearGradient } from 'expo-linear-gradient';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { router, useLocalSearchParams } from 'expo-router';
+import { apiErrorMessage } from '@/lib/apiError';
 
 // ─── constants ────────────────────────────────────────────────────────────────
-
-const TODAY = format(new Date(), 'yyyy-MM-dd');
 
 // TIME_ORDER y TIME_LABELS son ahora dinámicos desde la API (useHabitMoments)
 
@@ -74,13 +73,19 @@ const PRIORITY_OPTIONS: Array<{ value: 'alta' | 'media' | 'baja'; label: string 
 
 function isHabitDueToday(h: Habit): boolean {
   if (!h.isActive) return false;
-  if (h.periodicity === 'DAILY') return true;
-  if (h.periodicity === 'WEEKLY') return h.weekDays.includes(new Date().getDay());
+  const dow = new Date().getDay();
+  // Espejo de la validación del backend: MONTHLY siempre; WEEKLY exige weekDays;
+  // DAILY/CUSTOM respetan weekDays si están configurados (si no, todos los días).
+  if (h.periodicity === 'MONTHLY') return true;
+  if (h.periodicity === 'WEEKLY') return h.weekDays.includes(dow);
+  if (h.weekDays.length > 0) return h.weekDays.includes(dow);
   return true;
 }
 
+// Estado real del día desde el registro (no desde lastCompletedDate, que el
+// backend no limpia al desmarcar). Requiere pedir los hábitos con ?date=.
 function isCompletedToday(h: Habit): boolean {
-  return !!h.lastCompletedDate && h.lastCompletedDate.startsWith(TODAY);
+  return h.records?.[0]?.completed === true;
 }
 
 function formatDueDate(dueDate?: string): string | null {
@@ -638,6 +643,7 @@ function TaskFormModal({
 function NumericSheet({ habit, onClose }: { habit: Habit | null; onClose: () => void }) {
   const [value, setValue] = useState('');
   const logProgress = useNumericHabitProgress();
+  const TODAY = format(new Date(), 'yyyy-MM-dd');
 
   const handleSubmit = () => {
     if (!habit) return;
@@ -653,7 +659,8 @@ function NumericSheet({ habit, onClose }: { habit: Habit | null; onClose: () => 
           setValue('');
           onClose();
         },
-        onError: () => Alert.alert('Error', 'No se pudo registrar el progreso'),
+        onError: (err) =>
+          Alert.alert('Error', apiErrorMessage(err, 'No se pudo registrar el progreso')),
       }
     );
   };
@@ -727,7 +734,10 @@ export default function FocoScreen() {
   const [editingGoal, setEditingGoal] = useState<GoalWithProgress | undefined>(undefined);
   const queryClient = useQueryClient();
 
-  const { data: habits = [], isLoading: hLoading } = useHabits();
+  // Fresco en cada render (no a nivel de módulo) para no congelarse al minimizar.
+  const TODAY = format(new Date(), 'yyyy-MM-dd');
+
+  const { data: habits = [], isLoading: hLoading } = useHabits(TODAY);
   const { data: stats } = useHabitStats();
   const { data: tasks = [], isLoading: tLoading } = useTasks();
   const { data: goals = [], isLoading: gLoading } = useGoals('en_progreso');
@@ -789,7 +799,10 @@ export default function FocoScreen() {
     }
     toggleHabit.mutate(
       { habitId: habit.id, date: TODAY, completed: !done },
-      { onError: () => Alert.alert('Error', 'No se pudo actualizar el hábito') }
+      {
+        onError: (err) =>
+          Alert.alert('Error', apiErrorMessage(err, 'No se pudo actualizar el hábito')),
+      }
     );
   };
 
