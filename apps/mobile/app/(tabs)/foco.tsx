@@ -1091,10 +1091,10 @@ function GoalFormModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <Pressable style={styles.modalOverlay} onPress={onClose} />
+      <Pressable style={styles.overlay} onPress={onClose} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.modalSheet}
+        style={styles.sheet}
       >
         <View style={styles.sheetHandle} />
         <Text style={styles.sheetTitle}>{isEdit ? 'Editar meta' : 'Nueva meta'}</Text>

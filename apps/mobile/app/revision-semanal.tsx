@@ -113,6 +113,11 @@ export default function RevisionSemanalScreen() {
   const isCurrentWeek = weekRef.getTime() >= getMonday(new Date()).getTime();
 
   const { data: stats, isLoading: loadingStats } = useWeeklyStats(weekStart);
+  // El balance financiero pasó a desglosarse por moneda; tomamos ARS (o la primera disponible).
+  const financeBalance =
+    stats?.finance.byCurrency.find((c) => c.currency === 'ARS')?.balance ??
+    stats?.finance.byCurrency[0]?.balance ??
+    0;
   const { data: review } = useCurrentReview(weekStart);
   const { data: questions = [] } = useReviewQuestions();
   const { data: goals = [] } = useGoals('en_progreso');
@@ -259,12 +264,12 @@ export default function RevisionSemanalScreen() {
               <StatCard
                 label="Balance"
                 value={
-                  stats.finance.balance >= 0
-                    ? `+${(stats.finance.balance / 1000).toFixed(0)}k`
-                    : `${(stats.finance.balance / 1000).toFixed(0)}k`
+                  financeBalance >= 0
+                    ? `+${(financeBalance / 1000).toFixed(0)}k`
+                    : `${(financeBalance / 1000).toFixed(0)}k`
                 }
                 sub="ARS"
-                accent={stats.finance.balance >= 0 ? '#10b981' : '#ef4444'}
+                accent={financeBalance >= 0 ? '#10b981' : '#ef4444'}
               />
               <StatCard
                 label="Eventos"

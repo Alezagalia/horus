@@ -521,7 +521,7 @@ function SummaryCard({ label, count, color }: { label: string; count: number; co
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: Colors.bg,
+    backgroundColor: Colors.bgTop,
   },
   header: {
     flexDirection: 'row',

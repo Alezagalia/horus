@@ -380,7 +380,7 @@ export default function MetaDetalleScreen() {
             <Text style={styles.sectionTitle2}>Hábitos vinculados</Text>
             {habits.map(({ habit }) => (
               <View key={habit.id} style={styles.linkedRow}>
-                <Text style={styles.linkedIcon}>{habit.icon ?? '🎯'}</Text>
+                <Text style={styles.linkedIcon}>🎯</Text>
                 <Text style={styles.linkedName}>{habit.name}</Text>
               </View>
             ))}

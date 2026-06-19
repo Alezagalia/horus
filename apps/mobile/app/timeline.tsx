@@ -330,7 +330,7 @@ export default function TimelineScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: Colors.bg,
+    backgroundColor: Colors.bgTop,
   },
   header: {
     flexDirection: 'row',

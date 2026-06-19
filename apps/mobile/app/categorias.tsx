@@ -542,7 +542,7 @@ export default function CategoriasScreen() {
 // ─── Styles ────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.bg },
+  root: { flex: 1, backgroundColor: Colors.bgTop },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

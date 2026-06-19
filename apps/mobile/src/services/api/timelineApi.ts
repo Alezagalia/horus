@@ -1,7 +1,12 @@
 import { axiosInstance } from '../axios';
-import type { TimelineResponse, TimelineModule, TimelineEventCategory } from '@horus/shared';
+import type {
+  TimelineResponse,
+  TimelineEvent,
+  TimelineModule,
+  TimelineEventCategory,
+} from '@horus/shared';
 
-export type { TimelineResponse, TimelineModule, TimelineEventCategory };
+export type { TimelineResponse, TimelineEvent, TimelineModule, TimelineEventCategory };
 
 export interface TimelineParams {
   modules?: TimelineModule[];

@@ -1,11 +1,11 @@
 import { ReactNode } from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
+import { View, StyleSheet, ViewStyle, StyleProp } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Colors, Radius, Spacing, Shadows } from '@/tokens';
 
 interface Props {
   children: ReactNode;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   padding?: number;
   radius?: number;
   /** Use solid white instead of glass (e.g. AccountCard) */

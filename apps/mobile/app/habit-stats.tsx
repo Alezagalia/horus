@@ -61,8 +61,8 @@ function DayGrid({ days, habitColor }: { days: DayCell[]; habitColor: string }) 
         const isToday = d.date === today;
         const isFuture = d.date > today;
 
-        let bg = Colors.bgMid;
-        let textColor = Colors.muted;
+        let bg: string = Colors.bgMid;
+        let textColor: string = Colors.muted;
 
         if (!isFuture) {
           if (!d.shouldComplete) {
