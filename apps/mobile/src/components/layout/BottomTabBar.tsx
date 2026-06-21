@@ -46,6 +46,28 @@ export function BottomTabBar({ activeIndex }: Props) {
     );
   };
 
+  const renderTab = (tab: (typeof TABS)[number], index: number) => {
+    const active = activeIndex === index;
+    return (
+      <TouchableOpacity
+        key={tab.name}
+        style={styles.tabItem}
+        onPress={() => router.push(tab.route as any)}
+        activeOpacity={0.7}
+      >
+        <tab.Icon
+          size={20}
+          color={active ? Colors.vivid : Colors.muted}
+          strokeWidth={active ? 2.2 : 1.7}
+        />
+        <Text style={[styles.tabLabel, { color: active ? Colors.vivid : Colors.muted }]}>
+          {tab.name}
+        </Text>
+        {active && <View style={styles.activeDot} />}
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <>
       {/* FAB bottom sheet modal */}
@@ -73,31 +95,12 @@ export function BottomTabBar({ activeIndex }: Props) {
 
       {/* Wrapper: no captura toques propios, solo los hijos lo hacen */}
       <View style={styles.wrapper} pointerEvents="box-none">
-        {/* Tab bar: 4 tabs de navegación + botón "+" de acciones rápidas */}
+        {/* Tab bar — orden: Hoy, Foco, [+], Dinero, Cuerpo */}
         <BlurView intensity={70} tint="light" style={styles.bar}>
-          {TABS.map((tab, i) => {
-            const active = activeIndex === i;
-            return (
-              <TouchableOpacity
-                key={tab.name}
-                style={styles.tabItem}
-                onPress={() => router.push(tab.route as any)}
-                activeOpacity={0.7}
-              >
-                <tab.Icon
-                  size={20}
-                  color={active ? Colors.vivid : Colors.muted}
-                  strokeWidth={active ? 2.2 : 1.7}
-                />
-                <Text style={[styles.tabLabel, { color: active ? Colors.vivid : Colors.muted }]}>
-                  {tab.name}
-                </Text>
-                {active && <View style={styles.activeDot} />}
-              </TouchableOpacity>
-            );
-          })}
+          {renderTab(TABS[0], 0)}
+          {renderTab(TABS[1], 1)}
 
-          {/* Acción rápida (+) — ocupa el 5º lugar donde antes estaba "Yo" */}
+          {/* Acción rápida (+) — al medio de las 5 opciones */}
           <TouchableOpacity
             style={styles.tabItem}
             onPress={fabOpen ? closeFAB : openFAB}
@@ -113,6 +116,9 @@ export function BottomTabBar({ activeIndex }: Props) {
               )}
             </View>
           </TouchableOpacity>
+
+          {renderTab(TABS[2], 2)}
+          {renderTab(TABS[3], 3)}
         </BlurView>
       </View>
     </>
