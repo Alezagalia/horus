@@ -28,6 +28,7 @@ import {
   Pencil,
 } from 'lucide-react-native';
 import { useQueryClient } from '@tanstack/react-query';
+import { useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -1343,7 +1344,22 @@ type DineroTab = 'movimientos' | 'fijos' | 'mensuales' | 'presupuestos' | 'ahorr
 
 export default function DineroScreen() {
   const now = new Date();
+  const { tab } = useLocalSearchParams<{ tab?: DineroTab }>();
   const [activeTab, setActiveTab] = useState<DineroTab>('movimientos');
+
+  // Permite abrir Dinero directamente en una pestaña (ej: "Ver todos" de Gastos
+  // Pendientes → pestaña Mensuales), igual que foco.tsx con su parámetro tab.
+  useEffect(() => {
+    if (
+      tab === 'movimientos' ||
+      tab === 'fijos' ||
+      tab === 'mensuales' ||
+      tab === 'presupuestos' ||
+      tab === 'ahorro'
+    ) {
+      setActiveTab(tab);
+    }
+  }, [tab]);
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);

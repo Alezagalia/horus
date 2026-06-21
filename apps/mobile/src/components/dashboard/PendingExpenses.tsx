@@ -252,7 +252,10 @@ export function PendingExpenses({ expenses, accounts }: Props) {
           <Text style={styles.title}>Gastos Pendientes</Text>
           <Text style={styles.subtitle}>Gastos fijos del mes</Text>
         </View>
-        <TouchableOpacity onPress={() => router.push('/(tabs)/dinero')} activeOpacity={0.7}>
+        <TouchableOpacity
+          onPress={() => router.push({ pathname: '/(tabs)/dinero', params: { tab: 'mensuales' } })}
+          activeOpacity={0.7}
+        >
           <Text style={styles.link}>Ver todos →</Text>
         </TouchableOpacity>
       </View>
