@@ -43,4 +43,10 @@ router.get('/tokens', pushController.getUserTokens);
  */
 router.post('/test', pushController.sendTestPush);
 
+/**
+ * POST /api/push/run-daily
+ * Dispara manualmente los push de eventos del día (idempotente por día)
+ */
+router.post('/run-daily', pushController.runDailyEvents);
+
 export default router;

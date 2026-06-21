@@ -5,6 +5,7 @@
 
 import { Request, Response } from 'express';
 import * as pushService from '../services/push/push-notification.service.js';
+import { notifyDailyEvents } from '../services/dailyEventNotification.service.js';
 import {
   registerTokenSchema,
   unregisterTokenSchema,
@@ -169,6 +170,28 @@ export async function sendTestPush(req: Request, res: Response): Promise<void> {
     console.error('Error sending test push:', error);
     res.status(500).json({
       error: 'Failed to send test push',
+      message: error.message,
+    });
+  }
+}
+
+/**
+ * POST /api/push/run-daily
+ * Dispara manualmente el envío de push de eventos del día (hábitos/tareas/gastos)
+ * para todos los usuarios con token activo. Es idempotente por día (deduplicado
+ * vía la tabla Notification), por lo que es seguro llamarlo para probar.
+ */
+export async function runDailyEvents(_req: Request, res: Response): Promise<void> {
+  try {
+    const result = await notifyDailyEvents();
+    res.status(200).json({
+      message: 'Daily event notifications processed',
+      result,
+    });
+  } catch (error: any) {
+    console.error('Error running daily event notifications:', error);
+    res.status(500).json({
+      error: 'Failed to run daily event notifications',
       message: error.message,
     });
   }

@@ -9,6 +9,7 @@ import { errorMiddleware } from './middlewares/error.middleware.js';
 import { scheduleAutoCompleteJob } from './jobs/auto-complete-habits.job.js';
 import { scheduleArchiveTasksJob } from './jobs/archive-tasks.job.js';
 import { scheduleMonthlyExpenseGeneration } from './jobs/generate-monthly-expenses.job.js';
+import { scheduleDailyEventNotifications } from './jobs/notify-daily-events.job.js';
 import { initializeFirebaseAdmin } from './lib/firebase-admin.js';
 import { initSentry } from './lib/sentry.js';
 import { logInfo, logError } from './lib/logger.js';
@@ -119,6 +120,7 @@ app.listen(PORT, () => {
     scheduleAutoCompleteJob(); // US-036
     scheduleArchiveTasksJob(); // US-059
     scheduleMonthlyExpenseGeneration(); // US-093
+    scheduleDailyEventNotifications(); // Push automáticos de eventos del día
     logInfo('Cron jobs scheduled successfully'); // US-115
   } catch (error) {
     logError('Failed to schedule cron jobs', error as Error); // US-115
