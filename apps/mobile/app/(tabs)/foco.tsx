@@ -23,13 +23,13 @@ import { Chip } from '@/components/ui/Chip';
 import { Button } from '@/components/ui/Button';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { HabitFormModal } from '@/components/habits/HabitFormModal';
+import { NumericHabitSheet } from '@/components/habits/NumericHabitSheet';
 import { Colors, Typography, Spacing, Radius, Shadows, Gradients } from '@/tokens';
 import {
   useHabits,
   useHabitStats,
   useToggleHabitComplete,
   useDeleteHabit,
-  useNumericHabitProgress,
   habitKeys,
 } from '@/hooks/useHabits';
 import {
@@ -638,77 +638,6 @@ function TaskFormModal({
   );
 }
 
-// ─── Numeric input sheet ──────────────────────────────────────────────────────
-
-function NumericSheet({ habit, onClose }: { habit: Habit | null; onClose: () => void }) {
-  const [value, setValue] = useState('');
-  const logProgress = useNumericHabitProgress();
-  const TODAY = format(new Date(), 'yyyy-MM-dd');
-
-  const handleSubmit = () => {
-    if (!habit) return;
-    const num = parseFloat(value);
-    if (!value || isNaN(num) || num <= 0) {
-      Alert.alert('Error', 'Ingresa un valor válido mayor a 0');
-      return;
-    }
-    logProgress.mutate(
-      { habitId: habit.id, date: TODAY, value: num },
-      {
-        onSuccess: () => {
-          setValue('');
-          onClose();
-        },
-        onError: (err) =>
-          Alert.alert('Error', apiErrorMessage(err, 'No se pudo registrar el progreso')),
-      }
-    );
-  };
-
-  const handleClose = () => {
-    setValue('');
-    onClose();
-  };
-
-  return (
-    <Modal visible={!!habit} transparent animationType="slide" onRequestClose={handleClose}>
-      <Pressable style={styles.overlay} onPress={handleClose} />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.modalContainer}
-      >
-        <View style={styles.sheet}>
-          <View style={styles.sheetHandle} />
-          <Text style={styles.sheetTitle}>Registrar — {habit?.name}</Text>
-          {habit?.targetValue != null && (
-            <Text style={styles.numericSubtitle}>
-              Objetivo: {habit.targetValue} {habit.unit ?? ''}
-            </Text>
-          )}
-          <TextInput
-            style={[styles.input, styles.numericInput]}
-            value={value}
-            onChangeText={setValue}
-            placeholder="0"
-            placeholderTextColor={Colors.muted}
-            keyboardType="numeric"
-            autoFocus
-            returnKeyType="done"
-            onSubmitEditing={handleSubmit}
-            textAlign="center"
-          />
-          <Button
-            label="Registrar"
-            onPress={handleSubmit}
-            loading={logProgress.isPending}
-            disabled={!value || logProgress.isPending}
-          />
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
-  );
-}
-
 // ─── screen ───────────────────────────────────────────────────────────────────
 
 type Tab = 'tareas' | 'habitos' | 'metas';
@@ -1023,7 +952,7 @@ export default function FocoScreen() {
         }}
         habit={editingHabit}
       />
-      <NumericSheet habit={numericHabit} onClose={() => setNumericHabit(null)} />
+      <NumericHabitSheet habit={numericHabit} onClose={() => setNumericHabit(null)} />
       <GoalFormModal
         visible={showGoalModal}
         onClose={() => {
@@ -1545,20 +1474,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: Colors.ink,
     marginBottom: Spacing.lg,
-  },
-  numericSubtitle: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 13,
-    color: Colors.muted,
-    marginBottom: Spacing.lg,
-    textAlign: 'center',
-  },
-  numericInput: {
-    fontSize: 48,
-    fontFamily: 'Inter_700Bold',
-    textAlign: 'center',
-    borderBottomColor: Colors.vivid,
-    marginBottom: Spacing.xl,
   },
   input: {
     fontFamily: 'Inter_500Medium',

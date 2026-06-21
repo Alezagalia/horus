@@ -64,7 +64,17 @@ export const accountApi = {
     totalBalanceByCurrency: Record<string, number>;
   }> => {
     const { data } = await axiosInstance.get('/accounts');
-    return data;
+    // El backend expone el saldo como `currentBalance`; el resto de la app lo
+    // consume como `balance`. Normalizamos aquí para que coincidan (sin este
+    // mapeo, `balance` queda undefined → 0 y el chequeo de saldo del modal de
+    // pago deja el botón "Confirmar pago" deshabilitado siempre).
+    return {
+      ...data,
+      accounts: (data.accounts ?? []).map((a: Account & { currentBalance?: number }) => ({
+        ...a,
+        balance: Number(a.currentBalance ?? a.balance ?? 0),
+      })),
+    };
   },
 
   getFinanceStats: async (month?: number, year?: number): Promise<FinanceStats> => {

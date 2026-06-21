@@ -2,15 +2,16 @@ import { useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated, Modal, Pressable } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { router } from 'expo-router';
-import { Home, CheckSquare, Wallet, Dumbbell, User, Plus, X } from 'lucide-react-native';
+import { Home, CheckSquare, Wallet, Dumbbell, Plus, X } from 'lucide-react-native';
 import { Colors, Typography, Radius, Layout, Shadows, Spacing } from '@/tokens';
 
+// "Yo" se removió de la barra: ahora se accede tocando el avatar del dashboard.
+// El 5º lugar lo ocupa el botón "+" de acciones rápidas (antes flotante).
 const TABS = [
   { name: 'Hoy', route: '/(tabs)/', Icon: Home },
   { name: 'Foco', route: '/(tabs)/foco', Icon: CheckSquare },
   { name: 'Dinero', route: '/(tabs)/dinero', Icon: Wallet },
   { name: 'Cuerpo', route: '/(tabs)/cuerpo', Icon: Dumbbell },
-  { name: 'Yo', route: '/(tabs)/yo', Icon: User },
 ] as const;
 
 const FAB_ACTIONS = [
@@ -27,22 +28,22 @@ interface Props {
 
 export function BottomTabBar({ activeIndex }: Props) {
   const [fabOpen, setFabOpen] = useState(false);
-  const fabScale = useRef(new Animated.Value(1)).current;
   const sheetY = useRef(new Animated.Value(300)).current;
 
   const openFAB = () => {
     setFabOpen(true);
-    Animated.parallel([
-      Animated.spring(fabScale, { toValue: 0.9, useNativeDriver: true }),
-      Animated.spring(sheetY, { toValue: 0, tension: 300, friction: 28, useNativeDriver: true }),
-    ]).start();
+    Animated.spring(sheetY, {
+      toValue: 0,
+      tension: 300,
+      friction: 28,
+      useNativeDriver: true,
+    }).start();
   };
 
   const closeFAB = () => {
-    Animated.parallel([
-      Animated.spring(fabScale, { toValue: 1, useNativeDriver: true }),
-      Animated.timing(sheetY, { toValue: 300, duration: 200, useNativeDriver: true }),
-    ]).start(() => setFabOpen(false));
+    Animated.timing(sheetY, { toValue: 300, duration: 200, useNativeDriver: true }).start(() =>
+      setFabOpen(false)
+    );
   };
 
   return (
@@ -72,25 +73,7 @@ export function BottomTabBar({ activeIndex }: Props) {
 
       {/* Wrapper: no captura toques propios, solo los hijos lo hacen */}
       <View style={styles.wrapper} pointerEvents="box-none">
-        {/* Botón + flotante — pointerEvents="box-none" en el contenedor
-            para que los toques pasen a las tabs debajo */}
-        <View style={styles.fabContainer} pointerEvents="box-none">
-          <Animated.View style={{ transform: [{ scale: fabScale }] }}>
-            <TouchableOpacity
-              style={styles.fab}
-              onPress={fabOpen ? closeFAB : openFAB}
-              activeOpacity={0.85}
-            >
-              {fabOpen ? (
-                <X size={18} color="#fff" strokeWidth={2.5} />
-              ) : (
-                <Plus size={18} color="#fff" strokeWidth={2.5} />
-              )}
-            </TouchableOpacity>
-          </Animated.View>
-        </View>
-
-        {/* Tab bar con las 5 tabs */}
+        {/* Tab bar: 4 tabs de navegación + botón "+" de acciones rápidas */}
         <BlurView intensity={70} tint="light" style={styles.bar}>
           {TABS.map((tab, i) => {
             const active = activeIndex === i;
@@ -113,6 +96,23 @@ export function BottomTabBar({ activeIndex }: Props) {
               </TouchableOpacity>
             );
           })}
+
+          {/* Acción rápida (+) — ocupa el 5º lugar donde antes estaba "Yo" */}
+          <TouchableOpacity
+            style={styles.tabItem}
+            onPress={fabOpen ? closeFAB : openFAB}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Acción rápida"
+          >
+            <View style={styles.plusCircle}>
+              {fabOpen ? (
+                <X size={18} color="#fff" strokeWidth={2.5} />
+              ) : (
+                <Plus size={18} color="#fff" strokeWidth={2.5} />
+              )}
+            </View>
+          </TouchableOpacity>
         </BlurView>
       </View>
     </>
@@ -159,15 +159,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.vivid,
   },
 
-  /* FAB flotante — pequeño, arriba-derecha del tab bar */
-  fabContainer: {
-    position: 'absolute',
-    right: Spacing.md,
-    bottom: Layout.tabBarHeight + Spacing.sm,
-    zIndex: 10,
-    elevation: 25,
-  },
-  fab: {
+  /* Botón "+" de acciones rápidas, inline en el 5º lugar de la barra */
+  plusCircle: {
     width: 36,
     height: 36,
     borderRadius: 18,

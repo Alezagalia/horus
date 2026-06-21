@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Card } from '@/components/ui/Card';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { DailyTimeline } from '@/components/dashboard/DailyTimeline';
+import { NumericHabitSheet } from '@/components/habits/NumericHabitSheet';
 import { WeekAhead } from '@/components/dashboard/WeekAhead';
 import { PendingExpenses } from '@/components/dashboard/PendingExpenses';
 import { Colors, Spacing, Radius, Gradients, Shadows } from '@/tokens';
@@ -119,9 +120,15 @@ function PageHeader() {
         <TouchableOpacity style={styles.bellBtn} activeOpacity={0.7}>
           <Bell size={18} color={Colors.ink} strokeWidth={1.5} />
         </TouchableOpacity>
-        <View style={styles.avatar}>
+        <TouchableOpacity
+          style={styles.avatar}
+          activeOpacity={0.7}
+          onPress={() => router.push('/(tabs)/yo')}
+          accessibilityRole="button"
+          accessibilityLabel="Abrir mi perfil"
+        >
           <Text style={styles.avatarText}>{initials}</Text>
-        </View>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -227,6 +234,7 @@ function FeaturedGoalCard({ goal }: { goal: GoalWithProgress }) {
 
 export default function HoyScreen() {
   const queryClient = useQueryClient();
+  const [numericHabit, setNumericHabit] = useState<Habit | null>(null);
 
   // Recalculado en cada render para no quedar congelado tras minimizar/restaurar.
   const { TODAY, TODAY_START, TODAY_END, WEEK_END, CUR_MONTH, CUR_YEAR } = getTodayDates();
@@ -278,10 +286,10 @@ export default function HoyScreen() {
     if (!habit) return;
     const isDone = isCompletedToday(habit);
     // Los hábitos NUMERIC requieren un valor: no se pueden marcar con un simple
-    // check (el backend lo rechaza). Derivamos a Foco → hábitos, que tiene la
-    // hoja de entrada numérica.
+    // check (el backend lo rechaza). Abrimos la hoja de entrada numérica in situ
+    // (mismo componente que usa Foco → hábitos), sin redirigir.
     if (habit.type === 'NUMERIC' && !isDone) {
-      router.navigate({ pathname: '/(tabs)/foco', params: { tab: 'habitos' } });
+      setNumericHabit(habit);
       return;
     }
     toggleHabit.mutate(
@@ -399,6 +407,8 @@ export default function HoyScreen() {
           {weekSection}
         </>
       )}
+
+      <NumericHabitSheet habit={numericHabit} onClose={() => setNumericHabit(null)} />
     </ScreenContainer>
   );
 }

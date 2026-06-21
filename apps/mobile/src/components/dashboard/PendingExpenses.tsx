@@ -98,8 +98,13 @@ function PayExpenseModal({
   const balance = selectedAccount?.balance ?? 0;
   const amountNum = parseFloat(amount);
   const validAmount = amount.trim() !== '' && !Number.isNaN(amountNum) && amountNum > 0;
-  const exceedsBalance = selectedAccount != null && validAmount && amountNum > balance;
-  const canSubmit = !!selectedAccount && validAmount && !exceedsBalance && !payMutation.isPending;
+  // Aviso informativo (borde rojo + texto) cuando el monto supera el saldo, pero
+  // NO bloquea el pago: igual que el modal de Dinero, se permite pagar aunque la
+  // cuenta quede en negativo (p. ej. tarjetas). Antes esto deshabilitaba el botón
+  // y, si el saldo no se leía bien, quedaba trabado para siempre.
+  const exceedsBalance =
+    selectedAccount != null && validAmount && balance > 0 && amountNum > balance;
+  const canSubmit = !!selectedAccount && validAmount && !payMutation.isPending;
 
   const handleClose = () => {
     setAmount('');
@@ -108,10 +113,13 @@ function PayExpenseModal({
 
   const handlePay = () => {
     if (!expense || !canSubmit) return;
-    payMutation.mutate(
-      { id: expense.id, dto: { amount: amountNum, accountId } },
-      { onSuccess: handleClose }
-    );
+    // Disparamos el pago y cerramos la ventana de inmediato (optimista). El hook
+    // usePayMonthlyExpense invalida monthlyExpenses + accounts al resolver, así que
+    // la sección "Gastos Pendientes" del dashboard se actualiza sola; si falla,
+    // muestra una alerta. No dependemos de onSuccess para cerrar, porque con el
+    // cold-start de Railway la respuesta puede demorar y dejar la ventana abierta.
+    payMutation.mutate({ id: expense.id, dto: { amount: amountNum, accountId } });
+    handleClose();
   };
 
   return (
