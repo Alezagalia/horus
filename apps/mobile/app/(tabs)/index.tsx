@@ -29,13 +29,7 @@ import { useTasks, taskKeys } from '@/hooks/useTasks';
 import { useFeaturedGoal, goalKeys } from '@/hooks/useGoals';
 import { useAccounts, useFinanceStats, accountKeys } from '@/hooks/useAccounts';
 import { useMonthlyExpenses, monthlyExpenseKeys } from '@/hooks/useMonthlyExpenses';
-import {
-  useCalendarEvents,
-  useRecurringExpensesCount,
-  eventKeys,
-  calendarEventKeys,
-  recurringKeys,
-} from '@/hooks/useEvents';
+import { useCalendarEvents, eventKeys, calendarEventKeys, recurringKeys } from '@/hooks/useEvents';
 import type { Habit } from '@/services/api/habitApi';
 import type { Task } from '@/services/api/taskApi';
 import type { GoalWithProgress } from '@horus/shared';
@@ -79,6 +73,12 @@ function isCompletedToday(h: Habit): boolean {
 
 function isPending(t: Task): boolean {
   return t.status === 'pendiente' || t.status === 'en_progreso';
+}
+
+// Tarea pendiente cuyo vencimiento es hoy (compara fecha local, igual que TODAY).
+function isTaskDueToday(t: Task, today: string): boolean {
+  if (!isPending(t) || !t.dueDate) return false;
+  return format(new Date(t.dueDate), 'yyyy-MM-dd') === today;
 }
 
 function getInitials(name: string): string {
@@ -245,7 +245,6 @@ export default function HoyScreen() {
   const { data: tasks = [], isLoading: tasksLoading } = useTasks();
   const { data: featuredGoal } = useFeaturedGoal();
   const { data: financeStats } = useFinanceStats();
-  const { data: recurringCount = 0 } = useRecurringExpensesCount();
   const { data: todayEvents = [] } = useCalendarEvents(TODAY_START, TODAY_END);
   const { data: weekEvents = [] } = useCalendarEvents(TODAY_START, WEEK_END);
   const { data: todayActivities = [] } = useActivities(TODAY);
@@ -256,11 +255,18 @@ export default function HoyScreen() {
   const toggleActivity = useToggleActivityRecord();
 
   const todayHabits = habits.filter(isHabitDueToday);
-  const pendingTasks = tasks.filter(isPending).slice(0, 4);
+  // Card "Tareas hoy": tareas pendientes que vencen hoy (sin tope).
+  const tasksDueToday = tasks.filter((t) => isTaskDueToday(t, TODAY));
   // Igual que dinero.tsx: usar las cuentas tal cual vienen (no filtrar por isActive,
   // que puede no venir en la respuesta y dejaría el selector de cuenta vacío).
   const activeAccounts = accountsData?.accounts ?? [];
   const monthlyExpenses = monthlyData?.monthlyExpenses ?? [];
+
+  // Card "Saldo total": suma real de saldos de cuentas (no el balance del mes).
+  const balanceCurrency = financeStats?.currency ?? 'ARS';
+  const totalBalance = accountsData?.totalBalanceByCurrency?.[balanceCurrency] ?? 0;
+  // Card "Por pagar": gastos fijos del mes en estado pendiente.
+  const pendingExpensesCount = monthlyExpenses.filter((e) => e.status === 'pendiente').length;
 
   const pct = stats?.today.percentage ?? 0;
   const done = stats?.today.completed ?? 0;
@@ -380,15 +386,13 @@ export default function HoyScreen() {
 
       {/* ─── Quick stats ──────────────────────────────────────── */}
       <View style={styles.statsRow}>
-        <StatCard value={String(pendingTasks.length)} label="Tareas hoy" />
+        <StatCard value={String(tasksDueToday.length)} label="Tareas hoy" />
         <StatCard
-          value={
-            financeStats ? formatCompactBalance(financeStats.balance, financeStats.currency) : '—'
-          }
+          value={accountsData ? formatCompactBalance(totalBalance, balanceCurrency) : '—'}
           label="Saldo total"
           accent
         />
-        <StatCard value={String(recurringCount)} label="Por pagar" />
+        <StatCard value={String(pendingExpensesCount)} label="Por pagar" />
       </View>
 
       {/* ─── Agenda ‖ Gastos (2 col en tablet); Esta semana abajo a ancho completo ─── */}
