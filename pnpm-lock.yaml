@@ -7,6 +7,7 @@ settings:
 overrides:
   react: 18.3.1
   react-dom: 18.3.1
+  react-server-dom-webpack: ^19.0.2
 
 importers:
 
@@ -9417,8 +9418,8 @@ packages:
       react-dom:
         optional: true
 
-  react-server-dom-webpack@19.0.0-rc-6230622a1a-20240610:
-    resolution: {integrity: sha512-nr+IsOVD07QdeCr4BLvR5TALfLaZLi9AIaoa6vXymBc051iDPWedJujYYrjRJy5+9jp9oCx3G8Tt/Bs//TckJw==}
+  react-server-dom-webpack@19.2.7:
+    resolution: {integrity: sha512-bYfuvqPJnHB4CHo2Ze7fQyJAO77TUu1W/aKFt81ICXbLiOTg5jHaO/NPDlpvGWUALoEGaGb7Oi1uXAaO+Bw6jw==}
     engines: {node: '>=0.10.0'}
     peerDependencies:
       react: 18.3.1
@@ -20508,7 +20509,7 @@ snapshots:
       json5: 2.2.3
       lodash: 4.18.1
       react-native: 0.76.9(@babel/core@7.28.5)(@babel/preset-env@7.29.7(@babel/core@7.28.5))(@types/react@18.3.27)(encoding@0.1.13)(react@18.3.1)
-      react-server-dom-webpack: 19.0.0-rc-6230622a1a-20240610(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(webpack@5.107.2)
+      react-server-dom-webpack: 19.2.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(webpack@5.107.2)
       react-test-renderer: 18.3.1(react@18.3.1)
       server-only: 0.0.1
       stacktrace-js: 2.0.2
@@ -23154,13 +23155,14 @@ snapshots:
     optionalDependencies:
       react-dom: 18.3.1(react@18.3.1)
 
-  react-server-dom-webpack@19.0.0-rc-6230622a1a-20240610(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(webpack@5.107.2):
+  react-server-dom-webpack@19.2.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(webpack@5.107.2):
     dependencies:
       acorn-loose: 8.5.2
       neo-async: 2.6.2
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
       webpack: 5.107.2
+      webpack-sources: 3.5.0
 
   react-shallow-renderer@16.15.0(react@18.3.1):
     dependencies:
