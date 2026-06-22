@@ -160,9 +160,27 @@ function HabitRow({
         )}
       </TouchableOpacity>
       <Text style={styles.habitIcon}>{icon}</Text>
-      <Text style={[styles.habitName, done && styles.habitNameDone]} numberOfLines={1}>
-        {habit.name}
-      </Text>
+      <TouchableOpacity
+        style={styles.habitNameWrap}
+        activeOpacity={0.6}
+        onPress={() =>
+          router.push({
+            pathname: '/habit-stats',
+            params: {
+              id: habit.id,
+              name: habit.name,
+              color: habit.color ?? habit.category?.color ?? '',
+              type: habit.type,
+              unit: habit.unit ?? '',
+              targetValue: habit.targetValue != null ? String(habit.targetValue) : '',
+            },
+          })
+        }
+      >
+        <Text style={[styles.habitName, done && styles.habitNameDone]} numberOfLines={1}>
+          {habit.name}
+        </Text>
+      </TouchableOpacity>
       {habit.currentStreak > 0 && (
         <View style={styles.streakBadge}>
           <View style={styles.streakDot} />
@@ -1308,8 +1326,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   habitIcon: { fontSize: 17, lineHeight: 21 },
+  habitNameWrap: { flex: 1 },
   habitName: {
-    flex: 1,
     fontFamily: 'Inter_500Medium',
     fontSize: 14,
     color: Colors.ink,

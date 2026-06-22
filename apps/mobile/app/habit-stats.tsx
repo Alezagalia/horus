@@ -151,14 +151,28 @@ export default function HabitStatsScreen() {
     name: string;
     color: string;
     type: string;
+    unit: string;
+    targetValue: string;
   }>();
 
   const habitId = params.id ?? '';
   const habitName = params.name ?? 'Hábito';
   const habitColor = params.color && params.color !== '' ? params.color : Colors.vivid;
   const isNumeric = params.type === 'NUMERIC';
+  const unit = params.unit && params.unit !== '' ? params.unit : undefined;
+  const targetValue = params.targetValue ? parseFloat(params.targetValue) : null;
 
   const { data, isLoading } = useHabitDetailedStats(habitId);
+
+  // Historial de valores ingresados, de más reciente a más antiguo.
+  const history = useMemo(
+    () =>
+      (data?.last30DaysValues ?? [])
+        .filter((v) => v.value != null)
+        .slice()
+        .reverse(),
+    [data]
+  );
 
   // Pad last30DaysData to 30 entries if shorter (new habits)
   const days = useMemo<DayCell[]>(() => {
@@ -306,11 +320,44 @@ export default function HabitStatsScreen() {
                   <View style={sStyles.calCard}>
                     <NumericBars
                       values={data.last30DaysValues.slice(-20)}
+                      targetValue={targetValue}
+                      unit={unit}
                       habitColor={habitColor}
                     />
                   </View>
                 </>
               )}
+            </>
+          )}
+
+          {/* ─── Historial día por día (numéricos) ─────────────── */}
+          {isNumeric && history.length > 0 && (
+            <>
+              <Text style={sStyles.sectionTitle}>Historial</Text>
+              <View style={sStyles.calCard}>
+                {history.map((h, i) => {
+                  const reached = targetValue != null && (h.value ?? 0) >= targetValue;
+                  const raw = format(parseISO(h.date), 'EEE d MMM', { locale: es });
+                  const label = raw.charAt(0).toUpperCase() + raw.slice(1);
+                  return (
+                    <View
+                      key={h.date}
+                      style={[sStyles.histRow, i < history.length - 1 && sStyles.histDivider]}
+                    >
+                      <Text style={sStyles.histDate}>{label}</Text>
+                      <Text style={[sStyles.histValue, { color: habitColor }]}>
+                        {h.value}
+                        {unit ? ` ${unit}` : ''}
+                      </Text>
+                      {reached && (
+                        <View style={sStyles.histBadge}>
+                          <Text style={sStyles.histBadgeText}>✓ objetivo</Text>
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
             </>
           )}
 
@@ -538,6 +585,36 @@ const sStyles = StyleSheet.create({
     fontWeight: '700',
   },
 
+  histRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    gap: Spacing.sm,
+  },
+  histDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.line,
+  },
+  histDate: {
+    ...Typography.body,
+    color: Colors.ink,
+    flex: 1,
+  },
+  histValue: {
+    ...Typography.bodyStrong,
+    fontWeight: '700',
+  },
+  histBadge: {
+    backgroundColor: '#DCFCE7',
+    borderRadius: Radius.xs,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  histBadgeText: {
+    ...Typography.micro,
+    color: '#15803D',
+    fontWeight: '700',
+  },
   emptyState: {
     flex: 1,
     alignItems: 'center',
