@@ -288,7 +288,8 @@ export default function MetaDetalleScreen() {
     );
   }
 
-  const pct = Math.round((goal.progress ?? 0) * 100);
+  // progress ya viene en escala 0–100 desde el backend (no multiplicar por 100).
+  const pct = Math.round(goal.progress ?? 0);
   const statusCfg = STATUS_CONFIG[goal.status];
   const priorityColor = PRIORITY_COLORS[goal.priority] ?? Colors.muted;
   const krs = goal.keyResults ?? [];

@@ -46,7 +46,6 @@ import {
   useCreateGoal,
   useUpdateGoal,
   useDeleteGoal,
-  useFeaturedGoal,
   useFeatureGoal,
   goalKeys,
 } from '@/hooks/useGoals';
@@ -121,42 +120,6 @@ function groupByTimeOfDay(
     emoji: momentEmojis[k] ?? '⏰',
     habits: map[k],
   }));
-}
-
-// ─── Goal card ────────────────────────────────────────────────────────────────
-
-function GoalCard({ goal }: { goal: GoalWithProgress }) {
-  const pct = Math.round((goal.progress ?? 0) * 100);
-  const krs = goal.keyResults ?? [];
-  const krDone = krs.filter((kr) => kr.currentValue >= kr.targetValue).length;
-  const daysLeft = goal.targetDate
-    ? Math.max(0, differenceInDays(parseISO(goal.targetDate), new Date()))
-    : null;
-
-  return (
-    <Card solid style={styles.goalCard}>
-      <Text style={styles.goalOverline}>META ACTIVA</Text>
-      <View style={styles.goalTopRow}>
-        <Text style={styles.goalTitle} numberOfLines={2}>
-          {goal.title}
-        </Text>
-        <Text style={styles.goalPct}>{pct}%</Text>
-      </View>
-      <View style={styles.goalBar}>
-        <View style={[styles.goalBarFill, { width: `${pct}%` }]} />
-      </View>
-      <View style={styles.goalBottomRow}>
-        {krs.length > 0 ? (
-          <Text style={styles.goalMeta}>
-            {krDone} de {krs.length} sub-metas
-          </Text>
-        ) : (
-          <Text style={styles.goalMeta}>{goal.linkedTasksCount} tareas vinculadas</Text>
-        )}
-        {daysLeft !== null && <Text style={styles.goalMeta}>Quedan {daysLeft} días</Text>}
-      </View>
-    </Card>
-  );
 }
 
 // ─── Habit row (grouped) ──────────────────────────────────────────────────────
@@ -326,7 +289,8 @@ function GoalListItem({
   onDelete: () => void;
   onFeature: () => void;
 }) {
-  const pct = Math.round((goal.progress ?? 0) * 100);
+  // progress ya viene en escala 0–100 desde el backend (no multiplicar por 100).
+  const pct = Math.round(goal.progress ?? 0);
   const priorityColor =
     goal.priority === 'alta' ? '#EF4444' : goal.priority === 'media' ? '#F97316' : Colors.muted;
 
@@ -670,7 +634,6 @@ export default function FocoScreen() {
   const { data: stats } = useHabitStats();
   const { data: tasks = [], isLoading: tLoading } = useTasks();
   const { data: goals = [], isLoading: gLoading } = useGoals('en_progreso');
-  const { data: featuredGoal } = useFeaturedGoal();
   const { data: moments = [] } = useHabitMoments();
   const featureGoal = useFeatureGoal();
 
@@ -813,9 +776,6 @@ export default function FocoScreen() {
         ) : // ─── TAREAS ───────────────────────────────────────
         activeTab === 'tareas' ? (
           <>
-            {/* Featured goal */}
-            {featuredGoal && <GoalCard goal={featuredGoal} />}
-
             {/* Header */}
             <View style={styles.sectionRow}>
               <Text style={styles.sectionTitle}>Tareas</Text>

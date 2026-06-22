@@ -283,7 +283,8 @@ export default function RevisionSemanalScreen() {
               <>
                 <Text style={styles.section}>Progreso de metas</Text>
                 {stats.goals.map((g) => {
-                  const pct = Math.round(g.progress * 100);
+                  // progress ya viene en escala 0–100 desde el backend.
+                  const pct = Math.round(g.progress);
                   return (
                     <Card solid key={g.id} style={styles.goalRow}>
                       <View style={styles.goalRowHead}>
