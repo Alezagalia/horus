@@ -42,7 +42,7 @@ export interface CreateHabitDTO {
   type: 'CHECK' | 'NUMERIC';
   targetValue?: number;
   unit?: string;
-  periodicity: 'DAILY' | 'WEEKLY' | 'MONTHLY';
+  periodicity: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'CUSTOM';
   weekDays: number[];
   timeOfDay: string;
   color?: string;

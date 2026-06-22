@@ -16,22 +16,18 @@ import { Colors, Spacing, Radius } from '@/tokens';
 import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
 import { useCreateHabit, useUpdateHabit, useHabitCategories } from '@/hooks/useHabits';
+import { useHabitMoments } from '@/hooks/useHabitMoments';
 import type { Habit, CreateHabitDTO } from '@/services/api/habitApi';
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
 const DAY_LABELS = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
 
-const TIME_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: 'ANYTIME', label: 'Cualquiera' },
-  { value: 'AYUNO', label: 'En ayunas' },
-  { value: 'MANANA', label: 'Mañana' },
-  { value: 'MEDIA_MANANA', label: 'Media mañana' },
-  { value: 'TARDE', label: 'Tarde' },
-  { value: 'MEDIA_TARDE', label: 'Media tarde' },
-  { value: 'NOCHE', label: 'Noche' },
-  { value: 'ANTES_DORMIR', label: 'Antes dormir' },
-];
+type Periodicity = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'CUSTOM';
+
+// Opción "Cualquiera" siempre disponible; el resto se completa con los momentos
+// dinámicos del usuario (useHabitMoments), igual que la web.
+const ANYTIME_OPTION = { value: 'ANYTIME', label: 'Cualquiera' };
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -51,13 +47,23 @@ export function HabitFormModal({ visible, onClose, habit }: Props) {
   const [type, setType] = useState<'CHECK' | 'NUMERIC'>('CHECK');
   const [targetValue, setTargetValue] = useState('');
   const [unit, setUnit] = useState('');
-  const [periodicity, setPeriodicity] = useState<'DAILY' | 'WEEKLY' | 'MONTHLY'>('DAILY');
+  const [periodicity, setPeriodicity] = useState<Periodicity>('DAILY');
   const [weekDays, setWeekDays] = useState<number[]>([]);
   const [timeOfDay, setTimeOfDay] = useState('ANYTIME');
 
   const { data: categories = [] } = useHabitCategories();
+  const { data: moments = [] } = useHabitMoments();
   const createHabit = useCreateHabit();
   const updateHabit = useUpdateHabit();
+
+  // "Cualquiera" + momentos dinámicos del backend.
+  const timeOptions = [
+    ANYTIME_OPTION,
+    ...moments.map((m) => ({ value: m.key, label: `${m.emoji} ${m.label}` })),
+  ];
+
+  // WEEKLY y CUSTOM usan selector de días de la semana.
+  const usesWeekDays = periodicity === 'WEEKLY' || periodicity === 'CUSTOM';
 
   // Pre-load when editing
   useEffect(() => {
@@ -67,11 +73,7 @@ export function HabitFormModal({ visible, onClose, habit }: Props) {
       setType(habit.type);
       setTargetValue(habit.targetValue?.toString() ?? '');
       setUnit(habit.unit ?? '');
-      setPeriodicity(
-        habit.periodicity === 'CUSTOM'
-          ? 'DAILY'
-          : (habit.periodicity as 'DAILY' | 'WEEKLY' | 'MONTHLY')
-      );
+      setPeriodicity(habit.periodicity);
       setWeekDays(habit.weekDays ?? []);
       setTimeOfDay(habit.timeOfDay ?? 'ANYTIME');
     }
@@ -105,8 +107,7 @@ export function HabitFormModal({ visible, onClose, habit }: Props) {
       if (!targetValue || isNaN(tv) || tv <= 0) return 'El objetivo debe ser mayor a 0';
       if (!unit.trim()) return 'La unidad es obligatoria';
     }
-    if (periodicity === 'WEEKLY' && weekDays.length === 0)
-      return 'Selecciona al menos un día de la semana';
+    if (usesWeekDays && weekDays.length === 0) return 'Selecciona al menos un día de la semana';
     return null;
   };
 
@@ -122,7 +123,7 @@ export function HabitFormModal({ visible, onClose, habit }: Props) {
       categoryId,
       type,
       periodicity,
-      weekDays: periodicity === 'WEEKLY' ? weekDays : [],
+      weekDays: usesWeekDays ? weekDays : [],
       timeOfDay,
       ...(type === 'NUMERIC' && {
         targetValue: parseFloat(targetValue),
@@ -250,10 +251,15 @@ export function HabitFormModal({ visible, onClose, habit }: Props) {
                 active={periodicity === 'MONTHLY'}
                 onPress={() => setPeriodicity('MONTHLY')}
               />
+              <Chip
+                label="Personalizado"
+                active={periodicity === 'CUSTOM'}
+                onPress={() => setPeriodicity('CUSTOM')}
+              />
             </View>
 
-            {/* Week day selector */}
-            {periodicity === 'WEEKLY' && (
+            {/* Week day selector (WEEKLY o CUSTOM) */}
+            {usesWeekDays && (
               <>
                 <Text style={styles.label}>Días</Text>
                 <View style={styles.daysRow}>
@@ -283,7 +289,7 @@ export function HabitFormModal({ visible, onClose, habit }: Props) {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={[styles.chipRow, { marginBottom: Spacing.xl }]}
             >
-              {TIME_OPTIONS.map((opt) => (
+              {timeOptions.map((opt) => (
                 <Chip
                   key={opt.value}
                   label={opt.label}
