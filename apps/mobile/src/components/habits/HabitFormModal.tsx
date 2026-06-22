@@ -103,7 +103,7 @@ export function HabitFormModal({ visible, onClose, habit }: Props) {
     if (!name.trim()) return 'El nombre es obligatorio';
     if (!categoryId) return 'Selecciona una categoría';
     if (type === 'NUMERIC') {
-      const tv = parseFloat(targetValue);
+      const tv = parseFloat(targetValue.replace(',', '.'));
       if (!targetValue || isNaN(tv) || tv <= 0) return 'El objetivo debe ser mayor a 0';
       if (!unit.trim()) return 'La unidad es obligatoria';
     }
@@ -126,7 +126,7 @@ export function HabitFormModal({ visible, onClose, habit }: Props) {
       weekDays: usesWeekDays ? weekDays : [],
       timeOfDay,
       ...(type === 'NUMERIC' && {
-        targetValue: parseFloat(targetValue),
+        targetValue: parseFloat(targetValue.replace(',', '.')),
         unit: unit.trim(),
       }),
     };
@@ -215,7 +215,7 @@ export function HabitFormModal({ visible, onClose, habit }: Props) {
                     onChangeText={setTargetValue}
                     placeholder="10"
                     placeholderTextColor={Colors.muted}
-                    keyboardType="numeric"
+                    keyboardType="decimal-pad"
                     returnKeyType="next"
                   />
                 </View>

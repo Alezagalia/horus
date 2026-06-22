@@ -36,7 +36,8 @@ export function NumericHabitSheet({
 
   const handleSubmit = () => {
     if (!habit) return;
-    const num = parseFloat(value);
+    // Acepta coma o punto como separador decimal (es-AR usa coma).
+    const num = parseFloat(value.replace(',', '.'));
     if (!value || isNaN(num) || num <= 0) {
       Alert.alert('Error', 'Ingresa un valor válido mayor a 0');
       return;
@@ -80,7 +81,7 @@ export function NumericHabitSheet({
             onChangeText={setValue}
             placeholder="0"
             placeholderTextColor={Colors.muted}
-            keyboardType="numeric"
+            keyboardType="decimal-pad"
             autoFocus
             returnKeyType="done"
             onSubmitEditing={handleSubmit}
