@@ -27,7 +27,6 @@ import {
   Plus,
   Trash2,
   ClipboardCheck,
-  Salad,
   Scale,
   History,
   Tag,
@@ -631,12 +630,6 @@ export default function YoScreen() {
           icon={<Scale size={16} color="#F43F5E" />}
           label="Deuda de Vida"
           onPress={() => router.push('/deuda-de-vida')}
-        />
-        <View style={styles.divider} />
-        <SettingRow
-          icon={<Salad size={16} color="#22c55e" />}
-          label="Nutrición"
-          onPress={() => router.push('/nutricion')}
         />
         <View style={styles.divider} />
         <SettingRow

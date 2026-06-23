@@ -1,5 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { resourceApi, type CreateResourceDTO, type ResourceType } from '@/services/api/resourceApi';
+import {
+  resourceApi,
+  type CreateResourceDTO,
+  type UpdateResourceDTO,
+  type ResourceType,
+} from '@/services/api/resourceApi';
 
 export const resourceKeys = {
   all: ['resources'] as const,
@@ -22,6 +27,17 @@ export function useCreateResource() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (dto: CreateResourceDTO) => resourceApi.create(dto),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: resourceKeys.all });
+    },
+  });
+}
+
+export function useUpdateResource() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, dto }: { id: string; dto: UpdateResourceDTO }) =>
+      resourceApi.update(id, dto),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: resourceKeys.all });
     },

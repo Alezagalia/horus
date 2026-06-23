@@ -55,4 +55,27 @@ export const taskApi = {
   delete: async (taskId: string): Promise<void> => {
     await axiosInstance.delete(`/tasks/${taskId}`);
   },
+
+  // ─── Checklist ───────────────────────────────────────────────────────────────
+
+  addChecklistItem: async (
+    taskId: string,
+    title: string
+  ): Promise<{ id: string; title: string; completed: boolean }> => {
+    const { data } = await axiosInstance.post(`/tasks/${taskId}/checklist`, { title });
+    return data.item ?? data;
+  },
+
+  updateChecklistItem: async (
+    taskId: string,
+    itemId: string,
+    dto: { title?: string; completed?: boolean }
+  ): Promise<{ id: string; title: string; completed: boolean }> => {
+    const { data } = await axiosInstance.put(`/tasks/${taskId}/checklist/${itemId}`, dto);
+    return data.item ?? data;
+  },
+
+  deleteChecklistItem: async (taskId: string, itemId: string): Promise<void> => {
+    await axiosInstance.delete(`/tasks/${taskId}/checklist/${itemId}`);
+  },
 };

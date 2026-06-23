@@ -13,7 +13,6 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { format, addDays, subDays, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -29,6 +28,7 @@ import {
 } from 'lucide-react-native';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Chip } from '@/components/ui/Chip';
 import { Colors, Spacing, Radius, Gradients, Shadows } from '@/tokens';
 import {
   useFoods,
@@ -40,6 +40,9 @@ import {
   useDeleteFood,
 } from '@/hooks/useNutrition';
 import type { MealTime, Food, NutritionLogItem, CreateFoodDTO, UpdateFoodDTO } from '@horus/shared';
+import { RecipesView } from './RecipesView';
+import { MealPlannerView } from './MealPlannerView';
+import { ShoppingListsView } from './ShoppingListsView';
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
@@ -53,7 +56,7 @@ const MEAL_TIMES: { key: MealTime; label: string; emoji: string }[] = [
 
 const MACRO_TARGETS = { calories: 2000, protein: 150, carbs: 250, fat: 65 };
 
-type Tab = 'log' | 'foods';
+type NutTab = 'log' | 'recipes' | 'planner' | 'shopping' | 'foods';
 
 // ─── macro pill ───────────────────────────────────────────────────────────────
 
@@ -401,7 +404,7 @@ function EditFoodModal({ food, onClose }: { food: Food; onClose: () => void }) {
   );
 }
 
-// ─── foods view ───────────────────────────────────────────────────────────────
+// ─── foods view (embebido: usa .map, no FlatList) ───────────────────────────────
 
 function FoodsView() {
   const [search, setSearch] = useState('');
@@ -426,7 +429,7 @@ function FoodsView() {
   };
 
   return (
-    <View style={{ flex: 1 }}>
+    <View>
       <View style={styles.searchRow}>
         <Search size={16} color={Colors.muted} />
         <TextInput
@@ -445,18 +448,21 @@ function FoodsView() {
 
       {isLoading ? (
         <ActivityIndicator color={Colors.vivid} style={{ marginTop: Spacing.xl }} />
+      ) : foods.length === 0 ? (
+        <Text style={[styles.emptyText, { marginTop: Spacing.xl }]}>
+          {search.length >= 2 ? 'Sin resultados' : 'Sin alimentos registrados'}
+        </Text>
       ) : (
-        <FlatList
-          data={foods}
-          keyExtractor={(f) => f.id}
-          contentContainerStyle={{ paddingHorizontal: Spacing.lg, paddingBottom: 60 }}
-          ListEmptyComponent={
-            <Text style={[styles.emptyText, { marginTop: Spacing.xl }]}>
-              {search.length >= 2 ? 'Sin resultados' : 'Sin alimentos registrados'}
-            </Text>
-          }
-          renderItem={({ item }) => (
-            <View style={styles.manageFoodRow}>
+        <Card padding={0} solid>
+          {foods.map((item, i) => (
+            <View
+              key={item.id}
+              style={[
+                styles.manageFoodRow,
+                i === foods.length - 1 && { borderBottomWidth: 0 },
+                { paddingHorizontal: Spacing.md },
+              ]}
+            >
               <View style={{ flex: 1 }}>
                 <Text style={styles.foodName} numberOfLines={1}>
                   {item.name}
@@ -484,8 +490,8 @@ function FoodsView() {
                 <Trash2 size={15} color={Colors.muted} strokeWidth={1.5} />
               </TouchableOpacity>
             </View>
-          )}
-        />
+          ))}
+        </Card>
       )}
 
       {editFood && <EditFoodModal food={editFood} onClose={() => setEditFood(null)} />}
@@ -493,10 +499,10 @@ function FoodsView() {
   );
 }
 
-// ─── main screen ──────────────────────────────────────────────────────────────
+// ─── main embeddable view ───────────────────────────────────────────────────────
 
-export default function NutricionScreen() {
-  const [activeTab, setActiveTab] = useState<Tab>('log');
+export function NutritionView() {
+  const [activeTab, setActiveTab] = useState<NutTab>('log');
   const [date, setDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
   const [activeMeal, setActiveMeal] = useState<MealTime | null>(null);
   const isToday = date === format(new Date(), 'yyyy-MM-dd');
@@ -521,38 +527,49 @@ export default function NutricionScreen() {
   };
 
   return (
-    <View style={styles.root}>
-      {/* Header */}
-      <LinearGradient
-        colors={activeTab === 'log' ? Gradients.hero : Gradients.nudge}
-        style={styles.header}
+    <View>
+      {/* Sub-tabs */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={{ marginBottom: Spacing.lg }}
+        contentContainerStyle={styles.subTabs}
       >
-        <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
-            <X size={22} color="#fff" strokeWidth={2} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Nutrición</Text>
-          <View style={{ width: 22 }} />
-        </View>
+        <Chip label="Registro" active={activeTab === 'log'} onPress={() => setActiveTab('log')} />
+        <Chip
+          label="Recetas"
+          active={activeTab === 'recipes'}
+          onPress={() => setActiveTab('recipes')}
+        />
+        <Chip
+          label="Plan"
+          active={activeTab === 'planner'}
+          onPress={() => setActiveTab('planner')}
+        />
+        <Chip
+          label="Compras"
+          active={activeTab === 'shopping'}
+          onPress={() => setActiveTab('shopping')}
+        />
+        <Chip
+          label="Alimentos"
+          active={activeTab === 'foods'}
+          onPress={() => setActiveTab('foods')}
+        />
+      </ScrollView>
 
-        {/* Tab switcher */}
-        <View style={styles.tabBar}>
-          {(['log', 'foods'] as Tab[]).map((t) => (
-            <TouchableOpacity
-              key={t}
-              onPress={() => setActiveTab(t)}
-              style={[styles.tabChip, activeTab === t && styles.tabChipActive]}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.tabLabel, activeTab === t && styles.tabLabelActive]}>
-                {t === 'log' ? 'Registro' : 'Mis Alimentos'}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {activeTab === 'log' && (
-          <>
+      {activeTab === 'foods' ? (
+        <FoodsView />
+      ) : activeTab === 'recipes' ? (
+        <RecipesView />
+      ) : activeTab === 'planner' ? (
+        <MealPlannerView />
+      ) : activeTab === 'shopping' ? (
+        <ShoppingListsView />
+      ) : (
+        <>
+          {/* Macro + date hero card */}
+          <LinearGradient colors={Gradients.hero} style={styles.heroCard}>
             <View style={styles.dateRow}>
               <TouchableOpacity
                 onPress={() => setDate((d) => format(subDays(parseISO(d), 1), 'yyyy-MM-dd'))}
@@ -582,7 +599,6 @@ export default function NutricionScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Macro summary */}
             <View style={styles.macroRow}>
               <MacroPill
                 label="Calorías"
@@ -613,56 +629,50 @@ export default function NutricionScreen() {
                 color="#10b981"
               />
             </View>
-          </>
-        )}
-      </LinearGradient>
+          </LinearGradient>
 
-      {activeTab === 'foods' ? (
-        <FoodsView />
-      ) : isLoading ? (
-        <ActivityIndicator color={Colors.vivid} style={{ marginTop: Spacing.xl }} />
-      ) : (
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
-        >
-          {MEAL_TIMES.map(({ key, label, emoji }) => {
-            const items = itemsByMeal[key] ?? [];
-            const mealCals = items.reduce((s, i) => s + i.macros.calories, 0);
-            return (
-              <View key={key} style={styles.mealSection}>
-                <View style={styles.mealHeader}>
-                  <Text style={styles.mealEmoji}>{emoji}</Text>
-                  <Text style={styles.mealLabel}>{label}</Text>
-                  {mealCals > 0 && (
-                    <View style={styles.mealCalBadge}>
-                      <Flame size={11} color="#f59e0b" />
-                      <Text style={styles.mealCalText}>{Math.round(mealCals)} kcal</Text>
-                    </View>
+          {isLoading ? (
+            <ActivityIndicator color={Colors.vivid} style={{ marginTop: Spacing.xl }} />
+          ) : (
+            MEAL_TIMES.map(({ key, label, emoji }) => {
+              const items = itemsByMeal[key] ?? [];
+              const mealCals = items.reduce((s, i) => s + i.macros.calories, 0);
+              return (
+                <View key={key} style={styles.mealSection}>
+                  <View style={styles.mealHeader}>
+                    <Text style={styles.mealEmoji}>{emoji}</Text>
+                    <Text style={styles.mealLabel}>{label}</Text>
+                    {mealCals > 0 && (
+                      <View style={styles.mealCalBadge}>
+                        <Flame size={11} color="#f59e0b" />
+                        <Text style={styles.mealCalText}>{Math.round(mealCals)} kcal</Text>
+                      </View>
+                    )}
+                    <TouchableOpacity
+                      onPress={() => setActiveMeal(key)}
+                      style={styles.mealAddBtn}
+                      hitSlop={8}
+                    >
+                      <Plus size={16} color={Colors.vivid} strokeWidth={2} />
+                    </TouchableOpacity>
+                  </View>
+
+                  {items.length > 0 ? (
+                    items.map((item) => (
+                      <LogItemRow
+                        key={item.id}
+                        item={item}
+                        onDelete={() => handleRemove(item.id)}
+                      />
+                    ))
+                  ) : (
+                    <Text style={styles.emptyMeal}>Sin registros</Text>
                   )}
-                  <TouchableOpacity
-                    onPress={() => setActiveMeal(key)}
-                    style={styles.mealAddBtn}
-                    hitSlop={8}
-                  >
-                    <Plus size={16} color={Colors.vivid} strokeWidth={2} />
-                  </TouchableOpacity>
                 </View>
-
-                {items.length > 0 ? (
-                  items.map((item) => (
-                    <LogItemRow key={item.id} item={item} onDelete={() => handleRemove(item.id)} />
-                  ))
-                ) : (
-                  <Text style={styles.emptyMeal}>Sin registros</Text>
-                )}
-              </View>
-            );
-          })}
-
-          <View style={{ height: 60 }} />
-        </ScrollView>
+              );
+            })
+          )}
+        </>
       )}
 
       <AddFoodModal
@@ -676,17 +686,20 @@ export default function NutricionScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.bgTop },
-
-  // header
-  header: { paddingTop: 56, paddingBottom: Spacing.lg, paddingHorizontal: Spacing.lg },
-  headerRow: {
+  // sub tabs
+  subTabs: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.md,
+    gap: Spacing.sm,
+    paddingRight: Spacing.lg,
   },
-  headerTitle: { fontFamily: 'Inter_700Bold', fontSize: 18, color: '#fff' },
+
+  // hero card (macros + date)
+  heroCard: {
+    borderRadius: Radius['2xl'],
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+    ...Shadows.nav,
+  },
   dateRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -729,10 +742,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   macroBarFill: { height: 3, borderRadius: 2 },
-
-  // scroll
-  scroll: { flex: 1 },
-  content: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.md },
 
   // meal sections
   mealSection: {
@@ -875,31 +884,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   selectedMeta: { fontFamily: 'Inter_400Regular', fontSize: 12, color: Colors.muted },
-
-  // tab bar
-  tabBar: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginBottom: Spacing.sm,
-  },
-  tabChip: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 6,
-    borderRadius: Radius.pill,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-  },
-  tabChipActive: {
-    backgroundColor: 'rgba(255,255,255,0.9)',
-  },
-  tabLabel: {
-    fontFamily: 'Inter_500Medium',
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.75)',
-  },
-  tabLabelActive: {
-    color: Colors.ink,
-    fontWeight: '600',
-  },
 
   // manage foods
   manageFoodRow: {

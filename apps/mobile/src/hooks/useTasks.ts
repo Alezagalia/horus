@@ -62,3 +62,43 @@ export function useDeleteTask() {
     },
   });
 }
+
+export function useAddChecklistItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ taskId, title }: { taskId: string; title: string }) =>
+      taskApi.addChecklistItem(taskId, title),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: taskKeys.all });
+    },
+  });
+}
+
+export function useUpdateChecklistItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      taskId,
+      itemId,
+      dto,
+    }: {
+      taskId: string;
+      itemId: string;
+      dto: { title?: string; completed?: boolean };
+    }) => taskApi.updateChecklistItem(taskId, itemId, dto),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: taskKeys.all });
+    },
+  });
+}
+
+export function useDeleteChecklistItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ taskId, itemId }: { taskId: string; itemId: string }) =>
+      taskApi.deleteChecklistItem(taskId, itemId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: taskKeys.all });
+    },
+  });
+}

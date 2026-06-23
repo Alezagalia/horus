@@ -49,6 +49,23 @@ export interface CreateTransactionDTO {
   notes?: string;
 }
 
+export interface UpdateTransactionDTO {
+  amount?: number;
+  concept?: string;
+  date?: string;
+  notes?: string | null;
+  categoryId?: string;
+}
+
+export interface CreateTransferDTO {
+  fromAccountId: string;
+  toAccountId: string;
+  amount: number;
+  concept: string;
+  date: string;
+  notes?: string;
+}
+
 export const transactionApi = {
   list: async (filters?: {
     accountId?: string;
@@ -65,6 +82,15 @@ export const transactionApi = {
   create: async (dto: CreateTransactionDTO): Promise<Transaction> => {
     const { data } = await axiosInstance.post('/transactions', dto);
     return data.transaction ?? data;
+  },
+
+  update: async (transactionId: string, dto: UpdateTransactionDTO): Promise<Transaction> => {
+    const { data } = await axiosInstance.put(`/transactions/${transactionId}`, dto);
+    return data.transaction ?? data;
+  },
+
+  createTransfer: async (dto: CreateTransferDTO): Promise<void> => {
+    await axiosInstance.post('/transactions/transfer', dto);
   },
 
   delete: async (transactionId: string): Promise<void> => {

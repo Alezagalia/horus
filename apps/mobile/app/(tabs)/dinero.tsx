@@ -26,6 +26,7 @@ import {
   Trash2,
   Undo2,
   Pencil,
+  ArrowLeftRight,
 } from 'lucide-react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
@@ -38,6 +39,8 @@ import { useAccounts, useFinanceStats, accountKeys } from '@/hooks/useAccounts';
 import {
   useTransactions,
   useCreateTransaction,
+  useUpdateTransaction,
+  useCreateTransfer,
   useDeleteTransaction,
   useTxCategories,
   transactionKeys,
@@ -210,11 +213,13 @@ function AccountChip({
 
 function TransactionRow({
   tx,
+  onEdit,
   onDelete,
   deleting,
   isLast,
 }: {
   tx: Transaction;
+  onEdit: () => void;
   onDelete: () => void;
   deleting: boolean;
   isLast?: boolean;
@@ -223,24 +228,38 @@ function TransactionRow({
   const dotColor = tx.category?.color ?? Colors.ceilDark;
 
   const handleDelete = () => {
-    Alert.alert('Eliminar movimiento', `¿Eliminar "${tx.concept}"?`, [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Eliminar', style: 'destructive', onPress: onDelete },
-    ]);
+    Alert.alert(
+      'Eliminar movimiento',
+      tx.isTransfer
+        ? `Se eliminarán ambos lados de la transferencia "${tx.concept}".`
+        : `¿Eliminar "${tx.concept}"?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Eliminar', style: 'destructive', onPress: onDelete },
+      ]
+    );
   };
 
   return (
     <View style={[styles.txRow, !isLast && styles.txRowBorder]}>
       <View style={[styles.catDot, { backgroundColor: dotColor }]} />
-      <View style={styles.txCenter}>
+      <TouchableOpacity
+        style={styles.txCenter}
+        onPress={onEdit}
+        disabled={tx.isTransfer}
+        activeOpacity={0.6}
+      >
         <Text style={styles.txConcept} numberOfLines={1}>
           {tx.concept}
         </Text>
-        <Text style={styles.txMeta}>
-          {tx.category?.name}
-          {tx.account ? ` · ${tx.account.name}` : ''}
-        </Text>
-      </View>
+        <View style={styles.txMetaRow}>
+          {tx.isTransfer && <ArrowLeftRight size={11} color={Colors.muted} strokeWidth={1.8} />}
+          <Text style={styles.txMeta} numberOfLines={1}>
+            {tx.isTransfer ? 'Transferencia' : tx.category?.name}
+            {tx.account ? ` · ${tx.account.name}` : ''}
+          </Text>
+        </View>
+      </TouchableOpacity>
       <Text style={[styles.txAmount, { color: isIncome ? '#22c55e' : Colors.ink }]}>
         {isIncome ? '+' : '-'}
         {formatMoney(tx.amount, tx.account?.currency)}
@@ -266,11 +285,14 @@ function TransactionFormModal({
   visible,
   onClose,
   accounts,
+  editingTransaction,
 }: {
   visible: boolean;
   onClose: () => void;
   accounts: Account[];
+  editingTransaction?: Transaction | null;
 }) {
+  const isEditing = !!editingTransaction;
   const [txType, setTxType] = useState<TransactionType>('egreso');
   const [amount, setAmount] = useState('');
   const [concept, setConcept] = useState('');
@@ -279,12 +301,24 @@ function TransactionFormModal({
 
   const { data: categories = [] } = useTxCategories('gastos');
   const createTx = useCreateTransaction();
+  const updateTx = useUpdateTransaction();
 
   useEffect(() => {
-    if (accounts.length > 0 && !accountId) {
-      setAccountId(accounts[0].id);
+    if (!visible) return;
+    if (editingTransaction) {
+      setTxType(editingTransaction.type);
+      setAmount(String(editingTransaction.amount));
+      setConcept(editingTransaction.concept);
+      setAccountId(editingTransaction.accountId);
+      setCategoryId(editingTransaction.categoryId);
+    } else {
+      setTxType('egreso');
+      setAmount('');
+      setConcept('');
+      setCategoryId('');
+      setAccountId(accounts[0]?.id ?? '');
     }
-  }, [accounts, accountId]);
+  }, [visible, editingTransaction, accounts]);
 
   const handleClose = () => {
     setTxType('egreso');
@@ -297,27 +331,37 @@ function TransactionFormModal({
 
   const canSubmit =
     amount.trim() !== '' &&
-    parseFloat(amount) > 0 &&
+    parseFloat(amount.replace(',', '.')) > 0 &&
     concept.trim() !== '' &&
     !!accountId &&
     !!categoryId;
 
   const handleSubmit = () => {
     if (!canSubmit) return;
-    createTx.mutate(
-      {
-        type: txType,
-        amount: parseFloat(amount),
-        concept: concept.trim(),
-        accountId,
-        categoryId,
-        date: new Date().toISOString(),
-      },
-      {
-        onSuccess: handleClose,
-        onError: () => Alert.alert('Error', 'No se pudo guardar el movimiento'),
-      }
-    );
+    const parsedAmount = parseFloat(amount.replace(',', '.'));
+    const onError = () => Alert.alert('Error', 'No se pudo guardar el movimiento');
+
+    if (isEditing && editingTransaction) {
+      updateTx.mutate(
+        {
+          id: editingTransaction.id,
+          dto: { amount: parsedAmount, concept: concept.trim(), categoryId },
+        },
+        { onSuccess: handleClose, onError }
+      );
+    } else {
+      createTx.mutate(
+        {
+          type: txType,
+          amount: parsedAmount,
+          concept: concept.trim(),
+          accountId,
+          categoryId,
+          date: new Date().toISOString(),
+        },
+        { onSuccess: handleClose, onError }
+      );
+    }
   };
 
   return (
@@ -333,7 +377,9 @@ function TransactionFormModal({
         />
         <View style={styles.modalSheet}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Nuevo movimiento</Text>
+            <Text style={styles.modalTitle}>
+              {isEditing ? 'Editar movimiento' : 'Nuevo movimiento'}
+            </Text>
             <TouchableOpacity
               onPress={handleClose}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -345,7 +391,8 @@ function TransactionFormModal({
           <View style={styles.typeToggle}>
             <TouchableOpacity
               style={[styles.typeBtn, txType === 'egreso' && styles.typeBtnEgreso]}
-              onPress={() => setTxType('egreso')}
+              onPress={() => !isEditing && setTxType('egreso')}
+              disabled={isEditing}
             >
               <Text
                 style={[
@@ -358,7 +405,8 @@ function TransactionFormModal({
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.typeBtn, txType === 'ingreso' && styles.typeBtnIngreso]}
-              onPress={() => setTxType('ingreso')}
+              onPress={() => !isEditing && setTxType('ingreso')}
+              disabled={isEditing}
             >
               <Text
                 style={[
@@ -378,7 +426,7 @@ function TransactionFormModal({
             placeholder="0"
             placeholderTextColor={Colors.ceilLight}
             keyboardType="numeric"
-            autoFocus
+            autoFocus={!isEditing}
           />
 
           <TextInput
@@ -390,7 +438,7 @@ function TransactionFormModal({
             returnKeyType="done"
           />
 
-          <Text style={styles.pickerLabel}>Cuenta</Text>
+          <Text style={styles.pickerLabel}>Cuenta{isEditing ? ' (no editable)' : ''}</Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -400,8 +448,13 @@ function TransactionFormModal({
             {accounts.map((a) => (
               <TouchableOpacity
                 key={a.id}
-                style={[styles.pickerChip, accountId === a.id && styles.pickerChipActive]}
-                onPress={() => setAccountId(a.id)}
+                style={[
+                  styles.pickerChip,
+                  accountId === a.id && styles.pickerChipActive,
+                  isEditing && accountId !== a.id && { opacity: 0.4 },
+                ]}
+                onPress={() => !isEditing && setAccountId(a.id)}
+                disabled={isEditing}
               >
                 {a.color && <View style={[styles.accountDot, { backgroundColor: a.color }]} />}
                 <Text
@@ -443,12 +496,203 @@ function TransactionFormModal({
           </ScrollView>
 
           <Button
-            label="Guardar movimiento"
+            label={isEditing ? 'Guardar cambios' : 'Guardar movimiento'}
             onPress={handleSubmit}
-            loading={createTx.isPending}
+            loading={createTx.isPending || updateTx.isPending}
             disabled={!canSubmit}
             style={{ marginTop: Spacing.lg }}
           />
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+// ─── Transfer Modal ──────────────────────────────────────────────────────────
+
+function TransferModal({
+  visible,
+  onClose,
+  accounts,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  accounts: Account[];
+}) {
+  const [fromId, setFromId] = useState('');
+  const [toId, setToId] = useState('');
+  const [amount, setAmount] = useState('');
+  const [concept, setConcept] = useState('');
+
+  const createTransfer = useCreateTransfer();
+
+  useEffect(() => {
+    if (!visible) {
+      setFromId('');
+      setToId('');
+      setAmount('');
+      setConcept('');
+    }
+  }, [visible]);
+
+  const fromAccount = accounts.find((a) => a.id === fromId);
+  // Destino: mismas monedas que el origen y distinta cuenta (regla del backend)
+  const destinations = fromAccount
+    ? accounts.filter((a) => a.id !== fromId && a.currency === fromAccount.currency)
+    : [];
+
+  const parsedAmount = parseFloat(amount.replace(',', '.'));
+  const insufficient =
+    !!fromAccount && !isNaN(parsedAmount) && parsedAmount > (fromAccount.balance ?? 0);
+
+  const canSubmit =
+    !!fromId &&
+    !!toId &&
+    fromId !== toId &&
+    !isNaN(parsedAmount) &&
+    parsedAmount > 0 &&
+    concept.trim() !== '' &&
+    !insufficient;
+
+  const handleSubmit = () => {
+    if (!canSubmit) return;
+    createTransfer.mutate(
+      {
+        fromAccountId: fromId,
+        toAccountId: toId,
+        amount: parsedAmount,
+        concept: concept.trim(),
+        date: new Date().toISOString(),
+      },
+      {
+        onSuccess: onClose,
+        onError: (err: any) => {
+          const msg = err?.response?.data?.message ?? 'No se pudo realizar la transferencia';
+          Alert.alert('Error', msg);
+        },
+      }
+    );
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.modalOverlay}
+      >
+        <TouchableOpacity
+          style={StyleSheet.absoluteFillObject}
+          activeOpacity={1}
+          onPress={onClose}
+        />
+        <View style={styles.modalSheet}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Transferir entre cuentas</Text>
+            <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <X size={20} color={Colors.muted} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <TextInput
+              style={styles.amountInput}
+              value={amount}
+              onChangeText={setAmount}
+              placeholder="0"
+              placeholderTextColor={Colors.ceilLight}
+              keyboardType="numeric"
+              autoFocus
+            />
+
+            <TextInput
+              style={styles.conceptInput}
+              value={concept}
+              onChangeText={setConcept}
+              placeholder="Concepto (ej. Pago a ahorros)…"
+              placeholderTextColor={Colors.muted}
+              returnKeyType="done"
+            />
+
+            <Text style={styles.pickerLabel}>DESDE</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.pickerScroll}
+              contentContainerStyle={{ gap: Spacing.sm }}
+            >
+              {accounts.map((a) => (
+                <TouchableOpacity
+                  key={a.id}
+                  style={[styles.pickerChip, fromId === a.id && styles.pickerChipActive]}
+                  onPress={() => {
+                    setFromId(a.id);
+                    if (toId === a.id) setToId('');
+                  }}
+                >
+                  {a.color && <View style={[styles.accountDot, { backgroundColor: a.color }]} />}
+                  <Text
+                    style={[
+                      styles.pickerChipLabel,
+                      { color: fromId === a.id ? '#fff' : Colors.ink },
+                    ]}
+                  >
+                    {a.name} · {a.currency}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            {fromAccount && (
+              <Text style={styles.transferHint}>
+                Saldo disponible: {formatMoney(fromAccount.balance ?? 0, fromAccount.currency)}
+              </Text>
+            )}
+
+            <Text style={styles.pickerLabel}>HACIA</Text>
+            {fromId === '' ? (
+              <Text style={styles.transferHint}>Elegí primero la cuenta de origen.</Text>
+            ) : destinations.length === 0 ? (
+              <Text style={styles.transferHint}>
+                No hay otra cuenta en {fromAccount?.currency} para transferir.
+              </Text>
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.pickerScroll}
+                contentContainerStyle={{ gap: Spacing.sm }}
+              >
+                {destinations.map((a) => (
+                  <TouchableOpacity
+                    key={a.id}
+                    style={[styles.pickerChip, toId === a.id && styles.pickerChipActive]}
+                    onPress={() => setToId(a.id)}
+                  >
+                    {a.color && <View style={[styles.accountDot, { backgroundColor: a.color }]} />}
+                    <Text
+                      style={[
+                        styles.pickerChipLabel,
+                        { color: toId === a.id ? '#fff' : Colors.ink },
+                      ]}
+                    >
+                      {a.name} · {a.currency}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+
+            {insufficient && (
+              <Text style={styles.transferError}>Saldo insuficiente en la cuenta de origen.</Text>
+            )}
+
+            <Button
+              label="Transferir"
+              onPress={handleSubmit}
+              loading={createTransfer.isPending}
+              disabled={!canSubmit}
+              style={{ marginTop: Spacing.lg, marginBottom: Spacing.md }}
+            />
+          </ScrollView>
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -1364,6 +1608,8 @@ export default function DineroScreen() {
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
+  const [showTransferModal, setShowTransferModal] = useState(false);
   const [showRecurringModal, setShowRecurringModal] = useState(false);
   const [showPayModal, setShowPayModal] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<MonthlyExpense | null>(null);
@@ -1585,6 +1831,16 @@ export default function DineroScreen() {
                   <Text style={styles.sectionBadgeText}>{transactions.length}</Text>
                 </View>
               )}
+              {accounts.length >= 2 && (
+                <TouchableOpacity
+                  style={styles.transferBtn}
+                  onPress={() => setShowTransferModal(true)}
+                  activeOpacity={0.7}
+                >
+                  <ArrowLeftRight size={13} color={Colors.vivid} strokeWidth={2} />
+                  <Text style={styles.transferBtnLabel}>Transferir</Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             {txLoading ? (
@@ -1602,6 +1858,10 @@ export default function DineroScreen() {
                       <TransactionRow
                         key={tx.id}
                         tx={tx}
+                        onEdit={() => {
+                          setEditingTx(tx);
+                          setShowModal(true);
+                        }}
                         onDelete={() => deleteTransaction.mutate(tx.id)}
                         deleting={
                           deleteTransaction.isPending && deleteTransaction.variables === tx.id
@@ -1902,6 +2162,7 @@ export default function DineroScreen() {
               setSavingsEditing(null);
               setShowSavingsModal(true);
             } else {
+              setEditingTx(null);
               setShowModal(true);
             }
           }}
@@ -1913,7 +2174,16 @@ export default function DineroScreen() {
 
       <TransactionFormModal
         visible={showModal}
-        onClose={() => setShowModal(false)}
+        onClose={() => {
+          setShowModal(false);
+          setEditingTx(null);
+        }}
+        accounts={accounts}
+        editingTransaction={editingTx}
+      />
+      <TransferModal
+        visible={showTransferModal}
+        onClose={() => setShowTransferModal(false)}
         accounts={accounts}
       />
       <RecurringFormModal
@@ -2122,6 +2392,11 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     fontSize: 11,
     color: Colors.muted,
+  },
+  txMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
     marginTop: 2,
   },
   txAmount: {
@@ -2213,6 +2488,33 @@ const styles = StyleSheet.create({
     color: Colors.muted,
     letterSpacing: 0.6,
     marginBottom: Spacing.sm,
+  },
+  transferBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginLeft: 'auto',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.ice,
+  },
+  transferBtnLabel: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 12,
+    color: Colors.vivid,
+  },
+  transferHint: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 12,
+    color: Colors.muted,
+    marginBottom: Spacing.md,
+  },
+  transferError: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 12,
+    color: '#ef4444',
+    marginTop: Spacing.sm,
   },
   pickerScroll: {
     marginBottom: Spacing.md,

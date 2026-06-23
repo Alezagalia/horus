@@ -40,10 +40,14 @@ import {
   useStartWorkout,
   useFinishWorkout,
   useCancelWorkout,
+  useDeleteRoutine,
   useAddSet,
   useDeleteSet,
   workoutKeys,
 } from '@/hooks/useWorkouts';
+import { RoutineFormModal } from '@/components/workouts/RoutineFormModal';
+import { NutritionView } from '@/components/nutrition/NutritionView';
+import { MUSCLE_GROUPS, MUSCLE_GROUP_LABELS } from '@/constants/muscleGroups';
 import type {
   Routine,
   WorkoutSummaryItem,
@@ -83,31 +87,6 @@ function formatWorkoutDate(dateStr: string): string {
   return format(parseISO(dateStr), "d MMM · HH'h'mm", { locale: es });
 }
 
-// ─── exercise constants ────────────────────────────────────────────────────────
-
-const MUSCLE_GROUPS: Array<{ key: MuscleGroup | undefined; label: string }> = [
-  { key: undefined, label: 'Todos' },
-  { key: 'pecho', label: 'Pecho' },
-  { key: 'espalda', label: 'Espalda' },
-  { key: 'piernas', label: 'Piernas' },
-  { key: 'hombros', label: 'Hombros' },
-  { key: 'brazos', label: 'Brazos' },
-  { key: 'core', label: 'Core' },
-  { key: 'cardio', label: 'Cardio' },
-  { key: 'otro', label: 'Otro' },
-];
-
-const MUSCLE_GROUP_LABELS: Partial<Record<MuscleGroup, string>> = {
-  pecho: 'Pecho',
-  espalda: 'Espalda',
-  piernas: 'Piernas',
-  hombros: 'Hombros',
-  brazos: 'Brazos',
-  core: 'Core',
-  cardio: 'Cardio',
-  otro: 'Otro',
-};
-
 // ─── sub-components ───────────────────────────────────────────────────────────
 
 function StatsBar({ totalWorkouts, totalVolume }: { totalWorkouts: number; totalVolume: number }) {
@@ -136,10 +115,14 @@ function StatsBar({ totalWorkouts, totalVolume }: { totalWorkouts: number; total
 function RoutineCard({
   routine,
   onStart,
+  onEdit,
+  onDelete,
   starting,
 }: {
   routine: Routine;
   onStart: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
   starting: boolean;
 }) {
   return (
@@ -177,21 +160,29 @@ function RoutineCard({
         )}
       </View>
 
-      <TouchableOpacity
-        style={[styles.startBtn, starting && styles.startBtnDisabled]}
-        onPress={onStart}
-        disabled={starting}
-        activeOpacity={0.85}
-      >
-        {starting ? (
-          <ActivityIndicator size="small" color="#fff" />
-        ) : (
-          <>
-            <Play size={14} color="#fff" strokeWidth={2} fill="#fff" />
-            <Text style={styles.startBtnLabel}>Comenzar</Text>
-          </>
-        )}
-      </TouchableOpacity>
+      <View style={styles.routineActions}>
+        <TouchableOpacity
+          style={[styles.startBtn, { flex: 1 }, starting && styles.startBtnDisabled]}
+          onPress={onStart}
+          disabled={starting}
+          activeOpacity={0.85}
+        >
+          {starting ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <>
+              <Play size={14} color="#fff" strokeWidth={2} fill="#fff" />
+              <Text style={styles.startBtnLabel}>Comenzar</Text>
+            </>
+          )}
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.routineIconBtn} onPress={onEdit} activeOpacity={0.7}>
+          <Pencil size={16} color={Colors.muted} strokeWidth={1.8} />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.routineIconBtn} onPress={onDelete} activeOpacity={0.7}>
+          <Trash2 size={16} color={Colors.muted} strokeWidth={1.8} />
+        </TouchableOpacity>
+      </View>
     </Card>
   );
 }
@@ -252,9 +243,30 @@ function SectionHeader({ title, count }: { title: string; count?: number }) {
 
 // ─── views ────────────────────────────────────────────────────────────────────
 
-function RoutinesView({ onStarted }: { onStarted: (w: StartedWorkout) => void }) {
+function RoutinesView({
+  onStarted,
+  onEdit,
+}: {
+  onStarted: (w: StartedWorkout) => void;
+  onEdit: (routineId: string) => void;
+}) {
   const { data: routines = [], isLoading } = useRoutines();
   const startWorkout = useStartWorkout();
+  const deleteRoutine = useDeleteRoutine();
+
+  const handleDelete = (routine: Routine) => {
+    Alert.alert('Eliminar rutina', `¿Eliminar "${routine.name}"?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: () =>
+          deleteRoutine.mutate(routine.id, {
+            onError: () => Alert.alert('Error', 'No se pudo eliminar la rutina'),
+          }),
+      },
+    ]);
+  };
 
   const handleStart = (routine: Routine) => {
     Alert.alert('Comenzar entrenamiento', `¿Iniciar "${routine.name}"?`, [
@@ -282,7 +294,7 @@ function RoutinesView({ onStarted }: { onStarted: (w: StartedWorkout) => void })
       <Card solid style={styles.emptyCard}>
         <Dumbbell size={32} color={Colors.ceilLight} strokeWidth={1} />
         <Text style={styles.emptyTitle}>Sin rutinas</Text>
-        <Text style={styles.emptySub}>Creá una rutina desde la web para verla aquí</Text>
+        <Text style={styles.emptySub}>Creá tu primera rutina con el botón +</Text>
       </Card>
     );
   }
@@ -294,6 +306,8 @@ function RoutinesView({ onStarted }: { onStarted: (w: StartedWorkout) => void })
           key={r.id}
           routine={r}
           onStart={() => handleStart(r)}
+          onEdit={() => onEdit(r.id)}
+          onDelete={() => handleDelete(r)}
           starting={startWorkout.isPending && startWorkout.variables === r.id}
         />
       ))}
@@ -1211,13 +1225,15 @@ function StatsView() {
 
 // ─── screen ───────────────────────────────────────────────────────────────────
 
-type Tab = 'rutinas' | 'historial' | 'ejercicios' | 'stats';
+type Tab = 'rutinas' | 'historial' | 'ejercicios' | 'stats' | 'nutricion';
 
 export default function CuerpoScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('rutinas');
   const [activeWorkout, setActiveWorkout] = useState<StartedWorkout | null>(null);
   const [showExerciseModal, setShowExerciseModal] = useState(false);
   const [editingExercise, setEditingExercise] = useState<ExerciseWithStats | null>(null);
+  const [showRoutineModal, setShowRoutineModal] = useState(false);
+  const [editingRoutineId, setEditingRoutineId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const { data: routines = [] } = useRoutines();
@@ -1278,10 +1294,21 @@ export default function CuerpoScreen() {
             active={activeTab === 'stats'}
             onPress={() => setActiveTab('stats')}
           />
+          <Chip
+            label="Nutrición"
+            active={activeTab === 'nutricion'}
+            onPress={() => setActiveTab('nutricion')}
+          />
         </ScrollView>
 
         {activeTab === 'rutinas' ? (
-          <RoutinesView onStarted={setActiveWorkout} />
+          <RoutinesView
+            onStarted={setActiveWorkout}
+            onEdit={(id) => {
+              setEditingRoutineId(id);
+              setShowRoutineModal(true);
+            }}
+          />
         ) : activeTab === 'historial' ? (
           <HistorialView />
         ) : activeTab === 'ejercicios' ? (
@@ -1291,8 +1318,10 @@ export default function CuerpoScreen() {
               setShowExerciseModal(true);
             }}
           />
-        ) : (
+        ) : activeTab === 'stats' ? (
           <StatsView />
+        ) : (
+          <NutritionView />
         )}
       </ScreenContainer>
 
@@ -1318,12 +1347,34 @@ export default function CuerpoScreen() {
         </TouchableOpacity>
       )}
 
+      {activeTab === 'rutinas' && !activeWorkout && (
+        <TouchableOpacity
+          style={styles.exerciseFab}
+          onPress={() => {
+            setEditingRoutineId(null);
+            setShowRoutineModal(true);
+          }}
+          activeOpacity={0.85}
+        >
+          <Plus size={24} color="#fff" strokeWidth={2} />
+        </TouchableOpacity>
+      )}
+
       <ExerciseFormModal
         visible={showExerciseModal}
         exercise={editingExercise}
         onClose={() => {
           setShowExerciseModal(false);
           setEditingExercise(null);
+        }}
+      />
+
+      <RoutineFormModal
+        visible={showRoutineModal}
+        routineId={editingRoutineId}
+        onClose={() => {
+          setShowRoutineModal(false);
+          setEditingRoutineId(null);
         }}
       />
     </>
@@ -1462,6 +1513,19 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_500Medium',
     fontSize: 11,
     color: Colors.muted,
+  },
+  routineActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  routineIconBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.ice,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   startBtn: {
     flexDirection: 'row',
