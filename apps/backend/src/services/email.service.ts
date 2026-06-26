@@ -107,6 +107,57 @@ El link expira en ${expiresInMinutes} minutos. Si no solicitaste el cambio, igno
   return { subject, html, text };
 }
 
+/**
+ * Renders the email-verification email body (HTML + plaintext).
+ */
+export function renderVerificationEmail(args: {
+  userName: string;
+  verifyUrl: string;
+  expiresInMinutes: number;
+}): { html: string; text: string; subject: string } {
+  const { userName, verifyUrl, expiresInMinutes } = args;
+  const subject = 'Verificá tu email en Horus';
+  const expiresHint =
+    expiresInMinutes % 60 === 0 ? `${expiresInMinutes / 60} horas` : `${expiresInMinutes} minutos`;
+
+  const text = `Hola ${userName},
+
+¡Bienvenido a Horus! Para confirmar tu dirección de email, hacé click en el siguiente link:
+${verifyUrl}
+
+El link expira en ${expiresHint}. Podés seguir usando Horus mientras tanto; la verificación se exige solo para activar tu suscripción.
+
+— El equipo de Horus`;
+
+  const html = `<!doctype html>
+<html lang="es">
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f3f4f6; padding: 24px; color: #111827;">
+  <div style="max-width: 560px; margin: 0 auto; background: white; border-radius: 12px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    <h1 style="margin: 0 0 16px; font-size: 24px; font-weight: 700;">Verificá tu email</h1>
+    <p style="margin: 0 0 16px; line-height: 1.6;">Hola <strong>${escapeHtml(userName)}</strong>,</p>
+    <p style="margin: 0 0 24px; line-height: 1.6;">
+      ¡Bienvenido a Horus! Confirmá tu dirección de email haciendo click en el botón:
+    </p>
+    <p style="margin: 0 0 24px; text-align: center;">
+      <a href="${verifyUrl}"
+         style="display: inline-block; background: linear-gradient(to right, #6366f1, #a855f7); color: white; text-decoration: none; padding: 12px 24px; border-radius: 12px; font-weight: 600;">
+        Verificar mi email
+      </a>
+    </p>
+    <p style="margin: 0 0 8px; font-size: 14px; color: #6b7280;">O copiá este link en tu navegador:</p>
+    <p style="margin: 0 0 24px; font-size: 14px; word-break: break-all; color: #4f46e5;">${verifyUrl}</p>
+    <p style="margin: 0; font-size: 14px; color: #6b7280;">
+      El link expira en <strong>${expiresHint}</strong>. Podés seguir usando Horus mientras tanto; la verificación se exige solo para activar tu suscripción.
+    </p>
+    <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;" />
+    <p style="margin: 0; font-size: 12px; color: #9ca3af;">— El equipo de Horus</p>
+  </div>
+</body>
+</html>`;
+
+  return { subject, html, text };
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
@@ -119,4 +170,5 @@ function escapeHtml(value: string): string {
 export const emailService = {
   sendEmail,
   renderPasswordResetEmail,
+  renderVerificationEmail,
 };

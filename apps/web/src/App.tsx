@@ -22,6 +22,16 @@ const ForgotPasswordPage = lazy(() =>
 const ResetPasswordPage = lazy(() =>
   import('@/pages/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage }))
 );
+const VerifyEmailPage = lazy(() =>
+  import('@/pages/VerifyEmailPage').then((m) => ({ default: m.VerifyEmailPage }))
+);
+const PricingPage = lazy(() =>
+  import('@/pages/PricingPage').then((m) => ({ default: m.PricingPage }))
+);
+const TermsPage = lazy(() => import('@/pages/TermsPage').then((m) => ({ default: m.TermsPage })));
+const PrivacyPage = lazy(() =>
+  import('@/pages/PrivacyPage').then((m) => ({ default: m.PrivacyPage }))
+);
 
 // Lazy loading de páginas protegidas
 const DashboardPage = lazy(() =>
@@ -132,6 +142,9 @@ function AppRoutes() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/calendar/google-callback" element={<GoogleCallbackPage />} />
 
         {/* Protected routes with MainLayout */}
@@ -472,6 +485,16 @@ function AppRoutes() {
             <ProtectedRoute>
               <MainLayout>
                 <ActivitiesPage />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/pricing"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <PricingPage />
               </MainLayout>
             </ProtectedRoute>
           }

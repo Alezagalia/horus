@@ -50,6 +50,24 @@ const envSchema = z.object({
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().default('Horus <onboarding@resend.dev>'),
   FRONTEND_URL: z.string().url().default('http://localhost:5173'),
+  // Data retention (S-02.4). Expired auth tokens are always purged. Inactive
+  // accounts are only DELETED when both: the threshold (days) is > 0 AND the
+  // enable flag is 'true'. Otherwise the job runs in dry-run (logs only) so it
+  // can never silently mass-delete real accounts.
+  INACTIVE_ACCOUNT_PURGE_DAYS: z.string().default('0'),
+  INACTIVE_ACCOUNT_PURGE_ENABLED: z.string().default('false'),
+  // Plan gating (S-03). When 'false' (default) the entitlement middleware is a
+  // no-op, so plan limits / Pro features do NOT block anyone yet. Flip to 'true'
+  // once billing (Fase 2) is live, otherwise current users would be capped at
+  // Free limits with no way to upgrade.
+  BILLING_ENFORCED: z.string().default('false'),
+  // Lemon Squeezy (Merchant of Record) — S-04. All optional so the app boots
+  // without billing configured; the checkout endpoint 503s until they are set.
+  LEMONSQUEEZY_API_KEY: z.string().optional(),
+  LEMONSQUEEZY_STORE_ID: z.string().optional(),
+  LEMONSQUEEZY_WEBHOOK_SECRET: z.string().optional(),
+  LEMONSQUEEZY_VARIANT_PRO_MONTHLY: z.string().optional(),
+  LEMONSQUEEZY_VARIANT_PRO_ANNUAL: z.string().optional(),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

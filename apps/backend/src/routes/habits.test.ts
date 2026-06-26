@@ -2,10 +2,17 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 vi.mock('../lib/prisma.js', () => ({
   prisma: {
-    habit: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
+    habit: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      count: vi.fn().mockResolvedValue(0),
+    },
     habitRecord: { findFirst: vi.fn(), findMany: vi.fn(), upsert: vi.fn(), count: vi.fn() },
     habitAudit: { create: vi.fn(), createMany: vi.fn() },
     category: { findFirst: vi.fn() },
+    subscription: { findUnique: vi.fn().mockResolvedValue(null) },
     $transaction: vi.fn(),
   },
 }));

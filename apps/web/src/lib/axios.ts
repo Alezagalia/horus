@@ -4,6 +4,7 @@
  */
 
 import axios from 'axios';
+import toast from 'react-hot-toast';
 
 // In production (unified deploy), use relative URL. In dev, use localhost.
 const API_URL =
@@ -66,6 +67,12 @@ axiosInstance.interceptors.response.use(
         window.location.href = '/login';
         return Promise.reject(refreshError);
       }
+    }
+
+    // 402: entitlement gate (Free user hit a Pro feature or plan limit).
+    if (error.response?.status === 402) {
+      const message = error.response?.data?.message || 'Esta función requiere el plan Pro.';
+      toast.error(message);
     }
 
     return Promise.reject(error);

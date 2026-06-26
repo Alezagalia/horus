@@ -55,4 +55,25 @@ export const authService = {
     });
     return data;
   },
+
+  async verifyEmail(token: string): Promise<{ message: string }> {
+    const { data } = await axiosInstance.post<{ message: string }>('/auth/verify-email', { token });
+    return data;
+  },
+
+  async resendVerification(email: string): Promise<{ message: string }> {
+    const { data } = await axiosInstance.post<{ message: string }>('/auth/resend-verification', {
+      email,
+    });
+    return data;
+  },
+
+  async exportData(): Promise<Blob> {
+    const { data } = await axiosInstance.get('/auth/export', { responseType: 'blob' });
+    return data as Blob;
+  },
+
+  async deleteAccount(password: string): Promise<void> {
+    await axiosInstance.delete('/auth/me', { data: { password } });
+  },
 };

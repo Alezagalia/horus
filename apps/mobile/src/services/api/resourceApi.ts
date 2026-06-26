@@ -28,6 +28,17 @@ export interface CreateResourceDTO {
   color?: string;
 }
 
+export interface UpdateResourceDTO {
+  title?: string;
+  description?: string;
+  content?: string;
+  url?: string;
+  language?: string;
+  tags?: string[];
+  isPinned?: boolean;
+  color?: string | null;
+}
+
 export const resourceApi = {
   list: async (filters?: {
     type?: ResourceType;
@@ -40,6 +51,11 @@ export const resourceApi = {
 
   create: async (dto: CreateResourceDTO): Promise<Resource> => {
     const { data } = await axiosInstance.post('/resources', dto);
+    return data;
+  },
+
+  update: async (id: string, dto: UpdateResourceDTO): Promise<Resource> => {
+    const { data } = await axiosInstance.put(`/resources/${id}`, dto);
     return data;
   },
 

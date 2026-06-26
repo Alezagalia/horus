@@ -9,3 +9,6 @@ export * from './schemas/index.js';
 
 // Export utils
 export * from './utils/index.js';
+
+// Export constants
+export * from './constants/legal.js';

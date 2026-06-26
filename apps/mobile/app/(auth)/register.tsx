@@ -10,16 +10,23 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
+  Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import { Colors, Typography, Spacing, Radius, Shadows, Gradients } from '@/tokens';
 
+const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? 'http://10.0.2.2:3000/api').replace(
+  /\/api\/?$/,
+  ''
+);
+
 export default function RegisterScreen() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const register = useAuthStore((s) => s.register);
 
@@ -32,9 +39,21 @@ export default function RegisterScreen() {
       Alert.alert('Contraseña muy corta', 'Debe tener al menos 8 caracteres.');
       return;
     }
+    if (!acceptedTerms) {
+      Alert.alert(
+        'Términos y Privacidad',
+        'Debés aceptar los Términos y la Política de Privacidad para crear tu cuenta.'
+      );
+      return;
+    }
     setLoading(true);
     try {
-      await register({ name: name.trim(), email: email.trim().toLowerCase(), password });
+      await register({
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        password,
+        acceptedTerms,
+      });
       router.replace('/(tabs)');
     } catch (err: any) {
       Alert.alert('Error al registrarse', err?.response?.data?.message ?? 'Intentá nuevamente.');
@@ -82,6 +101,30 @@ export default function RegisterScreen() {
                 />
               </View>
             ))}
+
+            <TouchableOpacity
+              style={styles.termsRow}
+              onPress={() => setAcceptedTerms((v) => !v)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.checkbox, acceptedTerms && styles.checkboxChecked]}>
+                {acceptedTerms && <Text style={styles.checkboxMark}>✓</Text>}
+              </View>
+              <Text style={[styles.termsText, Typography.body]}>
+                Acepto los{' '}
+                <Text style={styles.termsLink} onPress={() => Linking.openURL(`${WEB_URL}/terms`)}>
+                  Términos
+                </Text>{' '}
+                y la{' '}
+                <Text
+                  style={styles.termsLink}
+                  onPress={() => Linking.openURL(`${WEB_URL}/privacy`)}
+                >
+                  Política de Privacidad
+                </Text>
+                .
+              </Text>
+            </TouchableOpacity>
 
             <TouchableOpacity
               style={[styles.ctaButton, Shadows.cta, { marginTop: 20 }]}
@@ -149,6 +192,29 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     backgroundColor: Colors.bgTop,
   },
+  termsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginTop: 18,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: Radius.sm,
+    borderWidth: 1.5,
+    borderColor: Colors.ceil,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+  },
+  checkboxChecked: {
+    backgroundColor: Colors.vivid,
+    borderColor: Colors.vivid,
+  },
+  checkboxMark: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  termsText: { flex: 1, color: Colors.muted },
+  termsLink: { color: Colors.vivid, fontWeight: '600' },
   ctaButton: {
     backgroundColor: Colors.vivid,
     borderRadius: Radius.pill,

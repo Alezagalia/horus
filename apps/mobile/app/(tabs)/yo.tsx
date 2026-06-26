@@ -11,6 +11,7 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
+  Share,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { format, parseISO } from 'date-fns';
@@ -27,12 +28,12 @@ import {
   Plus,
   Trash2,
   ClipboardCheck,
-  Salad,
   Scale,
   History,
   Tag,
   BarChart2,
   Zap,
+  Download,
 } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
@@ -41,6 +42,8 @@ import { Button } from '@/components/ui/Button';
 import { Colors, Spacing, Radius, Gradients, Shadows } from '@/tokens';
 import { useAuthStore } from '@/store/authStore';
 import { authApi } from '@/services/api/authApi';
+import { apiErrorMessage } from '@/lib/apiError';
+import { useSubscription } from '@/hooks/useSubscription';
 import { cleanupPushToken } from '@/hooks/usePushNotifications';
 import {
   useAccounts,
@@ -492,6 +495,52 @@ export default function YoScreen() {
     }
   };
 
+  // ─── Plan (S-03) ────────────────────────────────────────────────────────
+  const { data: subscription } = useSubscription();
+  const [showPlans, setShowPlans] = useState(false);
+
+  // ─── Datos y privacidad (S-02) ──────────────────────────────────────────
+  const [exporting, setExporting] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const data = await authApi.exportData();
+      await Share.share({
+        title: 'Mis datos de Horus',
+        message: JSON.stringify(data, null, 2),
+      });
+    } catch {
+      Alert.alert('Error', 'No pudimos generar la exportación. Probá de nuevo.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!deletePassword) {
+      setDeleteError('Ingresá tu contraseña para confirmar.');
+      return;
+    }
+    setDeleteError('');
+    setDeleting(true);
+    try {
+      await authApi.deleteAccount(deletePassword);
+      setShowDelete(false);
+      await cleanupPushToken();
+      await logout();
+    } catch (err) {
+      setDeleteError(
+        apiErrorMessage(err, 'No se pudo eliminar la cuenta. Verificá tu contraseña.')
+      );
+      setDeleting(false);
+    }
+  };
+
   const handleLogout = () => {
     Alert.alert('Cerrar sesión', '¿Seguro que querés cerrar sesión?', [
       { text: 'Cancelar', style: 'cancel' },
@@ -634,17 +683,153 @@ export default function YoScreen() {
         />
         <View style={styles.divider} />
         <SettingRow
-          icon={<Salad size={16} color="#22c55e" />}
-          label="Nutrición"
-          onPress={() => router.push('/nutricion')}
-        />
-        <View style={styles.divider} />
-        <SettingRow
           icon={<Zap size={16} color="#f59e0b" />}
           label="Actividades"
           onPress={() => router.push('/actividades')}
         />
       </Card>
+
+      {/* ─── Plan (S-03) ──────────────────────────────────────────── */}
+      <SectionLabel label="TU PLAN" />
+      <Card padding={0} solid>
+        <SettingRow
+          icon={<Zap size={16} color={Colors.vivid} />}
+          label="Plan actual"
+          value={subscription?.plan ?? 'FREE'}
+          onPress={() => setShowPlans(true)}
+        />
+      </Card>
+
+      {/* ─── Modal: planes ────────────────────────────────────────── */}
+      <Modal
+        visible={showPlans}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowPlans(false)}
+      >
+        <View style={styles.deleteOverlay}>
+          <View style={styles.deleteCard}>
+            <Text style={styles.deleteTitle}>Planes</Text>
+            <Text style={styles.deleteBody}>
+              Tu plan actual:{' '}
+              <Text style={{ fontWeight: '700', color: Colors.vivid }}>
+                {subscription?.plan ?? 'FREE'}
+              </Text>
+            </Text>
+
+            <Text style={styles.planTier}>Free</Text>
+            <Text style={styles.planFeat}>5 hábitos · 1 meta · 1 cuenta · tareas y calendario</Text>
+
+            <Text style={[styles.planTier, { color: Colors.vivid, marginTop: 12 }]}>
+              Pro · $5/mes
+            </Text>
+            <Text style={styles.planFeat}>
+              Ilimitado · sync Google Calendar · fitness y nutrición · stats avanzadas
+            </Text>
+
+            {subscription?.plan === 'PRO' ? (
+              <Text style={styles.proActive}>Ya tenés Pro 🎉</Text>
+            ) : (
+              <View
+                style={[
+                  styles.deleteConfirm,
+                  {
+                    backgroundColor: Colors.vivid,
+                    opacity: 0.6,
+                    marginTop: 16,
+                    alignSelf: 'stretch',
+                  },
+                ]}
+              >
+                <Text style={styles.deleteConfirmText}>Actualizar a Pro (próximamente)</Text>
+              </View>
+            )}
+
+            <View style={[styles.deleteActions, { marginTop: 16 }]}>
+              <TouchableOpacity onPress={() => setShowPlans(false)}>
+                <Text style={styles.deleteCancel}>Cerrar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ─── Datos y privacidad (S-02) ────────────────────────────── */}
+      <SectionLabel label="DATOS Y PRIVACIDAD" />
+      <Card padding={0} solid>
+        <SettingRow
+          icon={
+            exporting ? (
+              <ActivityIndicator size="small" color={Colors.vivid} />
+            ) : (
+              <Download size={16} color={Colors.vivid} />
+            )
+          }
+          label="Descargar mis datos"
+          value="Exporta todo en formato JSON"
+          onPress={exporting ? undefined : handleExport}
+        />
+        <SettingRow
+          icon={<Trash2 size={16} color="#ef4444" />}
+          label="Eliminar mi cuenta"
+          onPress={() => {
+            setDeletePassword('');
+            setDeleteError('');
+            setShowDelete(true);
+          }}
+          danger
+        />
+      </Card>
+
+      {/* ─── Modal: confirmar borrado de cuenta ───────────────────── */}
+      <Modal
+        visible={showDelete}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDelete(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.deleteOverlay}
+        >
+          <View style={styles.deleteCard}>
+            <Text style={styles.deleteTitle}>Eliminar mi cuenta</Text>
+            <Text style={styles.deleteBody}>
+              Esta acción es permanente y borra todos tus datos. Ingresá tu contraseña para
+              confirmar.
+            </Text>
+            <TextInput
+              style={styles.deleteInput}
+              value={deletePassword}
+              onChangeText={(t) => {
+                setDeletePassword(t);
+                setDeleteError('');
+              }}
+              placeholder="Tu contraseña"
+              placeholderTextColor={Colors.muted}
+              secureTextEntry
+              autoCapitalize="none"
+            />
+            {deleteError ? <Text style={styles.deleteErr}>{deleteError}</Text> : null}
+            <View style={styles.deleteActions}>
+              <TouchableOpacity onPress={() => setShowDelete(false)} disabled={deleting}>
+                <Text style={styles.deleteCancel}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.deleteConfirm}
+                onPress={handleDeleteAccount}
+                disabled={deleting}
+              >
+                {deleting ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.deleteConfirmText}>Eliminar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
 
       {/* ─── App info ─────────────────────────────────────────────── */}
       <SectionLabel label="APLICACIÓN" />
@@ -948,5 +1133,87 @@ const styles = StyleSheet.create({
   currencyChipLabel: {
     fontFamily: 'Inter_600SemiBold',
     fontSize: 13,
+  },
+  // Delete-account confirmation modal
+  deleteOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(10, 14, 31, 0.55)',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.xl,
+  },
+  deleteCard: {
+    backgroundColor: Colors.surfaceSolid,
+    borderRadius: Radius.xl,
+    padding: Spacing.xl,
+  },
+  deleteTitle: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 18,
+    color: Colors.text,
+    marginBottom: Spacing.sm,
+  },
+  deleteBody: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: Colors.textMuted,
+    marginBottom: Spacing.md,
+  },
+  deleteInput: {
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: Colors.text,
+  },
+  deleteErr: {
+    color: '#b91c1c',
+    fontSize: 12,
+    marginTop: 6,
+  },
+  deleteActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: Spacing.lg,
+    marginTop: Spacing.lg,
+  },
+  deleteCancel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.textMuted,
+  },
+  deleteConfirm: {
+    backgroundColor: '#ef4444',
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 10,
+    minWidth: 96,
+    alignItems: 'center',
+  },
+  deleteConfirmText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  // Plan modal
+  planTier: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 15,
+    color: Colors.text,
+    marginTop: 8,
+  },
+  planFeat: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: Colors.textMuted,
+    marginTop: 2,
+  },
+  proActive: {
+    color: '#047857',
+    fontSize: 14,
+    fontWeight: '700',
+    marginTop: 16,
   },
 });

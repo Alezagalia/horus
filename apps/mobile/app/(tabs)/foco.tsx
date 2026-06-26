@@ -39,6 +39,9 @@ import {
   useUpdateTask,
   useDeleteTask,
   useTaskCategories,
+  useAddChecklistItem,
+  useUpdateChecklistItem,
+  useDeleteChecklistItem,
   taskKeys,
 } from '@/hooks/useTasks';
 import {
@@ -457,9 +460,16 @@ function TaskFormModal({
   const [dueDate, setDueDate] = useState<Date | null>(null);
   const [categoryId, setCategoryId] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [checklist, setChecklist] = useState<
+    Array<{ id: string; title: string; completed: boolean }>
+  >([]);
+  const [newItem, setNewItem] = useState('');
 
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
+  const addChecklistItem = useAddChecklistItem();
+  const updateChecklistItem = useUpdateChecklistItem();
+  const deleteChecklistItem = useDeleteChecklistItem();
   const { data: categories = [] } = useTaskCategories();
 
   // Pre-load when editing
@@ -469,6 +479,7 @@ function TaskFormModal({
       setPriority(task.priority ?? null);
       setDueDate(task.dueDate ? new Date(task.dueDate) : null);
       setCategoryId(task.categoryId ?? '');
+      setChecklist(task.checklist ?? []);
     }
   }, [task]);
 
@@ -478,6 +489,50 @@ function TaskFormModal({
     setDueDate(null);
     setCategoryId('');
     setShowDatePicker(false);
+    setChecklist([]);
+    setNewItem('');
+  };
+
+  const handleAddItem = () => {
+    const trimmed = newItem.trim();
+    if (!trimmed || !task) return;
+    addChecklistItem.mutate(
+      { taskId: task.id, title: trimmed },
+      {
+        onSuccess: (item) => {
+          setChecklist((prev) => [...prev, item]);
+          setNewItem('');
+        },
+        onError: () => Alert.alert('Error', 'No se pudo agregar la subtarea'),
+      }
+    );
+  };
+
+  const handleToggleItem = (itemId: string, completed: boolean) => {
+    if (!task) return;
+    setChecklist((prev) =>
+      prev.map((i) => (i.id === itemId ? { ...i, completed: !completed } : i))
+    );
+    updateChecklistItem.mutate(
+      { taskId: task.id, itemId, dto: { completed: !completed } },
+      {
+        onError: () => {
+          setChecklist((prev) => prev.map((i) => (i.id === itemId ? { ...i, completed } : i)));
+          Alert.alert('Error', 'No se pudo actualizar la subtarea');
+        },
+      }
+    );
+  };
+
+  const handleDeleteItem = (itemId: string) => {
+    if (!task) return;
+    deleteChecklistItem.mutate(
+      { taskId: task.id, itemId },
+      {
+        onSuccess: () => setChecklist((prev) => prev.filter((i) => i.id !== itemId)),
+        onError: () => Alert.alert('Error', 'No se pudo eliminar la subtarea'),
+      }
+    );
   };
 
   const handleClose = () => {
@@ -593,6 +648,69 @@ function TaskFormModal({
               </ScrollView>
             </>
           )}
+
+          {/* Checklist (subtareas) — solo al editar, requiere taskId */}
+          {isEdit ? (
+            <>
+              <Text style={styles.priorityLabel}>
+                Subtareas{checklist.length > 0 ? ` (${checklist.length})` : ''}
+              </Text>
+              {checklist.map((item) => (
+                <View key={item.id} style={styles.checklistRow}>
+                  <TouchableOpacity
+                    onPress={() => handleToggleItem(item.id, item.completed)}
+                    hitSlop={8}
+                  >
+                    {item.completed ? (
+                      <CheckCircle2 size={20} color={Colors.vivid} strokeWidth={2} />
+                    ) : (
+                      <Circle size={20} color={Colors.muted} strokeWidth={1.8} />
+                    )}
+                  </TouchableOpacity>
+                  <Text
+                    style={[
+                      styles.checklistText,
+                      item.completed && {
+                        textDecorationLine: 'line-through',
+                        color: Colors.muted,
+                      },
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {item.title}
+                  </Text>
+                  <TouchableOpacity onPress={() => handleDeleteItem(item.id)} hitSlop={8}>
+                    <Trash2 size={15} color={Colors.muted} strokeWidth={1.5} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              <View style={styles.checklistAddRow}>
+                <TextInput
+                  style={styles.checklistInput}
+                  value={newItem}
+                  onChangeText={setNewItem}
+                  placeholder="Agregar subtarea…"
+                  placeholderTextColor={Colors.muted}
+                  returnKeyType="done"
+                  onSubmitEditing={handleAddItem}
+                />
+                <TouchableOpacity
+                  style={[
+                    styles.checklistAddBtn,
+                    (!newItem.trim() || addChecklistItem.isPending) && { opacity: 0.45 },
+                  ]}
+                  onPress={handleAddItem}
+                  disabled={!newItem.trim() || addChecklistItem.isPending}
+                >
+                  {addChecklistItem.isPending ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.checklistAddLabel}>Añadir</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : null}
 
           <Button
             label={isEdit ? 'Guardar' : 'Crear tarea'}
@@ -1509,4 +1627,48 @@ const styles = StyleSheet.create({
     color: Colors.muted,
   },
   createTaskBtn: {},
+  checklistRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingVertical: 8,
+  },
+  checklistText: {
+    flex: 1,
+    fontFamily: 'Inter_400Regular',
+    fontSize: 14,
+    color: Colors.ink,
+  },
+  checklistAddRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.xs,
+    marginBottom: Spacing.xl,
+  },
+  checklistInput: {
+    flex: 1,
+    fontFamily: 'Inter_400Regular',
+    fontSize: 14,
+    color: Colors.ink,
+    backgroundColor: Colors.bgTop,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.line,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 10,
+  },
+  checklistAddBtn: {
+    backgroundColor: Colors.vivid,
+    borderRadius: Radius.lg,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checklistAddLabel: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 13,
+    color: '#fff',
+  },
 });

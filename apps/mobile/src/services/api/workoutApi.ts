@@ -1,4 +1,7 @@
 import { axiosInstance } from '../axios';
+import type { CreateRoutineDTO, UpdateRoutineDTO, RoutineDetail } from '@horus/shared';
+
+export type { CreateRoutineDTO, UpdateRoutineDTO, RoutineDetail };
 
 // ─── Routine types ─────────────────────────────────────────────────────────────
 
@@ -119,6 +122,25 @@ export const workoutApi = {
   listRoutines: async (): Promise<Routine[]> => {
     const { data } = await axiosInstance.get('/routines');
     return data.routines ?? data;
+  },
+
+  getRoutineById: async (id: string): Promise<RoutineDetail> => {
+    const { data } = await axiosInstance.get(`/routines/${id}`);
+    return data.routine ?? data;
+  },
+
+  createRoutine: async (dto: CreateRoutineDTO): Promise<RoutineDetail> => {
+    const { data } = await axiosInstance.post('/routines', dto);
+    return data.routine ?? data;
+  },
+
+  updateRoutine: async (id: string, dto: UpdateRoutineDTO): Promise<RoutineDetail> => {
+    const { data } = await axiosInstance.put(`/routines/${id}`, dto);
+    return data.routine ?? data;
+  },
+
+  deleteRoutine: async (id: string): Promise<void> => {
+    await axiosInstance.delete(`/routines/${id}`);
   },
 
   listWorkouts: async (params?: {

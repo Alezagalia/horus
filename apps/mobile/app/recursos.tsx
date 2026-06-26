@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -22,6 +22,7 @@ import {
   Pin,
   Trash2,
   Plus,
+  Pencil,
   FileText,
   Code2,
   Bookmark,
@@ -35,6 +36,7 @@ import { Colors, Spacing, Radius, Shadows } from '@/tokens';
 import {
   useResources,
   useCreateResource,
+  useUpdateResource,
   useDeleteResource,
   useTogglePinResource,
   resourceKeys,
@@ -95,19 +97,40 @@ function CreateModal({
   visible,
   onClose,
   initialType,
+  editing,
 }: {
   visible: boolean;
   onClose: () => void;
   initialType?: ResourceType;
+  editing?: Resource | null;
 }) {
-  const [step, setStep] = useState<'type' | 'form'>(initialType ? 'form' : 'type');
-  const [type, setType] = useState<ResourceType>(initialType ?? 'NOTE');
+  const isEditing = !!editing;
+  const [step, setStep] = useState<'type' | 'form'>(initialType || editing ? 'form' : 'type');
+  const [type, setType] = useState<ResourceType>(editing?.type ?? initialType ?? 'NOTE');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [url, setUrl] = useState('');
 
   const createResource = useCreateResource();
+  const updateResource = useUpdateResource();
   const cfg = TYPE_CONFIG[type];
+
+  useEffect(() => {
+    if (!visible) return;
+    if (editing) {
+      setStep('form');
+      setType(editing.type);
+      setTitle(editing.title);
+      setContent(editing.content ?? '');
+      setUrl(editing.url ?? '');
+    } else {
+      setStep(initialType ? 'form' : 'type');
+      setType(initialType ?? 'NOTE');
+      setTitle('');
+      setContent('');
+      setUrl('');
+    }
+  }, [visible, editing, initialType]);
 
   const reset = () => {
     setStep(initialType ? 'form' : 'type');
@@ -127,6 +150,23 @@ function CreateModal({
 
   const handleSubmit = () => {
     if (!canSubmit) return;
+    const onError = () => Alert.alert('Error', 'No se pudo guardar el recurso');
+
+    if (isEditing && editing) {
+      updateResource.mutate(
+        {
+          id: editing.id,
+          dto: {
+            title: title.trim(),
+            ...(type !== 'BOOKMARK' && { content: content.trim() }),
+            ...(type === 'BOOKMARK' && { url: url.trim() }),
+          },
+        },
+        { onSuccess: handleClose, onError }
+      );
+      return;
+    }
+
     const dto: CreateResourceDTO = {
       type,
       title: title.trim(),
@@ -136,7 +176,7 @@ function CreateModal({
     };
     createResource.mutate(dto, {
       onSuccess: handleClose,
-      onError: () => Alert.alert('Error', 'No se pudo guardar el recurso'),
+      onError,
     });
   };
 
@@ -154,7 +194,7 @@ function CreateModal({
         <View style={styles.modalSheet}>
           {/* Header */}
           <View style={styles.modalHeader}>
-            {step === 'form' && !initialType ? (
+            {step === 'form' && !initialType && !isEditing ? (
               <TouchableOpacity
                 onPress={() => setStep('type')}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -165,7 +205,11 @@ function CreateModal({
               <View style={{ width: 20 }} />
             )}
             <Text style={styles.modalTitle}>
-              {step === 'type' ? 'Nuevo recurso' : `Nueva ${cfg.label}`}
+              {isEditing
+                ? `Editar ${cfg.label}`
+                : step === 'type'
+                  ? 'Nuevo recurso'
+                  : `Nueva ${cfg.label}`}
             </Text>
             <TouchableOpacity
               onPress={handleClose}
@@ -233,9 +277,9 @@ function CreateModal({
               )}
 
               <Button
-                label="Guardar"
+                label={isEditing ? 'Guardar cambios' : 'Guardar'}
                 onPress={handleSubmit}
-                loading={createResource.isPending}
+                loading={createResource.isPending || updateResource.isPending}
                 disabled={!canSubmit}
                 style={{ marginTop: Spacing.md }}
               />
@@ -251,12 +295,14 @@ function CreateModal({
 
 function ResourceCard({
   resource,
+  onEdit,
   onDelete,
   onPin,
   deleting,
   pinning,
 }: {
   resource: Resource;
+  onEdit: () => void;
   onDelete: () => void;
   onPin: () => void;
   deleting: boolean;
@@ -291,6 +337,10 @@ function ResourceCard({
           </View>
 
           <View style={styles.resourceActions}>
+            {/* Edit */}
+            <TouchableOpacity onPress={onEdit} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Pencil size={15} color={Colors.muted} strokeWidth={1.8} />
+            </TouchableOpacity>
             {/* Pin */}
             <TouchableOpacity
               onPress={onPin}
@@ -374,6 +424,7 @@ export default function RecursosScreen() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<ResourceType | 'ALL'>('ALL');
   const [showCreate, setShowCreate] = useState(params.create === '1');
+  const [editingResource, setEditingResource] = useState<Resource | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -470,6 +521,10 @@ export default function RecursosScreen() {
             <ResourceCard
               key={r.id}
               resource={r}
+              onEdit={() => {
+                setEditingResource(r);
+                setShowCreate(true);
+              }}
               onDelete={() => deleteResource.mutate(r.id)}
               onPin={() => pinResource.mutate(r.id)}
               deleting={deleteResource.isPending && deleteResource.variables === r.id}
@@ -482,11 +537,25 @@ export default function RecursosScreen() {
       </ScreenContainer>
 
       {/* FAB */}
-      <TouchableOpacity style={styles.fab} onPress={() => setShowCreate(true)} activeOpacity={0.85}>
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => {
+          setEditingResource(null);
+          setShowCreate(true);
+        }}
+        activeOpacity={0.85}
+      >
         <Plus size={24} color="#fff" strokeWidth={2} />
       </TouchableOpacity>
 
-      <CreateModal visible={showCreate} onClose={() => setShowCreate(false)} />
+      <CreateModal
+        visible={showCreate}
+        editing={editingResource}
+        onClose={() => {
+          setShowCreate(false);
+          setEditingResource(null);
+        }}
+      />
     </View>
   );
 }

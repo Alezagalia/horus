@@ -21,6 +21,7 @@ import { DailyTimeline } from '@/components/dashboard/DailyTimeline';
 import { NumericHabitSheet } from '@/components/habits/NumericHabitSheet';
 import { WeekAhead } from '@/components/dashboard/WeekAhead';
 import { PendingExpenses } from '@/components/dashboard/PendingExpenses';
+import { EmailVerificationBanner } from '@/components/dashboard/EmailVerificationBanner';
 import { Colors, Spacing, Radius, Gradients, Shadows } from '@/tokens';
 import { useAuthStore } from '@/store/authStore';
 import { useHabits, useHabitStats, useToggleHabitComplete, habitKeys } from '@/hooks/useHabits';
@@ -379,6 +380,9 @@ export default function HoyScreen() {
     <ScreenContainer onRefresh={onRefresh} refreshing={false} maxContentWidth={isWide ? 960 : 600}>
       {/* ─── Header ───────────────────────────────────────────── */}
       <PageHeader />
+
+      {/* ─── Aviso de verificación de email (no bloqueante) ───── */}
+      <EmailVerificationBanner />
 
       {/* ─── Hero + Meta destacada (apiladas, ancho completo) ─── */}
       <HeroCard pct={pct} done={done} total={total} longestStreak={longestStreak} />

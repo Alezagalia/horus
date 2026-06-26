@@ -1,9 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { workoutApi, type AddSetDTO } from '@/services/api/workoutApi';
+import {
+  workoutApi,
+  type AddSetDTO,
+  type CreateRoutineDTO,
+  type UpdateRoutineDTO,
+} from '@/services/api/workoutApi';
 
 export const workoutKeys = {
   all: ['workouts'] as const,
   routines: () => [...workoutKeys.all, 'routines'] as const,
+  routineDetail: (id: string) => [...workoutKeys.all, 'routines', id] as const,
   history: (params?: object) => [...workoutKeys.all, 'history', params] as const,
   detail: (id: string) => [...workoutKeys.all, 'detail', id] as const,
 };
@@ -13,6 +19,46 @@ export function useRoutines() {
     queryKey: workoutKeys.routines(),
     queryFn: workoutApi.listRoutines,
     staleTime: 1000 * 60 * 5,
+  });
+}
+
+export function useRoutineDetail(id: string | undefined) {
+  return useQuery({
+    queryKey: workoutKeys.routineDetail(id ?? ''),
+    queryFn: () => workoutApi.getRoutineById(id!),
+    staleTime: 1000 * 60 * 2,
+    enabled: !!id,
+  });
+}
+
+export function useCreateRoutine() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: CreateRoutineDTO) => workoutApi.createRoutine(dto),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: workoutKeys.all });
+    },
+  });
+}
+
+export function useUpdateRoutine() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, dto }: { id: string; dto: UpdateRoutineDTO }) =>
+      workoutApi.updateRoutine(id, dto),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: workoutKeys.all });
+    },
+  });
+}
+
+export function useDeleteRoutine() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => workoutApi.deleteRoutine(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: workoutKeys.all });
+    },
   });
 }
 

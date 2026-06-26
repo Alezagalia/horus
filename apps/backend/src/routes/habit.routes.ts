@@ -6,6 +6,7 @@
 import { Router, type IRouter } from 'express';
 import { habitController } from '../controllers/habit.controller.js';
 import { authMiddleware } from '../middlewares/auth.middleware.js';
+import { enforceLimit } from '../middlewares/entitlements.middleware.js';
 
 const router: IRouter = Router();
 
@@ -23,7 +24,7 @@ router.get('/', habitController.getAll);
 router.get('/:id', habitController.getById);
 router.get('/:id/stats', habitController.getHabitStats);
 router.get('/:id/audit', habitController.getAuditHistory);
-router.post('/', habitController.create);
+router.post('/', enforceLimit('habits'), habitController.create);
 router.post('/:id/reactivate', habitController.reactivate);
 router.put('/:id', habitController.update);
 router.put('/:id/notifications', habitController.updateNotificationConfig);

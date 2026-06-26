@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   transactionApi,
   type CreateTransactionDTO,
+  type UpdateTransactionDTO,
+  type CreateTransferDTO,
   type TransactionType,
 } from '@/services/api/transactionApi';
 
@@ -37,6 +39,29 @@ export function useCreateTransaction() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (dto: CreateTransactionDTO) => transactionApi.create(dto),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: transactionKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+    },
+  });
+}
+
+export function useUpdateTransaction() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, dto }: { id: string; dto: UpdateTransactionDTO }) =>
+      transactionApi.update(id, dto),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: transactionKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+    },
+  });
+}
+
+export function useCreateTransfer() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: CreateTransferDTO) => transactionApi.createTransfer(dto),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: transactionKeys.all });
       queryClient.invalidateQueries({ queryKey: ['accounts'] });

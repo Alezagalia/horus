@@ -110,6 +110,34 @@ export function RegisterPage() {
           </div>
 
           <div>
+            <label className="flex items-start gap-2 text-sm text-gray-600">
+              <input
+                {...registerField('acceptedTerms')}
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <span>
+                Acepto los{' '}
+                <Link to="/terms" target="_blank" className="text-indigo-600 hover:text-indigo-500">
+                  Términos y Condiciones
+                </Link>{' '}
+                y la{' '}
+                <Link
+                  to="/privacy"
+                  target="_blank"
+                  className="text-indigo-600 hover:text-indigo-500"
+                >
+                  Política de Privacidad
+                </Link>
+                .
+              </span>
+            </label>
+            {errors.acceptedTerms && (
+              <p className="mt-1 text-sm text-red-600">{errors.acceptedTerms.message}</p>
+            )}
+          </div>
+
+          <div>
             <button
               type="submit"
               disabled={isSubmitting}

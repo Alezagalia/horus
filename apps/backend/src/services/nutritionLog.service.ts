@@ -4,6 +4,7 @@
 
 import { prisma } from '../lib/prisma.js';
 import { NotFoundError, ForbiddenError } from '../middlewares/error.middleware.js';
+import { assertOwnership } from '../lib/ownership.js';
 import { calcMacrosForAmount } from './recipe.service.js';
 import type { UpsertNutritionLogInput, MacroTotals } from '@horus/shared';
 
@@ -128,6 +129,12 @@ export const nutritionLogService = {
 
   async upsert(userId: string, date: string, data: UpsertNutritionLogInput) {
     const dateObj = new Date(date);
+
+    await assertOwnership(
+      'food',
+      (data.items ?? []).map((item) => item.foodId),
+      userId
+    );
 
     await prisma.nutritionLog.upsert({
       where: { userId_date: { userId, date: dateObj } },

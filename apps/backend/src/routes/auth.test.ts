@@ -15,6 +15,15 @@ vi.mock('../middlewares/rate-limit.middleware.js', () => ({
   authLimiter: (_req: any, _res: any, next: any) => next(),
   generalLimiter: (_req: any, _res: any, next: any) => next(),
   passwordResetLimiter: (_req: any, _res: any, next: any) => next(),
+  sensitiveLimiter: (_req: any, _res: any, next: any) => next(),
+}));
+
+vi.mock('../services/dataExport.service.js', () => ({
+  dataExportService: { exportUserData: vi.fn().mockResolvedValue({ exportedAt: 'now', user: {} }) },
+}));
+
+vi.mock('../services/accountDeletion.service.js', () => ({
+  accountDeletionService: { deleteAccount: vi.fn().mockResolvedValue(undefined) },
 }));
 
 vi.mock('../middlewares/auth.middleware.js', () => ({
@@ -68,6 +77,8 @@ const mockUserBase = {
   password: '',
   refreshToken: null,
   hourlyRate: null,
+  failedLoginAttempts: 0,
+  lockedUntil: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -112,6 +123,19 @@ describe('POST /api/auth/login', () => {
     expect(res.status).toBe(401);
   });
 
+  it('returns 429 when the account is temporarily locked', async () => {
+    p.user.findUnique.mockResolvedValue({
+      ...mockUserBase,
+      lockedUntil: new Date(Date.now() + 10 * 60 * 1000),
+    } as any);
+
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: TEST_USER_EMAIL, password: 'password123' });
+
+    expect(res.status).toBe(429);
+  });
+
   it('returns 400 on missing fields', async () => {
     const res = await request(app).post('/api/auth/login').send({});
     expect(res.status).toBe(400);
@@ -130,12 +154,25 @@ describe('POST /api/auth/register', () => {
     } as any);
     p.user.update.mockResolvedValue({} as any);
 
-    const res = await request(app)
-      .post('/api/auth/register')
-      .send({ email: 'new@horus.app', name: 'New User', password: 'Secure123!' });
+    const res = await request(app).post('/api/auth/register').send({
+      email: 'new@horus.app',
+      name: 'New User',
+      password: 'Secure123!',
+      acceptedTerms: true,
+    });
 
     expect(res.status).toBe(201);
     expect(res.body).toHaveProperty('accessToken');
+  });
+
+  it('returns 400 when terms are not accepted', async () => {
+    p.user.findUnique.mockResolvedValue(null);
+
+    const res = await request(app)
+      .post('/api/auth/register')
+      .send({ email: 'new2@horus.app', name: 'New User', password: 'Secure123!' });
+
+    expect(res.status).toBe(400);
   });
 
   it('returns 400 when email is already taken', async () => {
@@ -191,5 +228,50 @@ describe('GET /api/auth/me', () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('user');
+  });
+});
+
+describe('GET /api/auth/export', () => {
+  it('returns 200 with a JSON attachment', async () => {
+    const res = await request(app)
+      .get('/api/auth/export')
+      .set('Authorization', `Bearer ${createTestToken()}`);
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-disposition']).toContain('attachment');
+    expect(res.body).toHaveProperty('exportedAt');
+  });
+});
+
+describe('DELETE /api/auth/me', () => {
+  it('returns 401 when the confirmation password is wrong', async () => {
+    p.user.findUnique.mockResolvedValue(mockUserBase as any);
+
+    const res = await request(app)
+      .delete('/api/auth/me')
+      .set('Authorization', `Bearer ${createTestToken()}`)
+      .send({ password: 'wrong-password' });
+
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 400 when no password is provided', async () => {
+    const res = await request(app)
+      .delete('/api/auth/me')
+      .set('Authorization', `Bearer ${createTestToken()}`)
+      .send({});
+
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 200 and deletes the account with the correct password', async () => {
+    p.user.findUnique.mockResolvedValue(mockUserBase as any);
+
+    const res = await request(app)
+      .delete('/api/auth/me')
+      .set('Authorization', `Bearer ${createTestToken()}`)
+      .send({ password: 'password123' });
+
+    expect(res.status).toBe(200);
   });
 });

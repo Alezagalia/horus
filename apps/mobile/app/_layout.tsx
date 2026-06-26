@@ -51,10 +51,6 @@ export default function RootLayout() {
             options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
           <Stack.Screen
-            name="nutricion"
-            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-          />
-          <Stack.Screen
             name="meta-detalle"
             options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
