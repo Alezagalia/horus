@@ -9,6 +9,7 @@ export interface RegisterDTO {
   name: string;
   email: string;
   password: string;
+  acceptedTerms: boolean;
 }
 
 export interface AuthTokens {
@@ -21,6 +22,7 @@ export interface AuthUser {
   name: string;
   email: string;
   hourlyRate: number | null;
+  emailVerifiedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -51,6 +53,19 @@ export const authApi = {
 
   forgotPassword: async (email: string): Promise<void> => {
     await axiosInstance.post('/auth/forgot-password', { email });
+  },
+
+  resendVerification: async (email: string): Promise<void> => {
+    await axiosInstance.post('/auth/resend-verification', { email });
+  },
+
+  exportData: async (): Promise<unknown> => {
+    const { data } = await axiosInstance.get('/auth/export');
+    return data;
+  },
+
+  deleteAccount: async (password: string): Promise<void> => {
+    await axiosInstance.delete('/auth/me', { data: { password } });
   },
 
   updateProfile: async (data: { name?: string; hourlyRate?: number }): Promise<AuthUser> => {

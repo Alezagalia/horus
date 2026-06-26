@@ -2,10 +2,17 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/prisma.js';
 import { env } from '../config/env.js';
+import { CURRENT_TERMS_VERSION } from '@horus/shared';
 import { categoryService } from './category.service.js';
 import { habitMomentService } from './habitMoment.service.js';
 
 const SALT_ROUNDS = 12;
+
+// Per-account login lockout (S-01.4). Complements the per-IP rate limiter:
+// after this many consecutive failed logins the account is locked for a cool-off
+// window, which blunts distributed brute force that rotates source IPs.
+export const LOGIN_MAX_ATTEMPTS = 10;
+export const LOGIN_LOCK_MINUTES = 15;
 
 export interface TokenPayload {
   userId: string;
@@ -73,6 +80,9 @@ export const authService = {
         email: data.email,
         name: data.name,
         password: hashedPassword,
+        // Consent captured at registration (validated upstream by registerSchema).
+        acceptedTermsVersion: CURRENT_TERMS_VERSION,
+        acceptedTermsAt: new Date(),
       },
       select: {
         id: true,
@@ -118,10 +128,67 @@ export const authService = {
     });
   },
 
-  async updateRefreshToken(userId: string, refreshToken: string | null): Promise<void> {
+  async updateRefreshToken(
+    userId: string,
+    refreshToken: string | null,
+    opts?: { touchLastLogin?: boolean }
+  ): Promise<void> {
     await prisma.user.update({
       where: { id: userId },
-      data: { refreshToken },
+      data: {
+        refreshToken,
+        ...(opts?.touchLastLogin && { lastLoginAt: new Date() }),
+      },
+    });
+  },
+
+  /**
+   * Returns the remaining lockout time in ms if the account is currently locked,
+   * otherwise null. A past `lockedUntil` is treated as not locked.
+   */
+  getLockRemainingMs(user: { lockedUntil?: Date | null }): number | null {
+    if (!user.lockedUntil) return null;
+    const remaining = user.lockedUntil.getTime() - Date.now();
+    return remaining > 0 ? remaining : null;
+  },
+
+  /**
+   * Records a failed login. Increments the counter and, once it reaches the
+   * threshold, locks the account for the cool-off window and resets the counter.
+   */
+  async recordFailedLogin(user: { id: string; failedLoginAttempts: number }): Promise<void> {
+    const attempts = user.failedLoginAttempts + 1;
+
+    if (attempts >= LOGIN_MAX_ATTEMPTS) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          failedLoginAttempts: 0,
+          lockedUntil: new Date(Date.now() + LOGIN_LOCK_MINUTES * 60 * 1000),
+        },
+      });
+      return;
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { failedLoginAttempts: attempts },
+    });
+  },
+
+  /**
+   * Clears the failed-login counter and any lock after a successful login.
+   * No-op write avoidance: only touches the row when there's something to reset.
+   */
+  async resetLoginAttempts(user: {
+    id: string;
+    failedLoginAttempts: number;
+    lockedUntil?: Date | null;
+  }): Promise<void> {
+    if (user.failedLoginAttempts === 0 && !user.lockedUntil) return;
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { failedLoginAttempts: 0, lockedUntil: null },
     });
   },
 

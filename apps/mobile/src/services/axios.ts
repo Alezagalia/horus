@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { Alert } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://10.0.2.2:3000/api';
@@ -29,6 +30,13 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+
+    // 402: entitlement gate (Free user hit a Pro feature or plan limit).
+    if (error.response?.status === 402) {
+      const message = error.response?.data?.message ?? 'Esta función requiere el plan Pro.';
+      Alert.alert('Plan Pro', message);
+      return Promise.reject(error);
+    }
 
     if (error.response?.status !== 401 || originalRequest._retry) {
       return Promise.reject(error);

@@ -3,7 +3,7 @@
  * Protects against brute force and DoS attacks
  */
 
-import rateLimit, { type RateLimitRequestHandler } from 'express-rate-limit';
+import rateLimit from 'express-rate-limit';
 import type { RequestHandler } from 'express';
 import { getGeneralRateLimitOptions, getAuthRateLimitOptions } from '../config/security.js';
 
@@ -23,7 +23,7 @@ export const authLimiter = rateLimit(getAuthRateLimitOptions()) as unknown as Re
  * Very strict limiter for password reset
  * Only 3 attempts per hour
  */
-export const passwordResetLimiter: RateLimitRequestHandler = rateLimit({
+export const passwordResetLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 3,
   message: {
@@ -32,13 +32,13 @@ export const passwordResetLimiter: RateLimitRequestHandler = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-});
+}) as unknown as RequestHandler;
 
 /**
  * Limiter for sensitive operations (account deletion, etc.)
  * 5 attempts per hour
  */
-export const sensitiveLimiter: RateLimitRequestHandler = rateLimit({
+export const sensitiveLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 5,
   message: {
@@ -47,4 +47,4 @@ export const sensitiveLimiter: RateLimitRequestHandler = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-});
+}) as unknown as RequestHandler;

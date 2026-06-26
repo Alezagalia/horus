@@ -6,6 +6,7 @@
 
 import { useState } from 'react';
 import { Sidebar } from './Sidebar';
+import { EmailVerificationBanner } from './EmailVerificationBanner';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -65,7 +66,10 @@ export function MainLayout({ children }: MainLayoutProps) {
 
         {/* Main content */}
         <main className="flex-1 overflow-x-hidden overflow-y-auto custom-scrollbar">
-          <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8">{children}</div>
+          <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8">
+            <EmailVerificationBanner />
+            {children}
+          </div>
         </main>
       </div>
     </div>

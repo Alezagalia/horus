@@ -7,15 +7,14 @@
 
 import { Router, type IRouter } from 'express';
 import { authMiddleware } from '../middlewares/auth.middleware.js';
+import { adminRoleMiddleware } from '../middlewares/adminRole.middleware.js';
 import * as adminController from '../controllers/admin.controller.js';
 
 const router: IRouter = Router();
 
-// All routes require authentication
+// All routes require authentication AND the ADMIN role
 router.use(authMiddleware);
-
-// TODO: Add admin role check middleware when roles are implemented
-// router.use(adminRoleMiddleware);
+router.use(adminRoleMiddleware);
 
 /**
  * POST /api/admin/generate-monthly-expenses
@@ -23,9 +22,6 @@ router.use(authMiddleware);
  * Query params:
  *   - month?: number (1-12, defaults to current month)
  *   - year?: number (defaults to current year)
- *
- * IMPORTANT: This endpoint should be protected with admin role in production
- * For now, it's protected only with authentication
  */
 router.post('/generate-monthly-expenses', adminController.generateMonthlyExpensesManual);
 

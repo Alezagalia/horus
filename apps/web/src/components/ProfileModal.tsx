@@ -4,8 +4,11 @@
  */
 
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import * as Dialog from '@radix-ui/react-dialog';
 import { useAuthStore } from '@/stores/authStore';
+import { authService } from '@/services/auth.service';
+import { useSubscription } from '@/hooks/useSubscription';
 
 interface ProfileModalProps {
   open: boolean;
@@ -13,13 +16,58 @@ interface ProfileModalProps {
 }
 
 export function ProfileModal({ open, onClose }: ProfileModalProps) {
-  const { user, updateProfile } = useAuthStore();
+  const { user, updateProfile, logout } = useAuthStore();
+  const { data: subscription } = useSubscription();
   const [hourlyRateInput, setHourlyRateInput] = useState(
     user?.hourlyRate != null ? String(user.hourlyRate) : ''
   );
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
+
+  // Data & privacy (S-02)
+  const [exporting, setExporting] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const blob = await authService.exportData();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'horus-export.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // Surface nothing intrusive; the button just re-enables.
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deletePassword) {
+      setDeleteError('Ingresá tu contraseña para confirmar.');
+      return;
+    }
+    setDeleteError('');
+    setDeleting(true);
+    try {
+      await authService.deleteAccount(deletePassword);
+      // Account gone — clear the session and bounce to login.
+      await logout();
+    } catch (err) {
+      const e = err as { response?: { data?: { message?: string } } };
+      setDeleteError(
+        e.response?.data?.message || 'No se pudo eliminar la cuenta. Verificá tu contraseña.'
+      );
+      setDeleting(false);
+    }
+  };
 
   // Sync input when user changes
   useEffect(() => {
@@ -79,6 +127,91 @@ export function ProfileModal({ open, onClose }: ProfileModalProps) {
               className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
             {error && <p className="mt-1.5 text-xs text-red-600">{error}</p>}
+          </div>
+
+          {/* Plan (S-03) */}
+          <div className="mb-6 border-t border-gray-100 pt-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900">Tu plan</h3>
+                <p className="text-xs text-gray-400">
+                  Plan actual:{' '}
+                  <span className="font-semibold text-indigo-600">
+                    {subscription?.plan ?? 'FREE'}
+                  </span>
+                </p>
+              </div>
+              <Link
+                to="/pricing"
+                onClick={onClose}
+                className="rounded-lg border border-indigo-200 px-3 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50"
+              >
+                Ver planes
+              </Link>
+            </div>
+          </div>
+
+          {/* Data & privacy (S-02) */}
+          <div className="mb-6 border-t border-gray-100 pt-5">
+            <h3 className="text-sm font-semibold text-gray-900 mb-1">Datos y privacidad</h3>
+            <p className="text-xs text-gray-400 mb-3">
+              Descargá una copia de tus datos o eliminá tu cuenta de forma permanente.
+            </p>
+
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              className="w-full mb-3 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60 transition-colors"
+            >
+              {exporting ? 'Generando…' : 'Descargar mis datos (JSON)'}
+            </button>
+
+            {!showDelete ? (
+              <button
+                onClick={() => setShowDelete(true)}
+                className="w-full rounded-lg border border-red-200 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+              >
+                Eliminar mi cuenta
+              </button>
+            ) : (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+                <p className="text-xs text-red-800 mb-2">
+                  Esta acción es <strong>permanente</strong> y borra todos tus datos. Ingresá tu
+                  contraseña para confirmar.
+                </p>
+                <input
+                  type="password"
+                  value={deletePassword}
+                  onChange={(e) => {
+                    setDeletePassword(e.target.value);
+                    setDeleteError('');
+                  }}
+                  placeholder="Tu contraseña"
+                  autoComplete="current-password"
+                  className="w-full rounded-lg border border-red-300 px-3 py-2 text-sm text-gray-900 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+                />
+                {deleteError && <p className="mt-1.5 text-xs text-red-700">{deleteError}</p>}
+                <div className="mt-3 flex justify-end gap-2">
+                  <button
+                    onClick={() => {
+                      setShowDelete(false);
+                      setDeletePassword('');
+                      setDeleteError('');
+                    }}
+                    className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-900"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    className="px-4 py-1.5 text-xs font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-60"
+                  >
+                    {deleting ? 'Eliminando…' : 'Eliminar definitivamente'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-3">

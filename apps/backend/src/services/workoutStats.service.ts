@@ -38,9 +38,9 @@ export const workoutStatsService = {
     exerciseId: string,
     days: number = 90
   ): Promise<ExerciseStatsResponse> {
-    // 1. Verify exercise exists
+    // 1. Verify exercise exists AND belongs to the requesting user
     const exercise = await prisma.exercise.findFirst({
-      where: { id: exerciseId },
+      where: { id: exerciseId, userId },
       select: {
         id: true,
         name: true,

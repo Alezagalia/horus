@@ -6,6 +6,7 @@
 import { Router, type IRouter } from 'express';
 import { accountController } from '../controllers/account.controller.js';
 import { authMiddleware } from '../middlewares/auth.middleware.js';
+import { enforceLimit } from '../middlewares/entitlements.middleware.js';
 
 const router: IRouter = Router();
 
@@ -15,7 +16,7 @@ router.use(authMiddleware);
 // Account CRUD routes
 router.get('/', accountController.getAll);
 router.get('/:id', accountController.getById);
-router.post('/', accountController.create);
+router.post('/', enforceLimit('accounts'), accountController.create);
 router.put('/:id', accountController.update);
 router.put('/:id/deactivate', accountController.deactivate);
 

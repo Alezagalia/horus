@@ -4,6 +4,7 @@
 
 import { prisma } from '../lib/prisma.js';
 import { NotFoundError, ForbiddenError } from '../middlewares/error.middleware.js';
+import { assertOwnership } from '../lib/ownership.js';
 import { calcMacrosForAmount } from './recipe.service.js';
 import type {
   CreateMealPlanInput,
@@ -223,6 +224,17 @@ export const mealPlanService = {
 
     if (!plan) throw new NotFoundError('Plan no encontrado');
     if (plan.userId !== userId) throw new ForbiddenError('Sin permiso');
+
+    await assertOwnership(
+      'food',
+      data.items.map((item) => item.foodId),
+      userId
+    );
+    await assertOwnership(
+      'recipe',
+      data.items.map((item) => item.recipeId),
+      userId
+    );
 
     await prisma.mealEntry.create({
       data: {

@@ -16,6 +16,9 @@ export const registerSchema = z.object({
     .string()
     .min(8, 'Password must be at least 8 characters')
     .max(100, 'Password must be less than 100 characters'),
+  acceptedTerms: z.boolean().refine((v) => v === true, {
+    message: 'Debés aceptar los Términos y la Política de Privacidad',
+  }),
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>;
@@ -65,3 +68,27 @@ export const resetPasswordSchema = z.object({
 });
 
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+
+export const verifyEmailSchema = z.object({
+  token: z.string().min(1, 'Token is required').max(256),
+});
+
+export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
+
+export const resendVerificationSchema = z.object({
+  email: z
+    .string()
+    .email('Invalid email format')
+    .max(255, 'Email must be less than 255 characters')
+    .toLowerCase()
+    .trim(),
+});
+
+export type ResendVerificationInput = z.infer<typeof resendVerificationSchema>;
+
+export const deleteAccountSchema = z.object({
+  // Re-authentication: the user must confirm their current password to delete.
+  password: z.string().min(1, 'Password is required').max(100),
+});
+
+export type DeleteAccountInput = z.infer<typeof deleteAccountSchema>;

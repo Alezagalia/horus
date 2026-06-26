@@ -39,6 +39,8 @@ export const authMiddleware = async (
         id: true,
         email: true,
         name: true,
+        role: true,
+        emailVerifiedAt: true,
         hourlyRate: true,
         createdAt: true,
         updatedAt: true,

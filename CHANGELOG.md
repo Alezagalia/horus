@@ -9,6 +9,82 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 
 ### Added
 
+- **[2026-06-24]** S-04 (Comercialización, Fase 2): Billing con Lemon Squeezy (Merchant of Record)
+  Integración de cobros vía Lemon Squeezy (elegido por ser MoR y aceptar founders de Argentina; maneja IVA/tax global). `lemonSqueezy.service.ts`: crea checkout hospedado (embebe `user_id` como custom data), verifica firma HMAC-SHA256 del webhook (timing-safe), mapea estados LS→`SubStatus`, y hace upsert de `Subscription` desde los webhooks de suscripción (resuelve el usuario por custom_data o por `providerSubscriptionId`). `POST /api/billing/checkout` (auth + **gate de email verificado**, conecta S-01.3) devuelve la URL de checkout; `POST /api/billing/webhook` (sin auth, verificado por firma) sincroniza la suscripción. Se captura el raw body en `express.json` (verify) para la firma. Enum `SubProvider` +`LEMON_SQUEEZY` (migración). Claves vía `.env` (opcionales → checkout 503 hasta configurarlas; ideal para test mode). Web: CTA de `PricingPage` cableado al checkout (mensual/anual → redirect). **Mobile NO se conecta a LS** (las tiendas prohíben pago web externo para bienes digitales → va por IAP en S-05; queda placeholder).
+  - Backend: apps/backend/src/services/lemonSqueezy.service.ts, apps/backend/src/controllers/billing.controller.ts, apps/backend/src/routes/billing.routes.ts, apps/backend/src/routes/index.ts, apps/backend/src/index.ts (raw body), apps/backend/src/types/express.d.ts, apps/backend/src/config/env.ts, apps/backend/.env.example, apps/backend/prisma/schema.prisma + migración 20260624000006_add_lemonsqueezy_provider
+  - Web: apps/web/src/services/subscriptionApi.ts, apps/web/src/pages/PricingPage.tsx
+  - Tests: apps/backend/src/services/lemonSqueezy.test.ts (15) + routes/billing.test.ts (4)
+  - Relacionado: docs/comercializacion-plan-implementacion.md (S-04)
+
+- **[2026-06-24]** S-04.2 / S-05.2 (Comercialización, frontend-first): Entitlements en web y mobile + pricing + manejo de 402
+  Frontend de la capa de planes (sin Stripe todavía). Web y mobile consumen `GET /api/subscription` vía `useSubscription` (TanStack Query) con tipos de Entitlements. Web: `PricingPage` (`/pricing`, comparación Free vs Pro + plan actual + CTA "próximamente") y sección "Tu plan" en ProfileModal. Mobile: sección "Tu plan" en tab Yo + modal de planes. Manejo global de **402** en los interceptores de axios: web muestra toast, mobile muestra Alert. El CTA de upgrade es placeholder hasta que el checkout de Stripe (S-04) esté cableado.
+  - Web: apps/web/src/{pages/PricingPage.tsx, hooks/useSubscription.ts, services/subscriptionApi.ts, types/subscription.ts, components/ProfileModal.tsx, lib/axios.ts, App.tsx}
+  - Mobile: apps/mobile/src/{hooks/useSubscription.ts, services/api/subscriptionApi.ts, services/axios.ts}, apps/mobile/app/(tabs)/yo.tsx
+  - Relacionado: docs/comercializacion-plan-implementacion.md (S-04.2, S-05.2)
+
+- **[2026-06-24]** S-03 (Comercialización, Fase 2): Modelo de suscripción + entitlements (gating de planes)
+  Capa de monetización (backend). Modelo `Subscription` 1:1 con User (enums `Plan` FREE/PRO, `SubStatus`, `SubProvider`; la ausencia de fila = FREE). `entitlements.service.ts` resuelve el plan efectivo (mantiene PRO mientras dure el período pagado aunque esté cancelada/past_due) y expone límites (Free: 5 hábitos, 1 meta, 1 cuenta; Pro: ilimitado) y features Pro (calendarSync, nutrition, fitness, advancedStats). Middleware `enforceLimit(resource)` y `requireFeature(feature)` cableado en POST de habits/goals/accounts y en sync de Google Calendar. `GET /api/subscription` devuelve plan + límites + features + estado. **El enforcement está apagado por defecto** (`BILLING_ENFORCED=false`): el middleware es no-op hasta que billing (S-04) esté vivo, para no capear a los usuarios actuales (todos FREE) sin forma de upgrade. Migración versionada. El enforcement "verificado antes de pagar" (S-01.3) se conectará en el checkout (S-04).
+  - Componentes: apps/backend/prisma/schema.prisma, apps/backend/prisma/migrations/20260624000005_add_subscription/migration.sql, apps/backend/src/services/entitlements.service.ts, apps/backend/src/middlewares/entitlements.middleware.ts, apps/backend/src/controllers/subscription.controller.ts, apps/backend/src/routes/{subscription,habit,goal,account,sync}.routes.ts, apps/backend/src/config/env.ts, apps/backend/src/middlewares/error.middleware.ts (PaymentRequiredError 402)
+  - Tests: apps/backend/src/services/entitlements.test.ts (12) + entitlements.middleware.test.ts (5)
+  - Relacionado: docs/comercializacion-plan-implementacion.md (S-03), docs/comercializacion-analisis.md (§3.1)
+
+- **[2026-06-24]** S-02.4 (Comercialización): Retención de datos — purga de tokens y cuentas inactivas
+  Job cron diario (03:30) de retención. **Purga de tokens** (siempre activa): borra password-reset y email-verification tokens expirados o usados (minimización de datos). **Purga de cuentas inactivas** (destructiva, segura por defecto): elimina cuentas sin login desde hace `INACTIVE_ACCOUNT_PURGE_DAYS` reusando el borrado en cascada de S-02.2, pero SOLO si además `INACTIVE_ACCOUNT_PURGE_ENABLED=true`; por defecto corre en **dry-run** (solo loguea cuántas borraría) para no eliminar usuarios reales por accidente. Se añadió `lastLoginAt` en User (se sella en cada login). Migración versionada. NOTA: un rollout productivo debería mandar email de aviso + período de gracia antes de borrar (fuera de alcance; mantener el flag apagado hasta entonces).
+  - Componentes: apps/backend/src/jobs/retention.job.ts, apps/backend/src/index.ts, apps/backend/src/config/env.ts, apps/backend/.env.example, apps/backend/prisma/schema.prisma, apps/backend/prisma/migrations/20260624000004_add_last_login/migration.sql, apps/backend/src/services/auth.service.ts, apps/backend/src/controllers/auth.controller.ts
+  - Tests: apps/backend/src/jobs/retention.job.test.ts (4)
+  - Relacionado: docs/comercializacion-plan-implementacion.md (S-02.4)
+
+- **[2026-06-24]** S-02.3 (Comercialización, parte técnica): Consentimiento de Términos y Privacidad en registro
+  Captura de consentimiento legal al registrarse. El registro ahora exige aceptar Términos + Política de Privacidad (`acceptedTerms` obligatorio); se guarda `acceptedTermsVersion` + `acceptedTermsAt` en User. Versión legal compartida en `@horus/shared` (`CURRENT_TERMS_VERSION`) para detectar usuarios que deban re-consentir si cambia. Web: checkbox en RegisterPage + páginas `/terms` y `/privacy`. Mobile: checkbox en pantalla de registro + links que abren las páginas web. Migración versionada incluida. **IMPORTANTE: el TEXTO legal de ToS/Privacidad es un BORRADOR (marcado como tal en pantalla) y requiere revisión profesional antes de comercializar.** Pendiente de S-02: política de retención + purga (S-02.4).
+  - Backend: apps/backend/prisma/schema.prisma, apps/backend/prisma/migrations/20260624000003_add_terms_consent/migration.sql, apps/backend/src/services/auth.service.ts, apps/backend/src/validations/auth.validation.ts
+  - Shared: packages/shared/src/constants/legal.ts
+  - Web: apps/web/src/pages/{TermsPage,PrivacyPage,RegisterPage}.tsx, apps/web/src/lib/validations/auth.ts, apps/web/src/types/auth.ts, apps/web/src/App.tsx
+  - Mobile: apps/mobile/app/(auth)/register.tsx, apps/mobile/src/services/api/authApi.ts
+  - Tests: caso "terms not accepted" en auth.test.ts
+  - Relacionado: docs/comercializacion-plan-implementacion.md (S-02.3)
+
+- **[2026-06-24]** S-02.1 + S-02.2 (Comercialización): Derechos de datos — export y borrado de cuenta
+  Cumplimiento GDPR (portabilidad + derecho al olvido). **Export** (`GET /api/auth/export`): descarga JSON con todos los datos del usuario agrupados por dominio (productividad, metas, finanzas, fitness, nutrición, otros); excluye credenciales y tokens internos. **Borrado** (`DELETE /api/auth/me`): elimina permanentemente la cuenta y todos los datos, con re-autenticación por contraseña; borra en orden seguro los hijos con FK `onDelete: Restrict` (hacia Category/Account/Exercise/Food) dentro de una transacción y luego cascadea el resto vía `user.delete`. Limitado con `sensitiveLimiter` (5/h). Frontend: web en `ProfileModal` (sección "Datos y privacidad" con descarga + confirmación de borrado por contraseña → logout); mobile en tab Yo (export vía Share nativo + modal de confirmación). Pendiente de S-02: ToS/Privacidad/consentimiento (S-02.3, requiere texto legal) y política de retención (S-02.4).
+  - Backend: apps/backend/src/services/{dataExport,accountDeletion}.service.ts, apps/backend/src/controllers/auth.controller.ts, apps/backend/src/routes/auth.routes.ts, apps/backend/src/validations/auth.validation.ts, apps/backend/src/middlewares/rate-limit.middleware.ts
+  - Web: apps/web/src/components/ProfileModal.tsx, apps/web/src/services/auth.service.ts
+  - Mobile: apps/mobile/app/(tabs)/yo.tsx, apps/mobile/src/services/api/authApi.ts
+  - Tests: apps/backend/src/services/{dataExport,accountDeletion}.test.ts (5) + casos export/delete en auth.test.ts (4)
+  - Relacionado: docs/comercializacion-plan-implementacion.md (S-02.1, S-02.2)
+
+### Security
+
+- **[2026-06-24]** S-01.4 (Comercialización): Hardening de autenticación
+  Defensa adicional contra fuerza bruta. (1) **Lockout por cuenta**: tras 10 intentos de login fallidos consecutivos la cuenta se bloquea 15 min (campos `failedLoginAttempts` + `lockedUntil` en User; login devuelve 429 mientras dura; el login exitoso limpia el contador). Complementa el rate-limit por IP (que un atacante distribuido podría evadir rotando IPs). (2) **Limiters estrictos cableados**: `forgot-password`, `reset-password`, `verify-email` y `resend-verification` ahora usan `passwordResetLimiter` (3/hora) en vez del genérico — frena email bombing y brute force de tokens. Verificado además que `.env` está gitignored y no trackeado. Migración versionada incluida.
+  - Componentes: apps/backend/prisma/schema.prisma, apps/backend/prisma/migrations/20260624000002_add_login_lockout/migration.sql, apps/backend/src/services/auth.service.ts, apps/backend/src/controllers/auth.controller.ts, apps/backend/src/routes/auth.routes.ts, apps/backend/src/middlewares/{rate-limit,error}.middleware.ts
+  - Tests: apps/backend/src/services/authLockout.test.ts (7) + caso 429 en auth.test.ts
+  - Relacionado: docs/comercializacion-plan-implementacion.md (S-01.4)
+
+### Added
+
+- **[2026-06-24]** S-01.3 (Comercialización): Verificación de email (no bloqueante)
+  Backend de verificación de email. Al registrarse se envía (fire-and-forget vía Resend) un email con link de verificación de un solo uso (token hasheado SHA-256, TTL 24h). La verificación NO bloquea el login: el usuario activa y usa la app enseguida; se exigirá recién antes de pagar (capa de billing, Fase 2). Endpoints `POST /api/auth/verify-email` y `POST /api/auth/resend-verification` (este último responde 200 siempre para no filtrar qué emails existen). `GET /api/auth/me` ahora expone `emailVerifiedAt`. Migración versionada incluida (campo `emailVerifiedAt` en users + tabla `email_verification_tokens`). Frontend: web tiene página `/verify-email` (consume el token del link) y banner no bloqueante en `MainLayout` con reenvío; mobile tiene banner equivalente en la pantalla Hoy. Enforcement del gate "verificado antes de pagar" queda para Fase 2 (billing).
+  - Backend: apps/backend/prisma/schema.prisma, apps/backend/prisma/migrations/20260624000001_add_email_verification/migration.sql, apps/backend/src/services/emailVerification.service.ts, apps/backend/src/services/email.service.ts, apps/backend/src/controllers/auth.controller.ts, apps/backend/src/routes/auth.routes.ts, apps/backend/src/validations/auth.validation.ts, apps/backend/src/middlewares/auth.middleware.ts
+  - Web: apps/web/src/pages/VerifyEmailPage.tsx, apps/web/src/components/EmailVerificationBanner.tsx, apps/web/src/components/MainLayout.tsx, apps/web/src/services/auth.service.ts, apps/web/src/types/auth.ts, apps/web/src/App.tsx
+  - Mobile: apps/mobile/src/components/dashboard/EmailVerificationBanner.tsx, apps/mobile/app/(tabs)/index.tsx, apps/mobile/src/services/api/authApi.ts
+  - Tests: apps/backend/src/services/emailVerification.service.test.ts (8), apps/mobile/src/components/**tests**/EmailVerificationBanner.test.tsx (3)
+  - Relacionado: docs/comercializacion-plan-implementacion.md (S-01.3)
+
+### Security
+
+- **[2026-06-24]** S-01.2 (Comercialización): Auditoría de aislamiento por `userId` (IDOR)
+  Auditoría de broken object-level authorization sobre los 47 services del backend. Se detectó y corrigió un patrón sistemático de IDOR: claves foráneas recibidas en el body (`foodId`, `recipeId`, `exerciseId`, `goalId`, `taskId`, `questionId`, `mealPlanId`) se insertaban sin validar ownership, permitiendo adjuntar/filtrar recursos de otro usuario por enumeración de ids. Mitigado con un guard central reutilizable `assertOwnership()` aplicado en recetas, plan de comidas, registro nutricional, listas de compra, estadísticas de ejercicio y revisión semanal. Endurecido también el `transferPair` en transacciones (defensa en profundidad). Reporte completo en docs/auditoria-aislamiento-userid.md.
+  - Componentes: apps/backend/src/lib/ownership.ts, apps/backend/src/services/{recipe,mealPlan,nutritionLog,shoppingList,workoutStats,weeklyReview,transaction}.service.ts
+  - Tests: apps/backend/src/lib/ownership.test.ts (4 tests)
+  - Relacionado: docs/comercializacion-plan-implementacion.md (S-01.2)
+
+### Added
+
+- **[2026-06-24]** S-01.1 (Comercialización): Rol de usuario y control de acceso admin
+  Primer paso del plan de comercialización (Fase 1 — P0). Se añade el enum `Role` (USER/ADMIN) y el campo `role` en `User`, un nuevo `adminRoleMiddleware` que exige rol ADMIN, y se aplica a las rutas `/api/admin` (antes accesibles por cualquier usuario autenticado — agujero de seguridad). El `authMiddleware` ahora carga `role` en `req.user`. Migración versionada incluida. Por defecto todos los usuarios son USER; para promover a ADMIN se actualiza el campo `role` directamente en la base de datos.
+  - Componentes: apps/backend/prisma/schema.prisma, apps/backend/prisma/migrations/20260624_add_user_role/migration.sql, apps/backend/src/middlewares/adminRole.middleware.ts, apps/backend/src/middlewares/auth.middleware.ts, apps/backend/src/routes/admin.routes.ts
+  - Tests: apps/backend/src/middlewares/adminRole.middleware.test.ts (5 tests)
+  - Relacionado: docs/comercializacion-plan-implementacion.md (S-01.1), docs/comercializacion-analisis.md (C-01)
+
 - **[2025-11-30]** US-133: Pantalla de Gestión de Rutinas (Mobile) - Versión Base
   Implementación de la funcionalidad base de gestión de rutinas para React Native. Incluye: lista de rutinas con estadísticas (veces ejecutada, última ejecución), vista detallada con ejercicios configurados, formulario de creación/edición (nombre y descripción), acciones de duplicar/eliminar con confirmación, integración con React Query, y componente RoutineCard reutilizable. NOTA: Gestión avanzada de ejercicios (drag-to-reorder, modal selector) queda pendiente para iteración futura debido a complejidad y limitaciones de tiempo.
   - Componentes: apps/mobile/src/api/routines.api.ts, apps/mobile/src/components/routines/RoutineCard.tsx, apps/mobile/src/screens/RoutinesScreen.tsx, apps/mobile/src/screens/RoutineDetailScreen.tsx, apps/mobile/src/screens/RoutineFormScreen.tsx

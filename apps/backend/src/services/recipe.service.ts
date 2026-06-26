@@ -4,6 +4,7 @@
 
 import { prisma } from '../lib/prisma.js';
 import { ConflictError, NotFoundError, ForbiddenError } from '../middlewares/error.middleware.js';
+import { assertOwnership } from '../lib/ownership.js';
 import type { CreateRecipeInput, UpdateRecipeInput, MacroTotals } from '@horus/shared';
 
 export function calcMacrosForAmount(
@@ -144,6 +145,12 @@ export const recipeService = {
       throw new ConflictError(`Ya existe una receta llamada "${data.name}"`);
     }
 
+    await assertOwnership(
+      'food',
+      (data.ingredients ?? []).map((ing) => ing.foodId),
+      userId
+    );
+
     const recipe = await prisma.recipe.create({
       data: {
         userId,
@@ -207,6 +214,8 @@ export const recipeService = {
 
     if (!recipe) throw new NotFoundError('Receta no encontrada');
     if (recipe.userId !== userId) throw new ForbiddenError('Sin permiso');
+
+    await assertOwnership('food', [data.foodId], userId);
 
     const existing = await prisma.recipeIngredient.findFirst({
       where: { recipeId, foodId: data.foodId },

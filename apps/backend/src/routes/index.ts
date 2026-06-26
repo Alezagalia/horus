@@ -33,6 +33,8 @@ import nutritionLogRoutes from './nutritionLog.routes.js';
 import shoppingListRoutes from './shoppingList.routes.js';
 import habitMomentRoutes from './habitMoment.routes.js';
 import activityRoutes from './activity.routes.js';
+import subscriptionRoutes from './subscription.routes.js';
+import billingRoutes from './billing.routes.js';
 
 const router: IRouter = Router();
 
@@ -70,6 +72,8 @@ router.use('/nutrition-logs', nutritionLogRoutes);
 router.use('/shopping-lists', shoppingListRoutes);
 router.use('/habit-moments', habitMomentRoutes);
 router.use('/activities', activityRoutes);
+router.use('/subscription', subscriptionRoutes);
+router.use('/billing', billingRoutes);
 
 // Health check
 router.get('/health', (_req, res) => {

@@ -131,3 +131,22 @@ export class ConflictError extends HttpError {
     this.meta = meta;
   }
 }
+
+export class TooManyRequestsError extends HttpError {
+  constructor(message: string = 'Too Many Requests') {
+    super(429, message);
+  }
+}
+
+/**
+ * 402 — used for entitlement gates (a Free user hitting a Pro feature or a plan
+ * limit). `meta.code` lets the client trigger the right paywall.
+ */
+export class PaymentRequiredError extends HttpError {
+  meta?: Record<string, unknown>;
+
+  constructor(message: string = 'Payment Required', meta?: Record<string, unknown>) {
+    super(402, message);
+    this.meta = meta;
+  }
+}

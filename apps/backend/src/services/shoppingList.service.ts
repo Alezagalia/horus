@@ -4,6 +4,7 @@
 
 import { prisma } from '../lib/prisma.js';
 import { NotFoundError, ForbiddenError, ConflictError } from '../middlewares/error.middleware.js';
+import { assertOwnership } from '../lib/ownership.js';
 import type { CreateShoppingListInput } from '@horus/shared';
 
 const includeItems = {
@@ -106,6 +107,13 @@ export const shoppingListService = {
   },
 
   async create(userId: string, data: CreateShoppingListInput) {
+    await assertOwnership('mealPlan', [data.mealPlanId], userId);
+    await assertOwnership(
+      'food',
+      (data.items ?? []).map((item) => item.foodId),
+      userId
+    );
+
     const list = await prisma.shoppingList.create({
       data: {
         userId,

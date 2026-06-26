@@ -5,6 +5,7 @@
 
 import { Router, type IRouter } from 'express';
 import { authMiddleware } from '../middlewares/auth.middleware.js';
+import { enforceLimit } from '../middlewares/entitlements.middleware.js';
 import * as goalController from '../controllers/goal.controller.js';
 
 const router: IRouter = Router();
@@ -15,7 +16,7 @@ router.use(authMiddleware);
 router.get('/', goalController.list);
 router.get('/featured', goalController.getFeatured);
 router.get('/:id', goalController.getById);
-router.post('/', goalController.create);
+router.post('/', enforceLimit('goals'), goalController.create);
 router.put('/:id', goalController.update);
 router.put('/:id/feature', goalController.feature);
 router.delete('/:id', goalController.remove);

@@ -10,6 +10,31 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Role {
+  USER
+  ADMIN
+}
+
+enum Plan {
+  FREE
+  PRO
+}
+
+enum SubStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  EXPIRED
+}
+
+enum SubProvider {
+  STRIPE
+  LEMON_SQUEEZY
+  GOOGLE_PLAY
+  APP_STORE
+}
+
 enum Scope {
   habitos
   tareas
@@ -167,6 +192,13 @@ model User {
   name                 String
   password             String
   refreshToken         String?
+  role                 Role                     @default(USER)
+  emailVerifiedAt      DateTime?
+  failedLoginAttempts  Int                      @default(0)
+  lockedUntil          DateTime?
+  lastLoginAt          DateTime?
+  acceptedTermsVersion String?
+  acceptedTermsAt      DateTime?
   hourlyRate           Decimal?                 @db.Decimal(10, 2)
   createdAt            DateTime                 @default(now())
   updatedAt            DateTime                 @updatedAt
@@ -205,9 +237,34 @@ model User {
   habitMoments         HabitMoment[]
   activities           Activity[]       @relation("UserActivities")
   activityRecords      ActivityRecord[] @relation("UserActivityRecords")
+  emailVerificationTokens EmailVerificationToken[]
+  subscription         Subscription?
 
   @@index([email])
   @@map("users")
+}
+
+/// Subscription: estado de monetización del usuario (S-03).
+/// 1:1 con User. La ausencia de fila = plan FREE. Es la fuente de verdad del
+/// entitlement; los webhooks de Stripe/IAP (S-04/S-05) la mantienen al día.
+model Subscription {
+  id                     String       @id @default(uuid())
+  userId                 String       @unique
+  plan                   Plan         @default(FREE)
+  status                 SubStatus    @default(ACTIVE)
+  provider               SubProvider?
+  providerCustomerId     String?
+  providerSubscriptionId String?
+  currentPeriodEnd       DateTime?
+  cancelAtPeriodEnd      Boolean      @default(false)
+  trialEndsAt            DateTime?
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([providerSubscriptionId])
+  @@map("subscriptions")
 }
 
 model Category {
@@ -1470,6 +1527,21 @@ model PasswordResetToken {
   @@index([userId, createdAt(sort: Desc)])
   @@index([expiresAt])
   @@map("password_reset_tokens")
+}
+
+model EmailVerificationToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([expiresAt])
+  @@map("email_verification_tokens")
 }
 
 // ─── F-17 Nutrición ──────────────────────────────────────────────────────────

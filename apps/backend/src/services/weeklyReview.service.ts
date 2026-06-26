@@ -12,6 +12,7 @@ import {
 } from '../validations/weeklyReview.validation.js';
 import { debiaRealizarseEnFecha } from './streak.service.js';
 import { normalizeToUTCNoon } from '../utils/date.utils.js';
+import { assertOwnership } from '../lib/ownership.js';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -197,6 +198,15 @@ export const createReview = async (userId: string, data: CreateReviewInput) => {
 export const updateReview = async (reviewId: string, userId: string, data: UpdateReviewInput) => {
   const existing = await prisma.weeklyReview.findFirst({ where: { id: reviewId, userId } });
   if (!existing) throw new Error('Revisión no encontrada');
+
+  // Prevent IDOR: every referenced id from the body must belong to the user.
+  await assertOwnership(
+    'reviewQuestion',
+    (data.answers ?? []).map((a) => a.questionId),
+    userId
+  );
+  await assertOwnership('goal', data.focusGoalIds ?? [], userId);
+  await assertOwnership('task', data.focusTaskIds ?? [], userId);
 
   let statsSnapshot = undefined;
   if (data.completedAt) {

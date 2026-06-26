@@ -8,6 +8,7 @@ export interface User {
   name: string;
   email: string;
   hourlyRate?: number | null;
+  emailVerifiedAt?: string | null;
   createdAt: string;
 }
 
@@ -20,6 +21,7 @@ export interface RegisterData {
   name: string;
   email: string;
   password: string;
+  acceptedTerms: boolean;
 }
 
 export interface AuthResponse {

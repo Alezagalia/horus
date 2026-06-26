@@ -192,9 +192,10 @@ export const transactionService = {
     // If it's a transfer, get the paired transaction
     let transferPair = null;
     if (transaction.isTransfer && transaction.transferPairId) {
-      transferPair = await prisma.transaction.findUnique({
+      transferPair = await prisma.transaction.findFirst({
         where: {
           id: transaction.transferPairId,
+          userId,
         },
         include: {
           account: {
