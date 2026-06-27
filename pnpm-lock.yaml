@@ -245,6 +245,9 @@ importers:
       react-native-gesture-handler:
         specifier: ~2.20.2
         version: 2.20.2(react-native@0.76.9(@babel/core@7.28.5)(@babel/preset-env@7.29.7(@babel/core@7.28.5))(@types/react@18.3.27)(encoding@0.1.13)(react@18.3.1))(react@18.3.1)
+      react-native-iap:
+        specifier: ^12.16.4
+        version: 12.16.4(expo@52.0.49(@babel/core@7.28.5)(@babel/preset-env@7.29.7(@babel/core@7.28.5))(@expo/metro-runtime@4.0.1(react-native@0.76.9(@babel/core@7.28.5)(@babel/preset-env@7.29.7(@babel/core@7.28.5))(@types/react@18.3.27)(encoding@0.1.13)(react@18.3.1)))(encoding@0.1.13)(react-native@0.76.9(@babel/core@7.28.5)(@babel/preset-env@7.29.7(@babel/core@7.28.5))(@types/react@18.3.27)(encoding@0.1.13)(react@18.3.1))(react@18.3.1))(react-native@0.76.9(@babel/core@7.28.5)(@babel/preset-env@7.29.7(@babel/core@7.28.5))(@types/react@18.3.27)(encoding@0.1.13)(react@18.3.1))(react@18.3.1)
       react-native-markdown-display:
         specifier: ^7.0.2
         version: 7.0.2(react-native@0.76.9(@babel/core@7.28.5)(@babel/preset-env@7.29.7(@babel/core@7.28.5))(@types/react@18.3.27)(encoding@0.1.13)(react@18.3.1))(react@18.3.1)
@@ -9285,6 +9288,16 @@ packages:
     resolution: {integrity: sha512-m3CkXWss6B1dd6mCMleLpzDCJJGGaHOLQsUzZv8kAASJmMfmVT4d2fx375iXKTRWT25ThBfae3dECuX5cq/8hg==}
     peerDependencies:
       react: 18.3.1
+
+  react-native-iap@12.16.4:
+    resolution: {integrity: sha512-3l3/k5ho2hzVCyfwlPRTrdn4gY1ku3dZFN9qJ7giZUBGr3wffciL5WRKxVUs7jQAXOgAtea9JexrMrgvEXSO/w==}
+    peerDependencies:
+      expo: '>=47.0.0'
+      react: 18.3.1
+      react-native: '>=0.65.1'
+    peerDependenciesMeta:
+      expo:
+        optional: true
 
   react-native-is-edge-to-edge@1.3.1:
     resolution: {integrity: sha512-NIXU/iT5+ORyCc7p0z2nnlkouYKX425vuU1OEm6bMMtWWR9yvb+Xg5AZmImTKoF9abxCPqrKC3rOZsKzUYgYZA==}
@@ -22975,6 +22988,13 @@ snapshots:
       react: 18.3.1
       react-fast-compare: 3.2.2
       shallowequal: 1.1.0
+
+  react-native-iap@12.16.4(expo@52.0.49(@babel/core@7.28.5)(@babel/preset-env@7.29.7(@babel/core@7.28.5))(@expo/metro-runtime@4.0.1(react-native@0.76.9(@babel/core@7.28.5)(@babel/preset-env@7.29.7(@babel/core@7.28.5))(@types/react@18.3.27)(encoding@0.1.13)(react@18.3.1)))(encoding@0.1.13)(react-native@0.76.9(@babel/core@7.28.5)(@babel/preset-env@7.29.7(@babel/core@7.28.5))(@types/react@18.3.27)(encoding@0.1.13)(react@18.3.1))(react@18.3.1))(react-native@0.76.9(@babel/core@7.28.5)(@babel/preset-env@7.29.7(@babel/core@7.28.5))(@types/react@18.3.27)(encoding@0.1.13)(react@18.3.1))(react@18.3.1):
+    dependencies:
+      react: 18.3.1
+      react-native: 0.76.9(@babel/core@7.28.5)(@babel/preset-env@7.29.7(@babel/core@7.28.5))(@types/react@18.3.27)(encoding@0.1.13)(react@18.3.1)
+    optionalDependencies:
+      expo: 52.0.49(@babel/core@7.28.5)(@babel/preset-env@7.29.7(@babel/core@7.28.5))(@expo/metro-runtime@4.0.1(react-native@0.76.9(@babel/core@7.28.5)(@babel/preset-env@7.29.7(@babel/core@7.28.5))(@types/react@18.3.27)(encoding@0.1.13)(react@18.3.1)))(encoding@0.1.13)(react-native@0.76.9(@babel/core@7.28.5)(@babel/preset-env@7.29.7(@babel/core@7.28.5))(@types/react@18.3.27)(encoding@0.1.13)(react@18.3.1))(react@18.3.1)
 
   react-native-is-edge-to-edge@1.3.1(react-native@0.76.9(@babel/core@7.28.5)(@babel/preset-env@7.29.7(@babel/core@7.28.5))(@types/react@18.3.27)(encoding@0.1.13)(react@18.3.1))(react@18.3.1):
     dependencies:

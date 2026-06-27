@@ -44,6 +44,8 @@ import { useAuthStore } from '@/store/authStore';
 import { authApi } from '@/services/api/authApi';
 import { apiErrorMessage } from '@/lib/apiError';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useProPurchase } from '@/hooks/useProPurchase';
+import { PRO_PRODUCTS } from '@/config/billing';
 import { cleanupPushToken } from '@/hooks/usePushNotifications';
 import {
   useAccounts,
@@ -498,6 +500,7 @@ export default function YoScreen() {
   // ─── Plan (S-03) ────────────────────────────────────────────────────────
   const { data: subscription } = useSubscription();
   const [showPlans, setShowPlans] = useState(false);
+  const { buy, purchasing } = useProPurchase();
 
   // ─── Datos y privacidad (S-02) ──────────────────────────────────────────
   const [exporting, setExporting] = useState(false);
@@ -730,18 +733,34 @@ export default function YoScreen() {
             {subscription?.plan === 'PRO' ? (
               <Text style={styles.proActive}>Ya tenés Pro 🎉</Text>
             ) : (
-              <View
-                style={[
-                  styles.deleteConfirm,
-                  {
-                    backgroundColor: Colors.vivid,
-                    opacity: 0.6,
-                    marginTop: 16,
-                    alignSelf: 'stretch',
-                  },
-                ]}
-              >
-                <Text style={styles.deleteConfirmText}>Actualizar a Pro (próximamente)</Text>
+              <View style={{ marginTop: 16, alignSelf: 'stretch', gap: 8 }}>
+                <TouchableOpacity
+                  style={[styles.deleteConfirm, { backgroundColor: Colors.vivid }]}
+                  disabled={purchasing !== null}
+                  onPress={() => buy(PRO_PRODUCTS.monthly)}
+                >
+                  {purchasing === PRO_PRODUCTS.monthly ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.deleteConfirmText}>Suscribirme mensual</Text>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.deleteConfirm,
+                    { backgroundColor: 'transparent', borderWidth: 1, borderColor: Colors.vivid },
+                  ]}
+                  disabled={purchasing !== null}
+                  onPress={() => buy(PRO_PRODUCTS.annual)}
+                >
+                  {purchasing === PRO_PRODUCTS.annual ? (
+                    <ActivityIndicator color={Colors.vivid} />
+                  ) : (
+                    <Text style={[styles.deleteConfirmText, { color: Colors.vivid }]}>
+                      Suscribirme anual
+                    </Text>
+                  )}
+                </TouchableOpacity>
               </View>
             )}
 

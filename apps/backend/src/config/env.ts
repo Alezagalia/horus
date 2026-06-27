@@ -68,6 +68,15 @@ const envSchema = z.object({
   LEMONSQUEEZY_WEBHOOK_SECRET: z.string().optional(),
   LEMONSQUEEZY_VARIANT_PRO_MONTHLY: z.string().optional(),
   LEMONSQUEEZY_VARIANT_PRO_ANNUAL: z.string().optional(),
+  // Google Play in-app subscriptions (mobile) — S-05. All optional so the app
+  // boots without billing configured; the verify endpoint 503s until set.
+  // SERVICE_ACCOUNT_JSON is the full service-account credentials JSON (one line).
+  GOOGLE_PLAY_PACKAGE_NAME: z.string().optional(),
+  GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: z.string().optional(),
+  GOOGLE_PLAY_PRODUCT_PRO_MONTHLY: z.string().optional(),
+  GOOGLE_PLAY_PRODUCT_PRO_ANNUAL: z.string().optional(),
+  // Shared secret guarding the RTDN push endpoint (passed as ?secret=).
+  GOOGLE_PLAY_RTDN_SECRET: z.string().optional(),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

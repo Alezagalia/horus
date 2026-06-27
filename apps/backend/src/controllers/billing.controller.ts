@@ -2,10 +2,18 @@ import { Request, Response, NextFunction } from 'express';
 import * as z from 'zod';
 import { UnauthorizedError, ForbiddenError } from '../middlewares/error.middleware.js';
 import { lemonSqueezyService } from '../services/lemonSqueezy.service.js';
+import { googlePlayService } from '../services/googlePlay.service.js';
+import { getEntitlements } from '../services/entitlements.service.js';
+import { env } from '../config/env.js';
 import { logger } from '../lib/logger.js';
 
 const checkoutSchema = z.object({
   interval: z.enum(['monthly', 'annual']).default('monthly'),
+});
+
+const googleVerifySchema = z.object({
+  productId: z.string().min(1),
+  purchaseToken: z.string().min(1),
 });
 
 export const billingController = {
@@ -60,6 +68,52 @@ export const billingController = {
         handled,
       });
 
+      res.status(200).json({ received: true });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  /**
+   * POST /api/billing/google/verify
+   * Verifies a Google Play purchase made by the mobile client and returns the
+   * user's refreshed entitlements. Requires auth + a verified email.
+   */
+  async verifyGooglePurchase(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const user = req.user;
+      if (!user) throw new UnauthorizedError('User not found');
+
+      if (!user.emailVerifiedAt) {
+        throw new ForbiddenError('Verificá tu email antes de suscribirte.');
+      }
+
+      const { productId, purchaseToken } = googleVerifySchema.parse(req.body ?? {});
+      await googlePlayService.verifyPurchase({ userId: user.id, productId, purchaseToken });
+
+      const entitlements = await getEntitlements(user.id);
+      res.status(200).json(entitlements);
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  /**
+   * POST /api/billing/google/rtdn?secret=...
+   * Google Play Real-Time Developer Notifications (Pub/Sub push). Guarded by a
+   * shared secret. Always 200s on a valid secret so Pub/Sub doesn't retry
+   * notifications we've already accepted.
+   */
+  async googleRtdn(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const secret = env.GOOGLE_PLAY_RTDN_SECRET;
+      if (!secret || req.query.secret !== secret) {
+        res.status(401).json({ message: 'Invalid secret' });
+        return;
+      }
+
+      const handled = await googlePlayService.applyRtdnNotification(req.body);
+      logger.info('[billing.rtdn] processed', { handled });
       res.status(200).json({ received: true });
     } catch (error) {
       next(error);
