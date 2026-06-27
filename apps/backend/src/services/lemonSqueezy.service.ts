@@ -57,6 +57,12 @@ export async function createCheckout(args: {
           email: args.email,
           custom: { user_id: args.userId },
         },
+        // Bring the customer back to our app after a successful payment. The
+        // subscription itself is synced via webhook; the page just refreshes the
+        // plan once the user lands here.
+        product_options: {
+          redirect_url: `${env.FRONTEND_URL}/pricing?checkout=success`,
+        },
       },
       relationships: {
         store: { data: { type: 'stores', id: String(env.LEMONSQUEEZY_STORE_ID) } },

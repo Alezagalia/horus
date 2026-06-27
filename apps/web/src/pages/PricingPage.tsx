@@ -1,16 +1,19 @@
 /**
- * Pricing Page (S-04.2, frontend-first)
+ * Pricing Page (S-04.2)
  *
- * Shows the Free vs Pro comparison and the user's current plan. The upgrade
- * CTA is intentionally a "coming soon" placeholder until Stripe checkout (S-04)
- * is wired up.
+ * Shows the Free vs Pro comparison and the user's current plan. The upgrade CTA
+ * starts a real Lemon Squeezy hosted checkout. After paying, the customer is
+ * redirected back here with `?checkout=success`; we then poll our subscription
+ * (synced via webhook) until it flips to Pro.
  */
 
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { useSubscription } from '@/hooks/useSubscription';
+import { useSubscription, subscriptionKeys } from '@/hooks/useSubscription';
 import { subscriptionApi } from '@/services/subscriptionApi';
+import type { Entitlements } from '@/types/subscription';
 
 const FREE_FEATURES = [
   'Hasta 5 hábitos',
@@ -32,6 +35,40 @@ export function PricingPage() {
   const { data, isLoading } = useSubscription();
   const plan = data?.plan ?? 'FREE';
   const [loadingInterval, setLoadingInterval] = useState<'monthly' | 'annual' | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const queryClient = useQueryClient();
+
+  // Returning from a successful Lemon Squeezy checkout. The subscription is
+  // synced by the webhook, which may land a moment after the redirect, so we
+  // refetch a few times until the plan shows as Pro.
+  useEffect(() => {
+    if (searchParams.get('checkout') !== 'success') return;
+
+    // Clean the query param so a refresh doesn't replay this.
+    searchParams.delete('checkout');
+    setSearchParams(searchParams, { replace: true });
+
+    toast.success('¡Gracias por suscribirte! Activando tu plan Pro…');
+
+    let cancelled = false;
+    let attempts = 0;
+    const poll = async () => {
+      attempts += 1;
+      await queryClient.invalidateQueries({ queryKey: subscriptionKeys.mine });
+      const current = queryClient.getQueryData<Entitlements>(subscriptionKeys.mine);
+      if (cancelled || current?.plan === 'PRO') {
+        if (current?.plan === 'PRO') toast.success('Tu plan Pro ya está activo 🎉');
+        return;
+      }
+      if (attempts < 5) setTimeout(poll, 2000);
+    };
+    void poll();
+
+    return () => {
+      cancelled = true;
+    };
+    // Run once on landing; subsequent renders have the param cleared.
+  }, []);
 
   const startCheckout = async (interval: 'monthly' | 'annual') => {
     setLoadingInterval(interval);
