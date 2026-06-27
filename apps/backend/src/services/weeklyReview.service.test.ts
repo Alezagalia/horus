@@ -23,7 +23,7 @@ vi.mock('./streak.service.js', () => ({
 import { prisma } from '../lib/prisma.js';
 import { getWeekStats, getOrCreateReview, createReview } from './weeklyReview.service.js';
 
-const p = vi.mocked(prisma);
+const p = vi.mocked(prisma, true);
 
 const USER_ID = 'user-1';
 const WEEK_START = '2026-05-25'; // Monday

@@ -16,7 +16,7 @@ import { prisma } from '../lib/prisma.js';
 import { sendToUser } from './push/push-notification.service.js';
 import { checkBudgetThreshold } from './budget-alert.service.js';
 
-const p = vi.mocked(prisma);
+const p = vi.mocked(prisma, true);
 const mockedSend = vi.mocked(sendToUser);
 
 const USER_ID = 'user-1';

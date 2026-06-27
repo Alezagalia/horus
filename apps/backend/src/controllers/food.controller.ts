@@ -18,10 +18,7 @@ export const foodController = {
       if (!user) throw new UnauthorizedError('User not found');
 
       const filters = foodFiltersSchema.parse(req.query);
-      const foods = await foodService.findAll(
-        user.id,
-        filters as { search?: string; isActive?: boolean }
-      );
+      const foods = await foodService.findAll(user.id, filters);
 
       res.status(200).json({ foods });
     } catch (error) {

@@ -21,7 +21,7 @@ vi.mock('../lib/prisma.js', () => ({
 import { prisma } from '../lib/prisma.js';
 import { listGoals, getGoalById, createGoal, updateGoal, deleteGoal } from './goal.service.js';
 
-const p = vi.mocked(prisma);
+const p = vi.mocked(prisma, true);
 
 const USER_ID = 'user-1';
 const GOAL_ID = 'goal-1';
