@@ -22,7 +22,7 @@ vi.mock('./habitMoment.service.js', () => ({
 import { prisma } from '../lib/prisma.js';
 import { authService } from './auth.service.js';
 
-const p = vi.mocked(prisma);
+const p = vi.mocked(prisma, true);
 
 const USER_ID = 'user-1';
 const USER_EMAIL = 'test@horus.app';

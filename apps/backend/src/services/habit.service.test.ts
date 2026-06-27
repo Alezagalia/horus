@@ -29,7 +29,7 @@ import { prisma } from '../lib/prisma.js';
 import { habitService } from './habit.service.js';
 import { NotFoundError } from '../middlewares/error.middleware.js';
 
-const p = vi.mocked(prisma);
+const p = vi.mocked(prisma, true);
 
 const USER_ID = 'user-1';
 const HABIT_ID = 'habit-1';
@@ -61,7 +61,7 @@ const mockHabit = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  p.$transaction.mockImplementation((fnOrArray: unknown) => {
+  (p.$transaction as ReturnType<typeof vi.fn>).mockImplementation((fnOrArray: unknown) => {
     if (typeof fnOrArray === 'function') return (fnOrArray as (tx: typeof p) => unknown)(p);
     return Promise.all(fnOrArray as Promise<unknown>[]);
   });

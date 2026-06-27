@@ -68,7 +68,7 @@ import {
 } from '../test/helpers/jwt.helper.js';
 
 const app = createTestApp(['/api/auth', authRouter]);
-const p = vi.mocked(prisma);
+const p = vi.mocked(prisma, true);
 
 const mockUserBase = {
   id: TEST_USER_ID,

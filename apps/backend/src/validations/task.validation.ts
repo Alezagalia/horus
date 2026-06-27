@@ -10,7 +10,7 @@ export const taskStatusEnum = z.enum(['pendiente', 'en_progreso', 'completada', 
 export const dueDateFilterEnum = z.enum(['overdue', 'today', 'week', 'month', 'none']);
 
 export const createTaskSchema = z.object({
-  categoryId: z.string().uuid('Category ID must be a valid UUID').optional(),
+  categoryId: z.string().uuid('Category ID must be a valid UUID'),
   title: z.string().min(1, 'Title is required').max(200).trim(),
   description: z.string().max(5000).optional().nullable(),
   priority: priorityEnum.default('media'),

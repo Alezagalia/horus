@@ -30,7 +30,7 @@ import { createTestApp } from '../test/helpers/app.factory.js';
 import habitRouter from './habit.routes.js';
 
 const app = createTestApp(['/api/habits', habitRouter]);
-const p = vi.mocked(prisma);
+const p = vi.mocked(prisma, true);
 
 const USER_ID = 'test-user-id';
 const HABIT_ID = '550e8400-e29b-41d4-a716-446655440001';
@@ -62,7 +62,7 @@ const mockHabit = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  p.$transaction.mockImplementation((fnOrArray: unknown) => {
+  (p.$transaction as ReturnType<typeof vi.fn>).mockImplementation((fnOrArray: unknown) => {
     if (typeof fnOrArray === 'function') return (fnOrArray as (tx: any) => unknown)(p);
     return Promise.all(fnOrArray as Promise<unknown>[]);
   });

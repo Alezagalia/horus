@@ -20,7 +20,7 @@ import { prisma } from '../lib/prisma.js';
 import { taskService } from './task.service.js';
 import { NotFoundError, BadRequestError } from '../middlewares/error.middleware.js';
 
-const p = vi.mocked(prisma);
+const p = vi.mocked(prisma, true);
 
 const USER_ID = 'user-1';
 const TASK_ID = 'task-1';
