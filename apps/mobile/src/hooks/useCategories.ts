@@ -20,10 +20,20 @@ export function useCreateCategory() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (dto: CreateCategoryDTO) => categoryApi.create(dto),
+    // NO reintentar: crear es un POST no idempotente. Con el cold-start de Railway
+    // el primer POST puede crear la categoría pero tardar más que el timeout de
+    // axios; el retry global (que reintenta timeouts) mandaba un segundo POST que
+    // el backend rechazaba con 409 "ya existe" — la categoría quedaba creada pero
+    // la UI mostraba error. El botón ya se bloquea mientras está pending, así que
+    // sin este retry no hay forma de duplicar el request.
+    retry: false,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: categoryKeys.all });
     },
     onError: (err: unknown) => {
+      // Refrescamos la lista igual: si el POST sí persistió pero la respuesta se
+      // perdió (timeout), la categoría debe aparecer al reabrir.
+      queryClient.invalidateQueries({ queryKey: categoryKeys.all });
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
         'No se pudo crear la categoría';
