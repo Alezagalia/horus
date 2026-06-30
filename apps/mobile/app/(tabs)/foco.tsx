@@ -1307,7 +1307,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontFamily: 'Inter_700Bold',
-    fontSize: 18,
+    fontSize: 16,
     color: Colors.ink,
     letterSpacing: -0.2,
   },

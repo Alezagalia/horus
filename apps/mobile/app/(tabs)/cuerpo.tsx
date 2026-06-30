@@ -331,7 +331,7 @@ function HistorialView() {
     <>
       {total > 0 && <StatsBar totalWorkouts={total} totalVolume={totalVolume} />}
 
-      <SectionHeader title="ENTRENAMIENTOS RECIENTES" count={workouts.length} />
+      <SectionHeader title="Entrenamientos recientes" count={workouts.length} />
 
       {workouts.length === 0 ? (
         <Card solid style={styles.emptyCard}>
@@ -1106,7 +1106,7 @@ function StatsView() {
       ) : stats ? (
         <>
           {/* Overview cards */}
-          <SectionHeader title="RESUMEN" />
+          <SectionHeader title="Resumen" />
           <View style={stStyles.overviewGrid}>
             <StatsOverviewCard
               label="Entrenamientos"
@@ -1134,7 +1134,7 @@ function StatsView() {
           {/* Muscle group distribution */}
           {stats.muscleGroupDistribution.length > 0 && (
             <>
-              <SectionHeader title="DISTRIBUCIÓN MUSCULAR" />
+              <SectionHeader title="Distribución muscular" />
               <Card solid style={{ marginBottom: Spacing.xl }}>
                 {stats.muscleGroupDistribution.map((mg) => (
                   <View key={mg.muscleGroup} style={stStyles.mgRow}>
@@ -1168,7 +1168,7 @@ function StatsView() {
           {/* Top exercises */}
           {stats.topExercises.length > 0 && (
             <>
-              <SectionHeader title="EJERCICIOS MÁS REALIZADOS" />
+              <SectionHeader title="Ejercicios más realizados" />
               <Card padding={0} solid style={{ marginBottom: Spacing.xl }}>
                 {stats.topExercises.slice(0, 6).map((ex, i, arr) => (
                   <TouchableOpacity
@@ -1447,10 +1447,10 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   sectionTitle: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 10,
-    color: Colors.muted,
-    letterSpacing: 1,
+    fontFamily: 'Inter_700Bold',
+    fontSize: 16,
+    color: Colors.ink,
+    letterSpacing: -0.2,
   },
   sectionBadge: {
     backgroundColor: Colors.ice,
