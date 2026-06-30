@@ -35,7 +35,7 @@ export function BudgetFormModal({
   editingBudget,
   isLoading,
 }: BudgetFormModalProps) {
-  const { data: categoriesData } = useCategories({ scope: 'gastos' });
+  const { data: categoriesData } = useCategories({ scope: 'egresos' });
   const categories = (categoriesData ?? []).filter((c) => c.isActive);
 
   const {

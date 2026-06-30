@@ -7,6 +7,7 @@ import { useState, useMemo } from 'react';
 import { Toaster } from 'react-hot-toast';
 import {
   Scope,
+  MANAGED_SCOPES,
   SCOPE_LABELS,
   SCOPE_ICONS,
   type CreateCategoryDTO,
@@ -162,7 +163,7 @@ export function CategoriesPage() {
 
         {/* Tabs */}
         <div className="flex items-center gap-2 border-b border-gray-200">
-          {(Object.values(Scope) as Scope[]).map((scope) => (
+          {MANAGED_SCOPES.map((scope) => (
             <button
               key={scope}
               onClick={() => setActiveScope(scope)}

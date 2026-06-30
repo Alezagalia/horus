@@ -108,14 +108,14 @@ export const getBudgetsSummary = async (
  * Create a new budget. Validates no active duplicate exists for same category+currency.
  */
 export const createBudget = async (userId: string, data: CreateBudgetInput) => {
-  // Verify category exists, is active, belongs to user, and has scope 'gastos'
+  // Verify category exists, is active, belongs to user, and has scope 'egresos'
   const category = await prisma.category.findFirst({
-    where: { id: data.categoryId, userId, isActive: true, scope: Scope.gastos },
+    where: { id: data.categoryId, userId, isActive: true, scope: Scope.egresos },
   });
 
   if (!category) {
     throw new Error(
-      'La categoría no existe, no está activa, no te pertenece, o no es de tipo "gastos"'
+      'La categoría no existe, no está activa, no te pertenece, o no es de tipo "egresos"'
     );
   }
 

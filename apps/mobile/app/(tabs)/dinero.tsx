@@ -299,7 +299,8 @@ function TransactionFormModal({
   const [accountId, setAccountId] = useState(accounts[0]?.id ?? '');
   const [categoryId, setCategoryId] = useState('');
 
-  const { data: categories = [] } = useTxCategories('gastos');
+  // Categorías según el tipo: ingreso → 'ingresos', egreso → 'egresos'.
+  const { data: categories = [] } = useTxCategories(txType === 'ingreso' ? 'ingresos' : 'egresos');
   const createTx = useCreateTransaction();
   const updateTx = useUpdateTransaction();
 
@@ -391,7 +392,12 @@ function TransactionFormModal({
           <View style={styles.typeToggle}>
             <TouchableOpacity
               style={[styles.typeBtn, txType === 'egreso' && styles.typeBtnEgreso]}
-              onPress={() => !isEditing && setTxType('egreso')}
+              onPress={() => {
+                if (!isEditing) {
+                  setTxType('egreso');
+                  setCategoryId('');
+                }
+              }}
               disabled={isEditing}
             >
               <Text
@@ -405,7 +411,12 @@ function TransactionFormModal({
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.typeBtn, txType === 'ingreso' && styles.typeBtnIngreso]}
-              onPress={() => !isEditing && setTxType('ingreso')}
+              onPress={() => {
+                if (!isEditing) {
+                  setTxType('ingreso');
+                  setCategoryId('');
+                }
+              }}
               disabled={isEditing}
             >
               <Text
@@ -762,7 +773,7 @@ function RecurringFormModal({ visible, onClose }: { visible: boolean; onClose: (
   const [dueDay, setDueDay] = useState('');
   const [notes, setNotes] = useState('');
 
-  const { data: categories = [] } = useTxCategories('gastos');
+  const { data: categories = [] } = useTxCategories('egresos');
   const createRecurring = useCreateRecurringExpense();
 
   useEffect(() => {
@@ -1155,7 +1166,7 @@ function BudgetFormModal({
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState('ARS');
 
-  const { data: categories = [] } = useTxCategories('gastos');
+  const { data: categories = [] } = useTxCategories('egresos');
   const createBudget = useCreateBudget();
   const updateBudget = useUpdateBudget();
 
@@ -1788,7 +1799,7 @@ export default function DineroScreen() {
             {accounts.length > 0 && (
               <>
                 <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>CUENTAS</Text>
+                  <Text style={styles.sectionTitle}>Cuentas</Text>
                 </View>
                 <ScrollView
                   horizontal
@@ -1825,7 +1836,7 @@ export default function DineroScreen() {
             )}
 
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>MOVIMIENTOS</Text>
+              <Text style={styles.sectionTitle}>Movimientos</Text>
               {transactions.length > 0 && (
                 <View style={styles.sectionBadge}>
                   <Text style={styles.sectionBadgeText}>{transactions.length}</Text>
@@ -1877,7 +1888,7 @@ export default function DineroScreen() {
         ) : activeTab === 'fijos' ? (
           <>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>GASTOS FIJOS</Text>
+              <Text style={styles.sectionTitle}>Gastos fijos</Text>
               <View style={{ flex: 1 }} />
               <TouchableOpacity onPress={() => setShowRecurringModal(true)} activeOpacity={0.7}>
                 <Text style={styles.newBtn}>+ Nuevo</Text>
@@ -1914,7 +1925,7 @@ export default function DineroScreen() {
           <>
             {/* PENDIENTES */}
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>PENDIENTES</Text>
+              <Text style={styles.sectionTitle}>Pendientes</Text>
               {pendingExpenses.length > 0 && (
                 <View style={styles.sectionBadge}>
                   <Text style={styles.sectionBadgeText}>{pendingExpenses.length}</Text>
@@ -1950,7 +1961,7 @@ export default function DineroScreen() {
             {paidExpenses.length > 0 && (
               <>
                 <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>PAGADOS</Text>
+                  <Text style={styles.sectionTitle}>Pagados</Text>
                   <View style={styles.sectionBadge}>
                     <Text style={styles.sectionBadgeText}>{paidExpenses.length}</Text>
                   </View>
@@ -2055,7 +2066,7 @@ export default function DineroScreen() {
           <>
             {/* EN PROGRESO */}
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>EN PROGRESO</Text>
+              <Text style={styles.sectionTitle}>En progreso</Text>
               {activeSavings.length > 0 && (
                 <View style={styles.sectionBadge}>
                   <Text style={styles.sectionBadgeText}>{activeSavings.length}</Text>
@@ -2117,7 +2128,7 @@ export default function DineroScreen() {
             {completedSavings.length > 0 && (
               <>
                 <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>COMPLETADAS</Text>
+                  <Text style={styles.sectionTitle}>Completadas</Text>
                   <View style={styles.sectionBadge}>
                     <Text style={styles.sectionBadgeText}>{completedSavings.length}</Text>
                   </View>
@@ -2305,10 +2316,10 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   sectionTitle: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 10,
-    color: Colors.muted,
-    letterSpacing: 1,
+    fontFamily: 'Inter_700Bold',
+    fontSize: 16,
+    color: Colors.ink,
+    letterSpacing: -0.2,
   },
   sectionBadge: {
     backgroundColor: Colors.ice,

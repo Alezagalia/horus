@@ -55,6 +55,7 @@ export function TransactionFormModal({
     handleSubmit,
     reset,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<TransactionFormData>({
     resolver: zodResolver(formSchema),
@@ -69,8 +70,19 @@ export function TransactionFormModal({
     },
   });
 
-  // Filter categories by scope (gastos for transactions)
-  const expenseCategories = categories.filter((cat) => cat.scope === 'gastos');
+  // Las categorías de dinero se separan por tipo: ingreso → scope 'ingresos',
+  // egreso → scope 'egresos'.
+  const watchedType = watch('type');
+  const moneyScope = watchedType === 'ingreso' ? 'ingresos' : 'egresos';
+  const expenseCategories = categories.filter((cat) => cat.scope === moneyScope);
+
+  // Al cambiar de tipo (solo en alta; en edición el tipo está bloqueado), limpiamos la
+  // categoría para no enviar una del scope contrario.
+  useEffect(() => {
+    if (!editingTransaction) {
+      setValue('categoryId', '');
+    }
+  }, [watchedType, editingTransaction, setValue]);
 
   // Get selected account to show balance
   const selectedAccountId = watch('accountId');

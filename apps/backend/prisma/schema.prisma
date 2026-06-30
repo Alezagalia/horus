@@ -39,7 +39,9 @@ enum Scope {
   habitos
   tareas
   eventos
-  gastos
+  gastos // legacy: migrado a `egresos` (jun-2026); se conserva por datos históricos
+  ingresos
+  egresos
   metas
   knowledge
   nutricion

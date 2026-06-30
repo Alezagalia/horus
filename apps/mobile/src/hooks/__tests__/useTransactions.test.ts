@@ -101,10 +101,10 @@ describe('useTxCategories', () => {
     const mockCats = [{ id: 'cat-3', name: 'Salario' }];
     (transactionApi.listCategories as jest.Mock).mockResolvedValue(mockCats);
 
-    const { result } = renderHook(() => useTxCategories('gastos'), { wrapper: createWrapper() });
+    const { result } = renderHook(() => useTxCategories('egresos'), { wrapper: createWrapper() });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(transactionApi.listCategories).toHaveBeenCalledWith('gastos');
+    expect(transactionApi.listCategories).toHaveBeenCalledWith('egresos');
   });
 });
 

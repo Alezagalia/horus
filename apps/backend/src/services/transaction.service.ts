@@ -255,17 +255,18 @@ export const transactionService = {
       throw new NotFoundError('Cuenta no encontrada o inactiva');
     }
 
-    // Validate category exists and is of scope 'gastos'
+    // La categoría debe coincidir con el tipo: ingreso → 'ingresos', egreso → 'egresos'.
+    const expectedScope = data.type === 'ingreso' ? Scope.ingresos : Scope.egresos;
     const category = await prisma.category.findFirst({
       where: {
         id: data.categoryId,
         userId,
-        scope: Scope.gastos,
+        scope: expectedScope,
       },
     });
 
     if (!category) {
-      throw new NotFoundError('Categoría no encontrada o no es de tipo gastos');
+      throw new NotFoundError(`Categoría no encontrada o no es de tipo ${expectedScope}`);
     }
 
     // Use Prisma transaction for atomicity
@@ -378,18 +379,20 @@ export const transactionService = {
       throw new BadRequestError('No se pueden editar transferencias. Elimina y crea una nueva.');
     }
 
-    // Validate category if changing
+    // Validate category if changing. El tipo no se puede modificar, así que el scope
+    // esperado sale del tipo de la transacción existente.
     if (data.categoryId) {
+      const expectedScope = existingTransaction.type === 'ingreso' ? Scope.ingresos : Scope.egresos;
       const category = await prisma.category.findFirst({
         where: {
           id: data.categoryId,
           userId,
-          scope: Scope.gastos,
+          scope: expectedScope,
         },
       });
 
       if (!category) {
-        throw new NotFoundError('Categoría no encontrada o no es de tipo gastos');
+        throw new NotFoundError(`Categoría no encontrada o no es de tipo ${expectedScope}`);
       }
     }
 
@@ -627,12 +630,13 @@ export const transactionService = {
       );
     }
 
-    // Get a default "Transferencias" category or create one
+    // Categoría interna "Transferencias" (scope 'egresos'). Las transferencias no pasan
+    // por la validación de scope por tipo; ambas patas (egreso/ingreso) la comparten.
     let transferCategory = await prisma.category.findFirst({
       where: {
         userId,
         name: 'Transferencias',
-        scope: Scope.gastos,
+        scope: Scope.egresos,
       },
     });
 
@@ -643,7 +647,7 @@ export const transactionService = {
           name: 'Transferencias',
           icon: 'swap-horizontal',
           color: '#6B7280',
-          scope: Scope.gastos,
+          scope: Scope.egresos,
           isDefault: false,
         },
       });

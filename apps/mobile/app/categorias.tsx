@@ -26,11 +26,11 @@ import {
   useSetDefaultCategory,
 } from '@/hooks/useCategories';
 import type { Category } from '@/services/api/categoryApi';
-import { Scope, SCOPE_LABELS, SCOPE_ICONS } from '@horus/shared';
+import { Scope, MANAGED_SCOPES, SCOPE_LABELS, SCOPE_ICONS } from '@horus/shared';
 
 // ─── constants ─────────────────────────────────────────────────────────────────
 
-const SCOPES = Object.values(Scope);
+const SCOPES = MANAGED_SCOPES;
 
 const PRESET_ICONS = [
   '🎯',

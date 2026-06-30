@@ -16,19 +16,19 @@ import { prisma } from '../lib/prisma.js';
  * Create a new recurring expense template
  */
 export const createRecurringExpense = async (userId: string, data: CreateRecurringExpenseInput) => {
-  // Verify category exists, is active, belongs to user, and has scope 'gastos'
+  // Verify category exists, is active, belongs to user, and has scope 'egresos'
   const category = await prisma.category.findFirst({
     where: {
       id: data.categoryId,
       userId,
       isActive: true,
-      scope: Scope.gastos,
+      scope: Scope.egresos,
     },
   });
 
   if (!category) {
     throw new Error(
-      'La categoría no existe, no está activa, no te pertenece, o no es de tipo "gastos"'
+      'La categoría no existe, no está activa, no te pertenece, o no es de tipo "egresos"'
     );
   }
 
@@ -158,13 +158,13 @@ export const updateRecurringExpense = async (
         id: data.categoryId,
         userId,
         isActive: true,
-        scope: Scope.gastos,
+        scope: Scope.egresos,
       },
     });
 
     if (!category) {
       throw new Error(
-        'La categoría no existe, no está activa, no te pertenece, o no es de tipo "gastos"'
+        'La categoría no existe, no está activa, no te pertenece, o no es de tipo "egresos"'
       );
     }
   }

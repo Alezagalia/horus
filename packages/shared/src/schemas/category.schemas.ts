@@ -12,7 +12,9 @@ export const scopeSchema = z.enum([
   'habitos',
   'tareas',
   'eventos',
-  'gastos',
+  'gastos', // legacy — se acepta para lecturas/datos antiguos
+  'ingresos',
+  'egresos',
   'metas',
   'knowledge',
   'nutricion',

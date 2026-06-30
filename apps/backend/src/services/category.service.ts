@@ -56,7 +56,7 @@ export const categoryService = {
     });
 
     if (existing) {
-      throw new ConflictError(`Category "${data.name}" already exists for scope "${data.scope}"`);
+      throw new ConflictError(`Ya existe una categoría con el nombre "${data.name}".`);
     }
 
     return prisma.category.create({
@@ -88,7 +88,7 @@ export const categoryService = {
       });
 
       if (existing) {
-        throw new ConflictError(`Category "${data.name}" already exists for this scope`);
+        throw new ConflictError(`Ya existe una categoría con el nombre "${data.name}".`);
       }
     }
 
@@ -170,20 +170,29 @@ export const categoryService = {
       { name: 'Personal', scope: 'eventos' as Scope, icon: '🎉', color: '#E91E63' },
       { name: 'Recordatorios', scope: 'eventos' as Scope, icon: '⏰', color: '#FF9800' },
 
-      // Gastos (US-019)
-      { name: 'Alimentación', scope: 'gastos' as Scope, icon: '🍔', color: '#4CAF50' },
-      { name: 'Transporte', scope: 'gastos' as Scope, icon: '🚗', color: '#2196F3' },
-      { name: 'Hogar', scope: 'gastos' as Scope, icon: '🏠', color: '#FF9800' },
-      { name: 'Entretenimiento', scope: 'gastos' as Scope, icon: '🎬', color: '#E91E63' },
-      { name: 'Salud', scope: 'gastos' as Scope, icon: '💊', color: '#F44336' },
+      // Ingresos
+      { name: 'Sueldo', scope: 'ingresos' as Scope, icon: '💼', color: '#4CAF50' },
+      { name: 'Honorarios', scope: 'ingresos' as Scope, icon: '🧾', color: '#2196F3' },
+      { name: 'Inversiones', scope: 'ingresos' as Scope, icon: '📈', color: '#9C27B0' },
+      { name: 'Regalos', scope: 'ingresos' as Scope, icon: '🎁', color: '#E91E63' },
+      { name: 'Otros ingresos', scope: 'ingresos' as Scope, icon: '💰', color: '#FF9800' },
+
+      // Egresos
+      { name: 'Alimentación', scope: 'egresos' as Scope, icon: '🍔', color: '#4CAF50' },
+      { name: 'Transporte', scope: 'egresos' as Scope, icon: '🚗', color: '#2196F3' },
+      { name: 'Hogar', scope: 'egresos' as Scope, icon: '🏠', color: '#FF9800' },
+      { name: 'Entretenimiento', scope: 'egresos' as Scope, icon: '🎬', color: '#E91E63' },
+      { name: 'Salud', scope: 'egresos' as Scope, icon: '💊', color: '#F44336' },
     ];
 
+    // Marca como predeterminada la primera categoría de cada scope.
+    const seenScopes = new Set<Scope>();
     const categories = await prisma.category.createMany({
-      data: defaultCategories.map((cat, index) => ({
-        ...cat,
-        userId,
-        isDefault: index === 0 || index === 4 || index === 7 || index === 10, // First of each scope
-      })),
+      data: defaultCategories.map((cat) => {
+        const isDefault = !seenScopes.has(cat.scope);
+        seenScopes.add(cat.scope);
+        return { ...cat, userId, isDefault };
+      }),
     });
 
     return categories;

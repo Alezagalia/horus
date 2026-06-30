@@ -89,8 +89,8 @@ export function RecurringExpenseFormModal({
 
   if (!isOpen) return null;
 
-  // Filter categories for expenses (scope 'gastos')
-  const expenseCategories = categories.filter((cat) => cat.scope === 'gastos');
+  // Filter categories for expenses (scope 'egresos')
+  const expenseCategories = categories.filter((cat) => cat.scope === 'egresos');
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
