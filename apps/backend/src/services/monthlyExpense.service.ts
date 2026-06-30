@@ -137,21 +137,26 @@ export const payMonthlyExpense = async (
       throw new Error('Cuenta no encontrada o no está activa');
     }
 
-    // 4. Verify account has sufficient balance
-    const currentBalance = Number(account.currentBalance);
-    if (currentBalance < data.amount) {
-      throw new Error(
-        `Saldo insuficiente en la cuenta. Saldo actual: ${currentBalance} ${monthlyExpense.recurringExpense.currency}`
-      );
-    }
+    // 4. Saldo: NO se bloquea por saldo insuficiente. Pagar un gasto fijo es un
+    // egreso como cualquier otro (createTransaction tampoco bloquea), y la cuenta
+    // puede quedar en negativo a propósito (p. ej. tarjetas de crédito). Tanto el
+    // modal de mobile como el de web ya muestran un aviso informativo cuando el
+    // monto supera el saldo, pero permiten confirmar. Bloquear aquí dejaba la UI y
+    // el backend en contradicción (la UI permitía enviar y el backend lo rechazaba).
 
     // 5. Store previous amount for tracking
     const previousAmount = monthlyExpense.amount;
 
-    // 6. Update monthly expense instance
+    // 6. Reclamo atómico del gasto: marca 'pagado' SOLO si sigue 'pendiente'.
+    // updateMany emite un UPDATE ... WHERE status='pendiente' que toma el lock de
+    // fila, así que de dos requests concurrentes del mismo pago (p. ej. el retry de
+    // la mutación de mobile tras un timeout de cold-start, o un doble tap) solo UNO
+    // gana el reclamo (count=1); el otro recibe count=0 y aborta ANTES de crear la
+    // transacción o tocar el saldo. Esto hace el pago idempotente y evita la doble
+    // imputación. El findFirst del paso 1 NO bloquea, por eso el guard real va aquí.
     const paidDate = data.paidDate || new Date();
-    const updatedExpense = await tx.monthlyExpenseInstance.update({
-      where: { id },
+    const claimed = await tx.monthlyExpenseInstance.updateMany({
+      where: { id, userId, status: 'pendiente' },
       data: {
         status: 'pagado',
         amount: data.amount,
@@ -160,6 +165,13 @@ export const payMonthlyExpense = async (
         paidDate,
         notes: data.notes,
       },
+    });
+    if (claimed.count === 0) {
+      throw new Error('El gasto ya está marcado como pagado');
+    }
+
+    const updatedExpense = await tx.monthlyExpenseInstance.findUniqueOrThrow({
+      where: { id },
       include: {
         recurringExpense: {
           select: {
