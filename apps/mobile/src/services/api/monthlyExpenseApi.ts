@@ -1,4 +1,5 @@
 import { axiosInstance } from '../axios';
+import { putIdempotent } from '../idempotent';
 import type {
   MonthlyExpense,
   MonthlyExpensesResponse,
@@ -15,17 +16,17 @@ export const monthlyExpenseApi = {
   },
 
   pay: async (id: string, dto: PayMonthlyExpenseDTO): Promise<MonthlyExpense> => {
-    const { data } = await axiosInstance.put(`/monthly-expenses/${id}/pay`, dto);
+    const data = await putIdempotent<any>(`/monthly-expenses/${id}/pay`, dto);
     return data.monthlyExpense ?? data;
   },
 
   update: async (id: string, dto: UpdateMonthlyExpenseDTO): Promise<MonthlyExpense> => {
-    const { data } = await axiosInstance.put(`/monthly-expenses/${id}`, dto);
+    const data = await putIdempotent<any>(`/monthly-expenses/${id}`, dto);
     return data.monthlyExpense ?? data;
   },
 
   undo: async (id: string): Promise<MonthlyExpense> => {
-    const { data } = await axiosInstance.put(`/monthly-expenses/${id}/undo`);
+    const data = await putIdempotent<any>(`/monthly-expenses/${id}/undo`);
     return data.monthlyExpense ?? data;
   },
 };

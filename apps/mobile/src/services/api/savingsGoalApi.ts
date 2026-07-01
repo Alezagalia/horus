@@ -1,4 +1,5 @@
 import { axiosInstance } from '../axios';
+import { postIdempotent } from '../idempotent';
 import type {
   SavingsGoalWithProgress,
   SavingsGoalsResponse,
@@ -16,7 +17,7 @@ export const savingsGoalApi = {
   },
 
   create: async (dto: CreateSavingsGoalDTO): Promise<SavingsGoalWithProgress> => {
-    const { data } = await axiosInstance.post<SavingsGoalResponse>('/savings-goals', dto);
+    const data = await postIdempotent<SavingsGoalResponse>('/savings-goals', dto);
     return data.savingsGoal;
   },
 

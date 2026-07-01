@@ -1,4 +1,5 @@
 import { axiosInstance } from '../axios';
+import { postIdempotent } from '../idempotent';
 import type {
   RecurringExpense,
   CreateRecurringExpenseDTO,
@@ -19,7 +20,7 @@ export const recurringExpenseApi = {
   listActive: async (): Promise<RecurringExpense[]> => recurringExpenseApi.list(true),
 
   create: async (dto: CreateRecurringExpenseDTO): Promise<RecurringExpense> => {
-    const { data } = await axiosInstance.post('/recurring-expenses', dto);
+    const data = await postIdempotent<any>('/recurring-expenses', dto);
     return data.recurringExpense ?? data;
   },
 

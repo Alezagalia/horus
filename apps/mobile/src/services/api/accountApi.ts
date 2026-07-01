@@ -1,4 +1,5 @@
 import { axiosInstance } from '../axios';
+import { postIdempotent } from '../idempotent';
 
 export type AccountType = 'efectivo' | 'banco' | 'billetera_digital' | 'tarjeta';
 
@@ -90,7 +91,7 @@ export const accountApi = {
   },
 
   create: async (dto: CreateAccountDTO): Promise<Account> => {
-    const { data } = await axiosInstance.post('/accounts', dto);
+    const data = await postIdempotent<any>('/accounts', dto);
     return data.account ?? data;
   },
 

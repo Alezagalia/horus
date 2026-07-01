@@ -1,4 +1,5 @@
 import { axiosInstance } from '../axios';
+import { postIdempotent } from '../idempotent';
 import type {
   Budget,
   BudgetSummary,
@@ -24,7 +25,7 @@ export const budgetApi = {
   },
 
   create: async (dto: CreateBudgetDTO): Promise<Budget> => {
-    const { data } = await axiosInstance.post('/budgets', dto);
+    const data = await postIdempotent<any>('/budgets', dto);
     return data.budget ?? data;
   },
 

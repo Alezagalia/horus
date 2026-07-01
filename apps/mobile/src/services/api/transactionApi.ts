@@ -1,4 +1,5 @@
 import { axiosInstance } from '../axios';
+import { postIdempotent } from '../idempotent';
 
 export type TransactionType = 'ingreso' | 'egreso';
 
@@ -80,7 +81,7 @@ export const transactionApi = {
   },
 
   create: async (dto: CreateTransactionDTO): Promise<Transaction> => {
-    const { data } = await axiosInstance.post('/transactions', dto);
+    const data = await postIdempotent<any>('/transactions', dto);
     return data.transaction ?? data;
   },
 
@@ -90,7 +91,7 @@ export const transactionApi = {
   },
 
   createTransfer: async (dto: CreateTransferDTO): Promise<void> => {
-    await axiosInstance.post('/transactions/transfer', dto);
+    await postIdempotent('/transactions/transfer', dto);
   },
 
   delete: async (transactionId: string): Promise<void> => {

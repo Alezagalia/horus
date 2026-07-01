@@ -1,4 +1,5 @@
 import { axiosInstance } from '../axios';
+import { postIdempotent } from '../idempotent';
 import type { Category, CreateCategoryDTO, UpdateCategoryDTO, Scope } from '@horus/shared';
 
 export type { Category, Scope };
@@ -26,7 +27,7 @@ export const categoryApi = {
   },
 
   create: async (dto: CreateCategoryDTO): Promise<Category> => {
-    const { data } = await axiosInstance.post('/categories', dto);
+    const data = await postIdempotent<any>('/categories', dto);
     return data.category ?? data;
   },
 
