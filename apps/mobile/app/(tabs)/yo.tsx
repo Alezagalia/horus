@@ -43,6 +43,7 @@ import { Colors, Spacing, Radius, Gradients, Shadows } from '@/tokens';
 import { useAuthStore } from '@/store/authStore';
 import { authApi } from '@/services/api/authApi';
 import { apiErrorMessage } from '@/lib/apiError';
+import { makeCreateErrorHandler } from '@/lib/mutationErrors';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useProPurchase } from '@/hooks/useProPurchase';
 import { PRO_PRODUCTS } from '@/config/billing';
@@ -162,6 +163,7 @@ function AccountFormModal({
   const createAccount = useCreateAccount();
   const updateAccount = useUpdateAccount();
   const deactivateAccount = useDeactivateAccount();
+  const queryClient = useQueryClient();
   const isBusy = createAccount.isPending || updateAccount.isPending;
 
   const handleDeactivate = () => {
@@ -230,7 +232,14 @@ function AccountFormModal({
       };
       createAccount.mutate(dto, {
         onSuccess: onClose,
-        onError: () => Alert.alert('Error', 'No se pudo crear la cuenta'),
+        onError: makeCreateErrorHandler({
+          queryClient,
+          invalidateKeys: [accountKeys.all],
+          onClose,
+          fallbackMessage: 'No se pudo crear la cuenta',
+          savedMessage:
+            'La confirmación no llegó por la conexión, pero la cuenta probablemente se creó. Fijate en la lista antes de crearla de nuevo.',
+        }),
       });
     }
   };

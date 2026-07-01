@@ -2,7 +2,6 @@ import { QueryClient } from '@tanstack/react-query';
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import { persistQueryClient } from '@tanstack/react-query-persist-client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { isNetworkError } from './apiError';
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -14,10 +13,12 @@ export const queryClient = new QueryClient({
       refetchOnMount: true,
     },
     mutations: {
-      // Reintenta SOLO errores de red/timeout (blips de WiFi, cold start de Railway),
-      // no errores de validación 4xx. Hasta 2 reintentos con backoff exponencial.
-      retry: (failureCount, error) => isNetworkError(error) && failureCount < 2,
-      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
+      // NO reintentar mutaciones. Un "error de red" en un POST NO significa que el
+      // server no lo procesó: con Railway/OkHttp la respuesta 201 a veces no llega
+      // al cliente (ERR_NETWORK) aunque el registro se haya creado. Reintentar en
+      // ese caso duplicaba los creates no idempotentes (transacciones, etc.). El
+      // cold-start se cubre con el timeout alto de axios (60s), no reintentando.
+      retry: false,
     },
   },
 });

@@ -29,6 +29,7 @@ import {
   ArrowLeftRight,
 } from 'lucide-react-native';
 import { useQueryClient } from '@tanstack/react-query';
+import { makeCreateErrorHandler } from '@/lib/mutationErrors';
 import { useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Card } from '@/components/ui/Card';
@@ -83,11 +84,12 @@ import type { CreateRecurringExpenseDTO } from '@horus/shared';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
-function formatMoney(amount: number, currency = 'ARS'): string {
+function formatMoney(amount: number, currency = 'ARS', decimals = 0): string {
   return new Intl.NumberFormat('es-AR', {
     style: 'currency',
     currency,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
   }).format(amount);
 }
 
@@ -229,7 +231,7 @@ function TransactionRow({
       </TouchableOpacity>
       <Text style={[styles.txAmount, { color: isIncome ? '#22c55e' : Colors.ink }]}>
         {isIncome ? '+' : '-'}
-        {formatMoney(tx.amount, tx.account?.currency)}
+        {formatMoney(tx.amount, tx.account?.currency, 2)}
       </Text>
       {deleting ? (
         <ActivityIndicator size="small" color={Colors.muted} style={{ marginLeft: Spacing.sm }} />
@@ -270,6 +272,7 @@ function TransactionFormModal({
   const { data: categories = [] } = useTxCategories(txType === 'ingreso' ? 'ingresos' : 'egresos');
   const createTx = useCreateTransaction();
   const updateTx = useUpdateTransaction();
+  const queryClient = useQueryClient();
 
   // Cuentas agrupadas por moneda para el selector inline.
   const accountsByCurrency = useMemo(() => {
@@ -317,7 +320,14 @@ function TransactionFormModal({
   const handleSubmit = () => {
     if (!canSubmit) return;
     const parsedAmount = parseFloat(amount.replace(',', '.'));
-    const onError = () => Alert.alert('Error', 'No se pudo guardar el movimiento');
+    const onError = makeCreateErrorHandler({
+      queryClient,
+      invalidateKeys: [transactionKeys.all, accountKeys.all],
+      onClose: handleClose,
+      fallbackMessage: 'No se pudo guardar el movimiento',
+      savedMessage:
+        'La confirmación no llegó por la conexión, pero el movimiento probablemente se guardó. Fijate en la lista antes de cargarlo de nuevo.',
+    });
 
     if (isEditing && editingTransaction) {
       updateTx.mutate(
@@ -523,6 +533,7 @@ function TransferModal({
   const [concept, setConcept] = useState('');
 
   const createTransfer = useCreateTransfer();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!visible) {
@@ -564,10 +575,14 @@ function TransferModal({
       },
       {
         onSuccess: onClose,
-        onError: (err: any) => {
-          const msg = err?.response?.data?.message ?? 'No se pudo realizar la transferencia';
-          Alert.alert('Error', msg);
-        },
+        onError: makeCreateErrorHandler({
+          queryClient,
+          invalidateKeys: [transactionKeys.all, accountKeys.all],
+          onClose,
+          fallbackMessage: 'No se pudo realizar la transferencia',
+          savedMessage:
+            'La confirmación no llegó por la conexión, pero la transferencia probablemente se realizó. Fijate en la lista antes de rehacerla.',
+        }),
       }
     );
   };
@@ -762,6 +777,7 @@ function RecurringFormModal({ visible, onClose }: { visible: boolean; onClose: (
 
   const { data: categories = [] } = useTxCategories('egresos');
   const createRecurring = useCreateRecurringExpense();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!visible) {
@@ -798,7 +814,14 @@ function RecurringFormModal({ visible, onClose }: { visible: boolean; onClose: (
     };
     createRecurring.mutate(dto, {
       onSuccess: onClose,
-      onError: () => Alert.alert('Error', 'No se pudo crear el gasto fijo'),
+      onError: makeCreateErrorHandler({
+        queryClient,
+        invalidateKeys: [recurringKeys.all, monthlyExpenseKeys.all],
+        onClose,
+        fallbackMessage: 'No se pudo crear el gasto fijo',
+        savedMessage:
+          'La confirmación no llegó por la conexión, pero el gasto fijo probablemente se creó. Fijate en la lista antes de crearlo de nuevo.',
+      }),
     });
   };
 
@@ -1156,6 +1179,7 @@ function BudgetFormModal({
   const { data: categories = [] } = useTxCategories('egresos');
   const createBudget = useCreateBudget();
   const updateBudget = useUpdateBudget();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (visible) {
@@ -1188,7 +1212,17 @@ function BudgetFormModal({
     } else {
       createBudget.mutate(
         { categoryId, amount: parseFloat(amount), currency },
-        { onSuccess: handleClose }
+        {
+          onSuccess: handleClose,
+          onError: makeCreateErrorHandler({
+            queryClient,
+            invalidateKeys: [budgetKeys.all],
+            onClose: handleClose,
+            fallbackMessage: 'No se pudo crear el presupuesto',
+            savedMessage:
+              'La confirmación no llegó por la conexión, pero el presupuesto probablemente se creó. Fijate en la lista antes de crearlo de nuevo.',
+          }),
+        }
       );
     }
   };
@@ -1399,6 +1433,7 @@ function SavingsGoalFormModal({
 
   const createGoal = useCreateSavingsGoal();
   const updateGoal = useUpdateSavingsGoal();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (visible) {
@@ -1457,7 +1492,17 @@ function SavingsGoalFormModal({
           targetDate: targetDateISO,
           notes: notes.trim() || null,
         },
-        { onSuccess: handleClose }
+        {
+          onSuccess: handleClose,
+          onError: makeCreateErrorHandler({
+            queryClient,
+            invalidateKeys: [savingsGoalKeys.all],
+            onClose: handleClose,
+            fallbackMessage: 'No se pudo crear la meta de ahorro',
+            savedMessage:
+              'La confirmación no llegó por la conexión, pero la meta probablemente se creó. Fijate en la lista antes de crearla de nuevo.',
+          }),
+        }
       );
     }
   };

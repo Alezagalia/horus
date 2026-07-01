@@ -6,8 +6,10 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://10.0.2.2:3000/api';
 
 export const axiosInstance = axios.create({
   baseURL: API_URL,
-  // 25s: cubre los cold starts de Railway (el contenedor puede tardar en despertar).
-  timeout: 25_000,
+  // 60s: cubre los cold starts de Railway. El contenedor dormido puede tardar 30-45s
+  // en despertar + responder; con 25s el cliente abortaba y mostraba "no se pudo crear"
+  // aunque el POST ya se había procesado en el server (categoría creada pero error en UI).
+  timeout: 60_000,
   headers: { 'Content-Type': 'application/json' },
 });
 

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Alert } from 'react-native';
 import { categoryApi } from '@/services/api/categoryApi';
+import { isNetworkError } from '@/lib/apiError';
 import type { Scope, CreateCategoryDTO, UpdateCategoryDTO } from '@horus/shared';
 
 export const categoryKeys = {
@@ -19,20 +20,29 @@ export function useCategories(scope?: Scope) {
 export function useCreateCategory() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (dto: CreateCategoryDTO) => categoryApi.create(dto),
-    // NO reintentar: crear es un POST no idempotente. Con el cold-start de Railway
-    // el primer POST puede crear la categoría pero tardar más que el timeout de
-    // axios; el retry global (que reintenta timeouts) mandaba un segundo POST que
-    // el backend rechazaba con 409 "ya existe" — la categoría quedaba creada pero
-    // la UI mostraba error. El botón ya se bloquea mientras está pending, así que
-    // sin este retry no hay forma de duplicar el request.
+    // El POST de crear a veces se procesa en el server (categoría creada) pero la
+    // respuesta no llega al cliente (ERR_NETWORK con Railway/OkHttp, o timeout de
+    // cold-start). En ese caso verificamos por GET si la categoría ya existe y lo
+    // tratamos como éxito, en vez de mostrar un error falso. Los GET sí funcionan.
+    mutationFn: async (dto: CreateCategoryDTO) => {
+      try {
+        return await categoryApi.create(dto);
+      } catch (err) {
+        if (isNetworkError(err)) {
+          const list = await categoryApi.list(dto.scope);
+          const target = dto.name.trim().toLowerCase();
+          const found = list.find((c) => c.name.trim().toLowerCase() === target);
+          if (found) return found; // el POST sí persistió
+        }
+        throw err;
+      }
+    },
+    // NO reintentar: crear es un POST no idempotente (evita duplicados).
     retry: false,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: categoryKeys.all });
     },
     onError: (err: unknown) => {
-      // Refrescamos la lista igual: si el POST sí persistió pero la respuesta se
-      // perdió (timeout), la categoría debe aparecer al reabrir.
       queryClient.invalidateQueries({ queryKey: categoryKeys.all });
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
