@@ -20,6 +20,7 @@
   "dependencies": {
     "@expo-google-fonts/inter": "~0.2.3",
     "@horus/shared": "workspace:*",
+    "@nozbe/watermelondb": "^0.28.0",
     "@react-native-async-storage/async-storage": "1.23.1",
     "@react-native-community/datetimepicker": "^8.2.0",
     "@tanstack/query-async-storage-persister": "^5.100.14",
@@ -60,6 +61,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
+    "@babel/plugin-proposal-decorators": "^8.0.2",
     "@config-plugins/detox": "^11.0.0",
     "@testing-library/jest-native": "^5.4.3",
     "@testing-library/react-native": "^13.3.3",

@@ -719,6 +719,12 @@ export default function YoScreen() {
       <SectionLabel label="HERRAMIENTAS" />
       <Card padding={0} solid>
         <SettingRow
+          icon={<Text style={{ fontSize: 15 }}>🧪</Text>}
+          label="WMDB Spike (offline)"
+          onPress={() => router.push('/wmdb-spike' as never)}
+        />
+        <View style={styles.divider} />
+        <SettingRow
           icon={<BarChart2 size={16} color="#F59E0B" />}
           label="Reportes"
           onPress={() => router.push('/reportes')}
