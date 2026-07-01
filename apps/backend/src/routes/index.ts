@@ -35,6 +35,7 @@ import habitMomentRoutes from './habitMoment.routes.js';
 import activityRoutes from './activity.routes.js';
 import subscriptionRoutes from './subscription.routes.js';
 import billingRoutes from './billing.routes.js';
+import replicationRoutes from './replication.routes.js';
 
 const router: IRouter = Router();
 
@@ -44,6 +45,7 @@ router.use('/habits', habitRoutes);
 router.use('/tasks', taskRoutes);
 router.use('/events', eventRoutes);
 router.use('/sync', syncRoutes);
+router.use('/replication', replicationRoutes);
 router.use('/accounts', accountRoutes);
 router.use('/transactions', transactionRoutes);
 router.use('/finance', financeRoutes);
