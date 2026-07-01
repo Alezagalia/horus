@@ -25,7 +25,6 @@ import {
   ChevronRight,
   Trophy,
   Trash2,
-  Plus,
   Pencil,
   X,
 } from 'lucide-react-native';
@@ -294,7 +293,7 @@ function RoutinesView({
       <Card solid style={styles.emptyCard}>
         <Dumbbell size={32} color={Colors.ceilLight} strokeWidth={1} />
         <Text style={styles.emptyTitle}>Sin rutinas</Text>
-        <Text style={styles.emptySub}>Creá tu primera rutina con el botón +</Text>
+        <Text style={styles.emptySub}>Creá tu primera rutina con "+ Nueva" arriba</Text>
       </Card>
     );
   }
@@ -698,7 +697,7 @@ function ExercisesView({ onEdit }: { onEdit: (ex: ExerciseWithStats) => void }) 
             <Text style={styles.emptySub}>
               {muscleFilter
                 ? 'No hay ejercicios en este grupo muscular'
-                : 'Creá tu primer ejercicio con el botón +'}
+                : 'Creá tu primer ejercicio con "+ Nuevo" arriba'}
             </Text>
           </View>
         </Card>
@@ -1302,22 +1301,50 @@ export default function CuerpoScreen() {
         </ScrollView>
 
         {activeTab === 'rutinas' ? (
-          <RoutinesView
-            onStarted={setActiveWorkout}
-            onEdit={(id) => {
-              setEditingRoutineId(id);
-              setShowRoutineModal(true);
-            }}
-          />
+          <>
+            <View style={styles.sectionRow}>
+              <Text style={styles.sectionTitle}>Rutinas</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setEditingRoutineId(null);
+                  setShowRoutineModal(true);
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.sectionLink}>+ Nueva</Text>
+              </TouchableOpacity>
+            </View>
+            <RoutinesView
+              onStarted={setActiveWorkout}
+              onEdit={(id) => {
+                setEditingRoutineId(id);
+                setShowRoutineModal(true);
+              }}
+            />
+          </>
         ) : activeTab === 'historial' ? (
           <HistorialView />
         ) : activeTab === 'ejercicios' ? (
-          <ExercisesView
-            onEdit={(ex) => {
-              setEditingExercise(ex);
-              setShowExerciseModal(true);
-            }}
-          />
+          <>
+            <View style={styles.sectionRow}>
+              <Text style={styles.sectionTitle}>Ejercicios</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setEditingExercise(null);
+                  setShowExerciseModal(true);
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.sectionLink}>+ Nuevo</Text>
+              </TouchableOpacity>
+            </View>
+            <ExercisesView
+              onEdit={(ex) => {
+                setEditingExercise(ex);
+                setShowExerciseModal(true);
+              }}
+            />
+          </>
         ) : activeTab === 'stats' ? (
           <StatsView />
         ) : (
@@ -1332,32 +1359,6 @@ export default function CuerpoScreen() {
           onFinish={handleWorkoutFinished}
           onCancel={() => setActiveWorkout(null)}
         />
-      )}
-
-      {activeTab === 'ejercicios' && !activeWorkout && (
-        <TouchableOpacity
-          style={styles.exerciseFab}
-          onPress={() => {
-            setEditingExercise(null);
-            setShowExerciseModal(true);
-          }}
-          activeOpacity={0.85}
-        >
-          <Plus size={24} color="#fff" strokeWidth={2} />
-        </TouchableOpacity>
-      )}
-
-      {activeTab === 'rutinas' && !activeWorkout && (
-        <TouchableOpacity
-          style={styles.exerciseFab}
-          onPress={() => {
-            setEditingRoutineId(null);
-            setShowRoutineModal(true);
-          }}
-          activeOpacity={0.85}
-        >
-          <Plus size={24} color="#fff" strokeWidth={2} />
-        </TouchableOpacity>
       )}
 
       <ExerciseFormModal
@@ -1451,6 +1452,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.ink,
     letterSpacing: -0.2,
+  },
+  sectionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  sectionLink: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+    color: Colors.vivid,
   },
   sectionBadge: {
     backgroundColor: Colors.ice,
@@ -1595,20 +1607,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_500Medium',
     fontSize: 12,
     color: Colors.muted,
-  },
-
-  // Exercise library
-  exerciseFab: {
-    position: 'absolute',
-    right: Spacing.lg,
-    bottom: Layout.tabBarHeight + Layout.tabBarOffset,
-    width: 52,
-    height: 52,
-    borderRadius: Radius.fab,
-    backgroundColor: Colors.vivid,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...Shadows.fab,
   },
   filterScroll: {
     marginBottom: Spacing.xl,

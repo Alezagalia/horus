@@ -21,7 +21,6 @@ import {
   ChevronRight,
   TrendingUp,
   TrendingDown,
-  Plus,
   X,
   Trash2,
   Undo2,
@@ -1842,6 +1841,7 @@ export default function DineroScreen() {
                   <Text style={styles.sectionBadgeText}>{transactions.length}</Text>
                 </View>
               )}
+              <View style={{ flex: 1 }} />
               {accounts.length >= 2 && (
                 <TouchableOpacity
                   style={styles.transferBtn}
@@ -1852,6 +1852,15 @@ export default function DineroScreen() {
                   <Text style={styles.transferBtnLabel}>Transferir</Text>
                 </TouchableOpacity>
               )}
+              <TouchableOpacity
+                onPress={() => {
+                  setEditingTx(null);
+                  setShowModal(true);
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.newBtn}>+ Nuevo</Text>
+              </TouchableOpacity>
             </View>
 
             {txLoading ? (
@@ -2021,6 +2030,25 @@ export default function DineroScreen() {
           </>
         ) : activeTab === 'presupuestos' ? (
           <>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Presupuestos</Text>
+              {budgetSummary.length > 0 && (
+                <View style={styles.sectionBadge}>
+                  <Text style={styles.sectionBadgeText}>{budgetSummary.length}</Text>
+                </View>
+              )}
+              <View style={{ flex: 1 }} />
+              <TouchableOpacity
+                onPress={() => {
+                  setBudgetEditing(null);
+                  setShowBudgetModal(true);
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.newBtn}>+ Nuevo</Text>
+              </TouchableOpacity>
+            </View>
+
             {budgetLoading ? (
               <ActivityIndicator color={Colors.vivid} style={{ marginVertical: 24 }} />
             ) : budgetSummary.length === 0 ? (
@@ -2072,6 +2100,16 @@ export default function DineroScreen() {
                   <Text style={styles.sectionBadgeText}>{activeSavings.length}</Text>
                 </View>
               )}
+              <View style={{ flex: 1 }} />
+              <TouchableOpacity
+                onPress={() => {
+                  setSavingsEditing(null);
+                  setShowSavingsModal(true);
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.newBtn}>+ Nuevo</Text>
+              </TouchableOpacity>
             </View>
 
             {savingsLoading ? (
@@ -2161,27 +2199,6 @@ export default function DineroScreen() {
 
         <View style={{ height: Layout.tabBarHeight + Layout.tabBarOffset + 16 }} />
       </ScreenContainer>
-
-      {(activeTab === 'movimientos' || activeTab === 'presupuestos' || activeTab === 'ahorro') && (
-        <TouchableOpacity
-          style={styles.fab}
-          onPress={() => {
-            if (activeTab === 'presupuestos') {
-              setBudgetEditing(null);
-              setShowBudgetModal(true);
-            } else if (activeTab === 'ahorro') {
-              setSavingsEditing(null);
-              setShowSavingsModal(true);
-            } else {
-              setEditingTx(null);
-              setShowModal(true);
-            }
-          }}
-          activeOpacity={0.85}
-        >
-          <Plus size={24} color="#fff" strokeWidth={2} />
-        </TouchableOpacity>
-      )}
 
       <TransactionFormModal
         visible={showModal}
@@ -2413,20 +2430,6 @@ const styles = StyleSheet.create({
   txAmount: {
     fontFamily: 'Inter_700Bold',
     fontSize: 14,
-  },
-
-  // FAB
-  fab: {
-    position: 'absolute',
-    right: Spacing.lg,
-    bottom: Layout.tabBarHeight + Layout.tabBarOffset,
-    width: 52,
-    height: 52,
-    borderRadius: Radius.fab,
-    backgroundColor: Colors.vivid,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...Shadows.fab,
   },
 
   // Modal
