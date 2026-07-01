@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -112,56 +112,31 @@ function formatBalance(amount: number, currency: string): string {
 function AccountRow({
   account,
   onEdit,
-  onDeactivate,
   isLast,
 }: {
   account: Account;
   onEdit: () => void;
-  onDeactivate: () => void;
   isLast?: boolean;
 }) {
-  const typeColor = ACCOUNT_TYPE_COLORS[account.type] ?? Colors.muted;
   return (
-    <View style={[styles.accountRow, !isLast && styles.divider]}>
-      <View style={[styles.accountTypeIcon, { backgroundColor: typeColor + '22' }]}>
-        <Text style={styles.accountTypeEmoji}>{ACCOUNT_TYPE_ICONS[account.type] ?? '💰'}</Text>
-      </View>
-      <View style={styles.accountInfo}>
-        <Text style={[styles.accountName, !account.isActive && { color: Colors.muted }]}>
-          {account.name}
-          {!account.isActive ? ' (inactiva)' : ''}
-        </Text>
-        <Text style={styles.accountMeta}>
-          {ACCOUNT_TYPE_LABELS[account.type]} · {account.currency}
-        </Text>
-      </View>
+    <TouchableOpacity
+      style={[styles.accountRow, !isLast && styles.accountRowBorder]}
+      onPress={onEdit}
+      activeOpacity={0.6}
+    >
       <Text
-        style={[styles.accountBalance, { color: account.balance < 0 ? '#ef4444' : Colors.ink }]}
+        style={[styles.accountName, !account.isActive && { color: Colors.muted }]}
+        numberOfLines={1}
+      >
+        {account.name}
+      </Text>
+      <Text
+        style={[styles.accountBalance, { color: account.balance < 0 ? '#ef4444' : Colors.muted }]}
       >
         {formatBalance(account.balance, account.currency)}
       </Text>
-      <TouchableOpacity onPress={onEdit} hitSlop={8} style={styles.accountAction}>
-        <Pencil size={14} color={Colors.muted} strokeWidth={1.5} />
-      </TouchableOpacity>
-      {account.isActive && (
-        <TouchableOpacity
-          onPress={() =>
-            Alert.alert(
-              'Desactivar cuenta',
-              `¿Desactivar "${account.name}"? Ya no aparecerá en tus movimientos.`,
-              [
-                { text: 'Cancelar', style: 'cancel' },
-                { text: 'Desactivar', style: 'destructive', onPress: onDeactivate },
-              ]
-            )
-          }
-          hitSlop={8}
-          style={styles.accountAction}
-        >
-          <Trash2 size={14} color={Colors.muted} strokeWidth={1.5} />
-        </TouchableOpacity>
-      )}
-    </View>
+      <ChevronRight size={16} color={Colors.muted} />
+    </TouchableOpacity>
   );
 }
 
@@ -186,7 +161,28 @@ function AccountFormModal({
 
   const createAccount = useCreateAccount();
   const updateAccount = useUpdateAccount();
+  const deactivateAccount = useDeactivateAccount();
   const isBusy = createAccount.isPending || updateAccount.isPending;
+
+  const handleDeactivate = () => {
+    if (!account) return;
+    Alert.alert(
+      'Desactivar cuenta',
+      `¿Desactivar "${account.name}"? Ya no aparecerá en tus movimientos.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Desactivar',
+          style: 'destructive',
+          onPress: () =>
+            deactivateAccount.mutate(account.id, {
+              onSuccess: onClose,
+              onError: () => Alert.alert('Error', 'No se pudo desactivar la cuenta'),
+            }),
+        },
+      ]
+    );
+  };
 
   useEffect(() => {
     if (visible) {
@@ -346,6 +342,18 @@ function AccountFormModal({
               loading={isBusy}
               disabled={!name.trim() || isBusy}
             />
+
+            {isEdit && account?.isActive && (
+              <TouchableOpacity
+                style={styles.deactivateBtn}
+                onPress={handleDeactivate}
+                disabled={deactivateAccount.isPending}
+                activeOpacity={0.7}
+              >
+                <Trash2 size={15} color="#ef4444" strokeWidth={1.8} />
+                <Text style={styles.deactivateBtnText}>Desactivar cuenta</Text>
+              </TouchableOpacity>
+            )}
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
@@ -475,8 +483,24 @@ export default function YoScreen() {
   const [editingAccount, setEditingAccount] = useState<Account | undefined>(undefined);
 
   const { data: accountsData } = useAccounts();
-  const deactivateAccount = useDeactivateAccount();
   const accounts = accountsData?.accounts ?? [];
+
+  // Cuentas activas agrupadas por moneda (con subtotal); inactivas aparte.
+  const { accountGroups, inactiveAccounts } = useMemo(() => {
+    const active = accounts.filter((a) => a.isActive);
+    const inactive = accounts.filter((a) => !a.isActive);
+    const map = new Map<string, typeof accounts>();
+    active.forEach((a) => {
+      if (!map.has(a.currency)) map.set(a.currency, []);
+      map.get(a.currency)!.push(a);
+    });
+    const groups = Array.from(map, ([currency, accs]) => ({
+      currency,
+      accounts: accs,
+      subtotal: accs.reduce((s, a) => s + Number(a.balance || 0), 0),
+    }));
+    return { accountGroups: groups, inactiveAccounts: inactive };
+  }, [accounts]);
 
   if (!user) return null;
 
@@ -631,24 +655,55 @@ export default function YoScreen() {
           <Text style={styles.emptyText}>Sin cuentas registradas</Text>
         </Card>
       ) : (
-        <Card padding={0} solid>
-          {accounts.map((acc, i) => (
-            <AccountRow
-              key={acc.id}
-              account={acc}
-              onEdit={() => {
-                setEditingAccount(acc);
-                setShowAccountModal(true);
-              }}
-              onDeactivate={() =>
-                deactivateAccount.mutate(acc.id, {
-                  onError: () => Alert.alert('Error', 'No se pudo desactivar la cuenta'),
-                })
-              }
-              isLast={i === accounts.length - 1}
-            />
+        <>
+          {accountGroups.map((group) => (
+            <View key={group.currency} style={styles.accountGroup}>
+              <View style={styles.accountGroupHeader}>
+                <Text style={styles.accountGroupTitle}>
+                  {group.currency} · {group.accounts.length}{' '}
+                  {group.accounts.length === 1 ? 'cuenta' : 'cuentas'}
+                </Text>
+                <Text style={styles.accountGroupSubtotal}>
+                  {formatBalance(group.subtotal, group.currency)}
+                </Text>
+              </View>
+              <Card padding={0} solid>
+                {group.accounts.map((acc, i) => (
+                  <AccountRow
+                    key={acc.id}
+                    account={acc}
+                    onEdit={() => {
+                      setEditingAccount(acc);
+                      setShowAccountModal(true);
+                    }}
+                    isLast={i === group.accounts.length - 1}
+                  />
+                ))}
+              </Card>
+            </View>
           ))}
-        </Card>
+
+          {inactiveAccounts.length > 0 && (
+            <View style={styles.accountGroup}>
+              <View style={styles.accountGroupHeader}>
+                <Text style={styles.accountGroupTitle}>INACTIVAS · {inactiveAccounts.length}</Text>
+              </View>
+              <Card padding={0} solid>
+                {inactiveAccounts.map((acc, i) => (
+                  <AccountRow
+                    key={acc.id}
+                    account={acc}
+                    onEdit={() => {
+                      setEditingAccount(acc);
+                      setShowAccountModal(true);
+                    }}
+                    isLast={i === inactiveAccounts.length - 1}
+                  />
+                ))}
+              </Card>
+            </View>
+          )}
+        </>
       )}
 
       {/* ─── Herramientas ─────────────────────────────────────────── */}
@@ -1055,37 +1110,56 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.lg,
-    paddingVertical: 12,
-    gap: Spacing.sm,
+    paddingVertical: 14,
+    gap: Spacing.md,
   },
-  accountTypeIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: Radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
+  accountRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.line,
   },
-  accountTypeEmoji: {
-    fontSize: 18,
-  },
-  accountInfo: { flex: 1 },
   accountName: {
+    flex: 1,
     fontFamily: 'Inter_500Medium',
     fontSize: 14,
     color: Colors.ink,
-    marginBottom: 2,
-  },
-  accountMeta: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 12,
-    color: Colors.muted,
   },
   accountBalance: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: 'Inter_500Medium',
     fontSize: 14,
   },
-  accountAction: {
-    padding: 4,
+  accountGroup: {
+    marginBottom: Spacing.md,
+  },
+  accountGroupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 2,
+    marginBottom: Spacing.xs,
+  },
+  accountGroupTitle: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 11,
+    color: Colors.muted,
+    letterSpacing: 0.5,
+  },
+  accountGroupSubtotal: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 13,
+    color: Colors.ink,
+  },
+  deactivateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    marginTop: Spacing.md,
+  },
+  deactivateBtnText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+    color: '#ef4444',
   },
 
   // Empty state
