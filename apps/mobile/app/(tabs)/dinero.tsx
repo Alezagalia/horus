@@ -19,6 +19,7 @@ import { es } from 'date-fns/locale';
 import {
   ChevronLeft,
   ChevronRight,
+  Check,
   TrendingUp,
   TrendingDown,
   X,
@@ -177,39 +178,6 @@ function MoneyHeroCard({
   );
 }
 
-function AccountChip({
-  account,
-  active,
-  onPress,
-}: {
-  account: Account;
-  active: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={0.8}
-      style={[styles.accountChip, active && styles.accountChipActive]}
-    >
-      {account.color && <View style={[styles.accountDot, { backgroundColor: account.color }]} />}
-      <View>
-        <Text style={[styles.accountChipName, { color: active ? '#fff' : Colors.ink }]}>
-          {account.name}
-        </Text>
-        <Text
-          style={[
-            styles.accountChipBal,
-            { color: active ? 'rgba(255,255,255,0.75)' : Colors.muted },
-          ]}
-        >
-          {formatMoney(account.balance, account.currency)}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
-}
-
 function TransactionRow({
   tx,
   onEdit,
@@ -303,6 +271,16 @@ function TransactionFormModal({
   const createTx = useCreateTransaction();
   const updateTx = useUpdateTransaction();
 
+  // Cuentas agrupadas por moneda para el selector inline.
+  const accountsByCurrency = useMemo(() => {
+    const map = new Map<string, typeof accounts>();
+    accounts.forEach((a) => {
+      if (!map.has(a.currency)) map.set(a.currency, []);
+      map.get(a.currency)!.push(a);
+    });
+    return Array.from(map, ([currency, accs]) => ({ currency, accounts: accs }));
+  }, [accounts]);
+
   useEffect(() => {
     if (!visible) return;
     if (editingTransaction) {
@@ -388,130 +366,140 @@ function TransactionFormModal({
             </TouchableOpacity>
           </View>
 
-          <View style={styles.typeToggle}>
-            <TouchableOpacity
-              style={[styles.typeBtn, txType === 'egreso' && styles.typeBtnEgreso]}
-              onPress={() => {
-                if (!isEditing) {
-                  setTxType('egreso');
-                  setCategoryId('');
-                }
-              }}
-              disabled={isEditing}
-            >
-              <Text
-                style={[
-                  styles.typeBtnLabel,
-                  { color: txType === 'egreso' ? '#fff' : Colors.muted },
-                ]}
-              >
-                Egreso
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.typeBtn, txType === 'ingreso' && styles.typeBtnIngreso]}
-              onPress={() => {
-                if (!isEditing) {
-                  setTxType('ingreso');
-                  setCategoryId('');
-                }
-              }}
-              disabled={isEditing}
-            >
-              <Text
-                style={[
-                  styles.typeBtnLabel,
-                  { color: txType === 'ingreso' ? '#fff' : Colors.muted },
-                ]}
-              >
-                Ingreso
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <TextInput
-            style={styles.amountInput}
-            value={amount}
-            onChangeText={setAmount}
-            placeholder="0"
-            placeholderTextColor={Colors.ceilLight}
-            keyboardType="numeric"
-            autoFocus={!isEditing}
-          />
-
-          <TextInput
-            style={styles.conceptInput}
-            value={concept}
-            onChangeText={setConcept}
-            placeholder="Concepto..."
-            placeholderTextColor={Colors.muted}
-            returnKeyType="done"
-          />
-
-          <Text style={styles.pickerLabel}>Cuenta{isEditing ? ' (no editable)' : ''}</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.pickerScroll}
-            contentContainerStyle={{ gap: Spacing.sm }}
-          >
-            {accounts.map((a) => (
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <View style={styles.typeToggle}>
               <TouchableOpacity
-                key={a.id}
-                style={[
-                  styles.pickerChip,
-                  accountId === a.id && styles.pickerChipActive,
-                  isEditing && accountId !== a.id && { opacity: 0.4 },
-                ]}
-                onPress={() => !isEditing && setAccountId(a.id)}
+                style={[styles.typeBtn, txType === 'egreso' && styles.typeBtnEgreso]}
+                onPress={() => {
+                  if (!isEditing) {
+                    setTxType('egreso');
+                    setCategoryId('');
+                  }
+                }}
                 disabled={isEditing}
               >
-                {a.color && <View style={[styles.accountDot, { backgroundColor: a.color }]} />}
                 <Text
                   style={[
-                    styles.pickerChipLabel,
-                    { color: accountId === a.id ? '#fff' : Colors.ink },
+                    styles.typeBtnLabel,
+                    { color: txType === 'egreso' ? '#fff' : Colors.muted },
                   ]}
                 >
-                  {a.name}
+                  Egreso
                 </Text>
               </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          <Text style={styles.pickerLabel}>Categoría</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.pickerScroll}
-            contentContainerStyle={{ gap: Spacing.sm }}
-          >
-            {categories.map((c) => (
               <TouchableOpacity
-                key={c.id}
-                style={[styles.pickerChip, categoryId === c.id && styles.pickerChipActive]}
-                onPress={() => setCategoryId(c.id)}
+                style={[styles.typeBtn, txType === 'ingreso' && styles.typeBtnIngreso]}
+                onPress={() => {
+                  if (!isEditing) {
+                    setTxType('ingreso');
+                    setCategoryId('');
+                  }
+                }}
+                disabled={isEditing}
               >
-                {c.icon && <Text style={{ fontSize: 14 }}>{c.icon}</Text>}
                 <Text
                   style={[
-                    styles.pickerChipLabel,
-                    { color: categoryId === c.id ? '#fff' : Colors.ink },
+                    styles.typeBtnLabel,
+                    { color: txType === 'ingreso' ? '#fff' : Colors.muted },
                   ]}
                 >
-                  {c.name}
+                  Ingreso
                 </Text>
               </TouchableOpacity>
-            ))}
-          </ScrollView>
+            </View>
 
-          <Button
-            label={isEditing ? 'Guardar cambios' : 'Guardar movimiento'}
-            onPress={handleSubmit}
-            loading={createTx.isPending || updateTx.isPending}
-            disabled={!canSubmit}
-            style={{ marginTop: Spacing.lg }}
-          />
+            <TextInput
+              style={styles.amountInput}
+              value={amount}
+              onChangeText={setAmount}
+              placeholder="0"
+              placeholderTextColor={Colors.ceilLight}
+              keyboardType="numeric"
+              autoFocus={!isEditing}
+            />
+
+            <TextInput
+              style={styles.conceptInput}
+              value={concept}
+              onChangeText={setConcept}
+              placeholder="Concepto..."
+              placeholderTextColor={Colors.muted}
+              returnKeyType="done"
+            />
+
+            <Text style={styles.pickerLabel}>Cuenta{isEditing ? ' (no editable)' : ''}</Text>
+            <View style={[styles.formListCard, isEditing && { opacity: 0.6 }]}>
+              <ScrollView
+                style={styles.formList}
+                nestedScrollEnabled
+                keyboardShouldPersistTaps="handled"
+              >
+                {accountsByCurrency.map((group) => (
+                  <View key={group.currency}>
+                    <View style={styles.currencyHeader}>
+                      <Text style={styles.currencyHeaderText}>{group.currency}</Text>
+                    </View>
+                    {group.accounts.map((a) => (
+                      <TouchableOpacity
+                        key={a.id}
+                        style={[styles.filterRow, accountId === a.id && styles.filterRowActive]}
+                        onPress={() => !isEditing && setAccountId(a.id)}
+                        disabled={isEditing}
+                        activeOpacity={0.7}
+                      >
+                        <View
+                          style={[styles.accountDot, a.color ? { backgroundColor: a.color } : null]}
+                        />
+                        <Text style={styles.filterRowName} numberOfLines={1}>
+                          {a.name}
+                        </Text>
+                        <Text style={styles.filterRowBal}>
+                          {formatMoney(a.balance, a.currency)}
+                        </Text>
+                        {accountId === a.id && <Check size={18} color={Colors.vivid} />}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+
+            <Text style={styles.pickerLabel}>Categoría</Text>
+            <View style={styles.formListCard}>
+              <ScrollView
+                style={styles.formList}
+                nestedScrollEnabled
+                keyboardShouldPersistTaps="handled"
+              >
+                {categories.length === 0 ? (
+                  <Text style={styles.formListEmpty}>No hay categorías de este tipo</Text>
+                ) : (
+                  categories.map((c) => (
+                    <TouchableOpacity
+                      key={c.id}
+                      style={[styles.filterRow, categoryId === c.id && styles.filterRowActive]}
+                      onPress={() => setCategoryId(c.id)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.catRowIcon}>{c.icon || '📁'}</Text>
+                      <Text style={styles.filterRowName} numberOfLines={1}>
+                        {c.name}
+                      </Text>
+                      {categoryId === c.id && <Check size={18} color={Colors.vivid} />}
+                    </TouchableOpacity>
+                  ))
+                )}
+              </ScrollView>
+            </View>
+
+            <Button
+              label={isEditing ? 'Guardar cambios' : 'Guardar movimiento'}
+              onPress={handleSubmit}
+              loading={createTx.isPending || updateTx.isPending}
+              disabled={!canSubmit}
+              style={{ marginTop: Spacing.lg }}
+            />
+          </ScrollView>
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -1702,6 +1690,30 @@ export default function DineroScreen() {
   );
 
   const accounts = accountsData?.accounts ?? [];
+
+  // Saldo total por moneda (no se suman monedas distintas).
+  const balancesByCurrency = useMemo(() => {
+    const map = new Map<string, number>();
+    accounts.forEach((a) =>
+      map.set(a.currency, (map.get(a.currency) ?? 0) + Number(a.balance || 0))
+    );
+    return Array.from(map, ([currency, total]) => ({ currency, total }));
+  }, [accounts]);
+
+  // Cuentas agrupadas por moneda (con subtotal) para la grilla de filtro.
+  const accountsByCurrency = useMemo(() => {
+    const map = new Map<string, typeof accounts>();
+    accounts.forEach((a) => {
+      if (!map.has(a.currency)) map.set(a.currency, []);
+      map.get(a.currency)!.push(a);
+    });
+    return Array.from(map, ([currency, accs]) => ({
+      currency,
+      accounts: accs,
+      subtotal: accs.reduce((s, a) => s + Number(a.balance || 0), 0),
+    }));
+  }, [accounts]);
+
   const transactions = txData?.transactions ?? [];
   const grouped = useMemo(() => groupByDate(transactions), [transactions]);
 
@@ -1797,40 +1809,75 @@ export default function DineroScreen() {
           <>
             {accounts.length > 0 && (
               <>
-                <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>Cuentas</Text>
+                <View style={styles.accountsSummary}>
+                  <Text style={styles.accountsSummaryLabel}>Saldo total</Text>
+                  <Text style={styles.accountsSummaryValue}>
+                    {balancesByCurrency
+                      .map((b) => formatMoney(b.total, b.currency))
+                      .join('   ·   ')}
+                  </Text>
+                  <Text style={styles.accountsCount}>
+                    {accounts.length} {accounts.length === 1 ? 'cuenta' : 'cuentas'}
+                  </Text>
                 </View>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={{ gap: Spacing.sm, paddingRight: Spacing.screenX }}
-                  style={{ marginBottom: Spacing.sm }}
-                >
-                  <TouchableOpacity
-                    style={[
-                      styles.accountChip,
-                      selectedAccountId === null && styles.accountChipActive,
-                    ]}
-                    onPress={() => setSelectedAccountId(null)}
+
+                <Card padding={0} solid style={styles.accountGrid}>
+                  <ScrollView
+                    style={styles.accountGridScroll}
+                    nestedScrollEnabled
+                    keyboardShouldPersistTaps="handled"
                   >
-                    <Text
+                    <TouchableOpacity
                       style={[
-                        styles.accountChipName,
-                        { color: selectedAccountId === null ? '#fff' : Colors.ink },
+                        styles.filterRow,
+                        selectedAccountId === null && styles.filterRowActive,
                       ]}
+                      onPress={() => setSelectedAccountId(null)}
+                      activeOpacity={0.7}
                     >
-                      Todas
-                    </Text>
-                  </TouchableOpacity>
-                  {accounts.map((a) => (
-                    <AccountChip
-                      key={a.id}
-                      account={a}
-                      active={selectedAccountId === a.id}
-                      onPress={() => setSelectedAccountId(selectedAccountId === a.id ? null : a.id)}
-                    />
-                  ))}
-                </ScrollView>
+                      <Text style={[styles.filterRowName, { flex: 1 }]}>Todas las cuentas</Text>
+                      {selectedAccountId === null && <Check size={18} color={Colors.vivid} />}
+                    </TouchableOpacity>
+
+                    {accountsByCurrency.map((group) => (
+                      <View key={group.currency}>
+                        <View style={styles.currencyHeader}>
+                          <Text style={styles.currencyHeaderText}>{group.currency}</Text>
+                          <Text style={styles.currencyHeaderSub}>
+                            {formatMoney(group.subtotal, group.currency)}
+                          </Text>
+                        </View>
+                        {group.accounts.map((a) => (
+                          <TouchableOpacity
+                            key={a.id}
+                            style={[
+                              styles.filterRow,
+                              selectedAccountId === a.id && styles.filterRowActive,
+                            ]}
+                            onPress={() =>
+                              setSelectedAccountId(selectedAccountId === a.id ? null : a.id)
+                            }
+                            activeOpacity={0.7}
+                          >
+                            <View
+                              style={[
+                                styles.accountDot,
+                                a.color ? { backgroundColor: a.color } : null,
+                              ]}
+                            />
+                            <Text style={styles.filterRowName} numberOfLines={1}>
+                              {a.name}
+                            </Text>
+                            <Text style={styles.filterRowBal}>
+                              {formatMoney(a.balance, a.currency)}
+                            </Text>
+                            {selectedAccountId === a.id && <Check size={18} color={Colors.vivid} />}
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    ))}
+                  </ScrollView>
+                </Card>
               </>
             )}
 
@@ -2350,37 +2397,93 @@ const styles = StyleSheet.create({
     color: Colors.vivid,
   },
 
-  // Account chips
-  accountChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: Radius.pill,
-    backgroundColor: Colors.surfaceSolid,
-    borderWidth: 1,
-    borderColor: Colors.line,
-    ...Shadows.account,
-  },
-  accountChipActive: {
-    backgroundColor: Colors.vivid,
-    borderColor: Colors.vivid,
-    ...Shadows.cta,
-  },
   accountDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
+    backgroundColor: Colors.ceilLight,
   },
-  accountChipName: {
-    fontFamily: 'Inter_600SemiBold',
-    fontSize: 13,
+
+  // Accounts summary + filter (movimientos)
+  accountsSummary: {
+    backgroundColor: Colors.surfaceSolid,
+    borderRadius: Radius.xl,
+    borderWidth: 1,
+    borderColor: Colors.line,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    marginBottom: Spacing.sm,
+    ...Shadows.account,
   },
-  accountChipBal: {
+  accountsSummaryLabel: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 12,
+    color: Colors.muted,
+  },
+  accountsSummaryValue: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 18,
+    color: Colors.ink,
+    letterSpacing: -0.3,
+    marginTop: 2,
+  },
+  accountsCount: {
     fontFamily: 'Inter_400Regular',
     fontSize: 11,
-    marginTop: 1,
+    color: Colors.muted,
+    marginTop: 2,
+  },
+
+  // Account filter grid (inline, scrollable — muestra ~5 cuentas)
+  accountGrid: {
+    marginBottom: Spacing.md,
+  },
+  accountGridScroll: {
+    maxHeight: 280,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.line,
+  },
+  filterRowActive: {
+    backgroundColor: 'rgba(30,107,255,0.08)',
+  },
+  filterRowName: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 14,
+    color: Colors.ink,
+    flex: 1,
+    minWidth: 0,
+  },
+  filterRowBal: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 13,
+    color: Colors.muted,
+  },
+  currencyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
+    paddingBottom: 4,
+    backgroundColor: Colors.bgTop,
+  },
+  currencyHeaderText: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: 11,
+    color: Colors.muted,
+    letterSpacing: 0.5,
+  },
+  currencyHeaderSub: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 12,
+    color: Colors.ink,
   },
 
   // Date header
@@ -2445,6 +2548,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.lg,
     paddingBottom: 40,
+    maxHeight: '88%',
+  },
+  formListCard: {
+    borderWidth: 1,
+    borderColor: Colors.line,
+    borderRadius: Radius.lg,
+    backgroundColor: Colors.surfaceSolid,
+    overflow: 'hidden',
+    marginBottom: Spacing.md,
+  },
+  formList: {
+    maxHeight: 176,
+  },
+  formListEmpty: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    color: Colors.muted,
+    textAlign: 'center',
+    paddingVertical: Spacing.lg,
+  },
+  catRowIcon: {
+    fontSize: 16,
+    width: 20,
+    textAlign: 'center',
   },
   modalHeader: {
     flexDirection: 'row',
