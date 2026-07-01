@@ -17,7 +17,10 @@ export async function idempotencyMiddleware(
 ): Promise<void> {
   try {
     const key = req.header('Idempotency-Key');
-    if (!key || req.method !== 'POST') {
+    // Sólo actúa si el request trae Idempotency-Key. Cubre POST (creates) y PUT
+    // (pagos, undo, updates) — operaciones donde perder la respuesta por red y
+    // reintentar podría re-ejecutar.
+    if (!key || (req.method !== 'POST' && req.method !== 'PUT')) {
       next();
       return;
     }
