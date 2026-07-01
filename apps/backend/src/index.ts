@@ -15,6 +15,7 @@ import { initializeFirebaseAdmin } from './lib/firebase-admin.js';
 import { initSentry } from './lib/sentry.js';
 import { logInfo, logError } from './lib/logger.js';
 import { requestLoggerMiddleware } from './middlewares/request-logger.middleware.js';
+import { idempotencyMiddleware } from './middlewares/idempotency.middleware.js';
 import { generalLimiter } from './middlewares/rate-limit.middleware.js';
 import { getCorsOptions, apiHelmetOptions } from './config/security.js';
 
@@ -87,6 +88,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Request logging (US-115)
 app.use(requestLoggerMiddleware);
+
+// Idempotencia de POSTs (Idempotency-Key) — antes de las rutas
+app.use(idempotencyMiddleware);
 
 // ===========================================
 // API Routes

@@ -738,6 +738,19 @@ model Account {
   @@map("accounts")
 }
 
+/// Idempotencia: guarda la respuesta de un POST por `Idempotency-Key` (UUID de cliente).
+/// Si llega otro POST con la misma clave, se devuelve la respuesta cacheada en vez de
+/// re-ejecutar (evita duplicados cuando la respuesta original se perdió por red).
+model IdempotencyKey {
+  key        String   @id
+  statusCode Int
+  response   Json
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("idempotency_keys")
+}
+
 /// Transaction: Modelo de transacciones financieras
 /// Sprint 9 - US-073
 ///
