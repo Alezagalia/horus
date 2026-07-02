@@ -9,6 +9,10 @@ dockerfilePath = "Dockerfile"
 watchPatterns = ["apps/**", "packages/**"]
 
 [deploy]
+# Keep the service awake 24/7: with Serverless/App Sleeping on, Railway stops
+# the container after ~10 min without traffic and the next request pays a
+# multi-second cold start (the mobile app's first request after idle).
+sleepApplication = false
 healthcheckPath = "/api/health"
 healthcheckTimeout = 30
 restartPolicyType = "ON_FAILURE"
