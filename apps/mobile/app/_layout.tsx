@@ -64,10 +64,6 @@ export default function RootLayout() {
             name="actividades"
             options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
-          <Stack.Screen
-            name="wmdb-spike"
-            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-          />
         </Stack>
       </QueryClientProvider>
     </GestureHandlerRootView>

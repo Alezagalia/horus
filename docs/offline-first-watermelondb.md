@@ -1,7 +1,24 @@
 # Offline-first (Nivel 2) con WatermelonDB — Plan
 
-> Estado: **Fase 0 (spike) en curso**. Se avanza al plan completo solo si persisten
-> los errores de red / se decide invertir en offline-first. Guardado el 2026-07-01.
+> Estado: **Fase 1 (dominio Dinero) IMPLEMENTADA** (2026-07-02, branch
+> `feat/offline-first-dinero`). Pendiente: E2E en tablet (modo avión) antes de
+> mergear a `main`. La Fase 0 (spike) fue validada y su código temporal eliminado.
+>
+> **Qué quedó construido en Fase 1:**
+>
+> - Backend: `/api/replication` pull/push de 7 tablas (accounts, categories de
+>   dinero, transactions, recurring_expenses, monthly_expense_instances, budgets,
+>   savings_goals) en `src/services/replication/`. Tombstones (`replication_tombstones`)
+>   para el hard delete de transactions + purga diaria (180 días) + guard de
+>   full-resync. Push atómico con invariantes: deltas de saldo server-side,
+>   pares de transferencia, claim idempotente de pago, LWW client-wins
+>   (tombstone gana, claim gana). `Transaction.monthlyExpenseInstanceId` vincula
+>   pago↔instancia (adiós heurística por concepto).
+> - Mobile: schema Watermelon v2 (7 tablas), IDs UUID de cliente, sync engine
+>   (`src/db/sync.ts` + `syncScheduler.ts`: foreground/NetInfo/debounce/manual),
+>   `syncStore` + `SyncStatusDot` en Dinero. Reads y writes de Dinero 100%
+>   locales (`moneyQueries.ts`/`moneyWrites.ts`) manteniendo las firmas de los
+>   hooks. `useFinanceStats` sigue online; `useCategories` (gestión) sigue REST.
 
 ## Objetivo
 

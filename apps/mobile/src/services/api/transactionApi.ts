@@ -1,5 +1,6 @@
-import { axiosInstance } from '../axios';
-import { postIdempotent } from '../idempotent';
+// Offline-first Fase 1: las transacciones se leen/escriben en WatermelonDB
+// (src/db/moneyQueries|moneyWrites) y se replican vía /api/replication.
+// Este módulo conserva solo los TIPOS del dominio que consume la UI.
 
 export type TransactionType = 'ingreso' | 'egreso';
 
@@ -66,42 +67,3 @@ export interface CreateTransferDTO {
   date: string;
   notes?: string;
 }
-
-export const transactionApi = {
-  list: async (filters?: {
-    accountId?: string;
-    type?: TransactionType;
-    from?: string;
-    to?: string;
-    limit?: number;
-    offset?: number;
-  }): Promise<TransactionListResult> => {
-    const { data } = await axiosInstance.get('/transactions', { params: filters });
-    return data;
-  },
-
-  create: async (dto: CreateTransactionDTO): Promise<Transaction> => {
-    const data = await postIdempotent<any>('/transactions', dto);
-    return data.transaction ?? data;
-  },
-
-  update: async (transactionId: string, dto: UpdateTransactionDTO): Promise<Transaction> => {
-    const { data } = await axiosInstance.put(`/transactions/${transactionId}`, dto);
-    return data.transaction ?? data;
-  },
-
-  createTransfer: async (dto: CreateTransferDTO): Promise<void> => {
-    await postIdempotent('/transactions/transfer', dto);
-  },
-
-  delete: async (transactionId: string): Promise<void> => {
-    await axiosInstance.delete(`/transactions/${transactionId}`);
-  },
-
-  listCategories: async (scope?: string): Promise<TxCategory[]> => {
-    const { data } = await axiosInstance.get('/categories', {
-      params: scope ? { scope } : undefined,
-    });
-    return data.categories ?? data;
-  },
-};

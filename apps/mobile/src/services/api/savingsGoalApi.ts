@@ -1,32 +1,7 @@
-import { axiosInstance } from '../axios';
-import { postIdempotent } from '../idempotent';
-import type {
-  SavingsGoalWithProgress,
-  SavingsGoalsResponse,
-  SavingsGoalResponse,
-  CreateSavingsGoalDTO,
-  UpdateSavingsGoalDTO,
-} from '@horus/shared';
+// Offline-first Fase 1: las metas de ahorro se leen/escriben en WatermelonDB
+// (src/db/moneyQueries|moneyWrites) y se replican vía /api/replication.
+// Este módulo conserva solo el re-export de tipos que consume la UI.
+
+import type { SavingsGoalWithProgress } from '@horus/shared';
 
 export type { SavingsGoalWithProgress };
-
-export const savingsGoalApi = {
-  list: async (): Promise<SavingsGoalsResponse> => {
-    const { data } = await axiosInstance.get('/savings-goals');
-    return data;
-  },
-
-  create: async (dto: CreateSavingsGoalDTO): Promise<SavingsGoalWithProgress> => {
-    const data = await postIdempotent<SavingsGoalResponse>('/savings-goals', dto);
-    return data.savingsGoal;
-  },
-
-  update: async (id: string, dto: UpdateSavingsGoalDTO): Promise<SavingsGoalWithProgress> => {
-    const { data } = await axiosInstance.put<SavingsGoalResponse>(`/savings-goals/${id}`, dto);
-    return data.savingsGoal;
-  },
-
-  remove: async (id: string): Promise<void> => {
-    await axiosInstance.delete(`/savings-goals/${id}`);
-  },
-};

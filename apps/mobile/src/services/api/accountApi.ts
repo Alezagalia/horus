@@ -1,5 +1,8 @@
 import { axiosInstance } from '../axios';
-import { postIdempotent } from '../idempotent';
+
+// Offline-first Fase 1: el CRUD de cuentas va a WatermelonDB
+// (src/db/moneyQueries|moneyWrites) y se replica vía /api/replication.
+// Acá quedan los tipos/constantes y getFinanceStats (analytics, online).
 
 export type AccountType = 'efectivo' | 'banco' | 'billetera_digital' | 'tarjeta';
 
@@ -60,24 +63,6 @@ export interface UpdateAccountDTO {
 }
 
 export const accountApi = {
-  list: async (): Promise<{
-    accounts: Account[];
-    totalBalanceByCurrency: Record<string, number>;
-  }> => {
-    const { data } = await axiosInstance.get('/accounts');
-    // El backend expone el saldo como `currentBalance`; el resto de la app lo
-    // consume como `balance`. Normalizamos aquí para que coincidan (sin este
-    // mapeo, `balance` queda undefined → 0 y el chequeo de saldo del modal de
-    // pago deja el botón "Confirmar pago" deshabilitado siempre).
-    return {
-      ...data,
-      accounts: (data.accounts ?? []).map((a: Account & { currentBalance?: number }) => ({
-        ...a,
-        balance: Number(a.currentBalance ?? a.balance ?? 0),
-      })),
-    };
-  },
-
   getFinanceStats: async (month?: number, year?: number): Promise<FinanceStats> => {
     const { data } = await axiosInstance.get('/finance/stats', { params: { month, year } });
     return {
@@ -88,19 +73,5 @@ export const accountApi = {
       balance: data.totals?.balance ?? 0,
       currency: data.cuentasResumen?.[0]?.currency ?? 'ARS',
     };
-  },
-
-  create: async (dto: CreateAccountDTO): Promise<Account> => {
-    const data = await postIdempotent<any>('/accounts', dto);
-    return data.account ?? data;
-  },
-
-  update: async (id: string, dto: UpdateAccountDTO): Promise<Account> => {
-    const { data } = await axiosInstance.put(`/accounts/${id}`, dto);
-    return data.account ?? data;
-  },
-
-  deactivate: async (id: string): Promise<void> => {
-    await axiosInstance.put(`/accounts/${id}/deactivate`, {});
   },
 };
