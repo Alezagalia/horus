@@ -1,16 +1,14 @@
 import { Model } from '@nozbe/watermelondb';
 import { field, date, readonly } from '@nozbe/watermelondb/decorators';
 
-export class Account extends Model {
-  static table = 'accounts';
+export class Category extends Model {
+  static table = 'categories';
 
   @field('name') name!: string;
-  @field('type') type!: string;
-  @field('currency') currency!: string;
-  /** currentBalance sincronizado desde el server (+ ajuste optimista local). */
-  @field('balance') balance!: number;
-  @field('color') color?: string;
+  @field('scope') scope!: string;
   @field('icon') icon?: string;
+  @field('color') color?: string;
+  @field('is_default') isDefault!: boolean;
   @field('is_active') isActive!: boolean;
   @readonly @date('created_at') createdAt!: Date;
   @readonly @date('updated_at') updatedAt!: Date;

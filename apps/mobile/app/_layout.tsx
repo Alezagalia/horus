@@ -12,6 +12,7 @@ import {
 } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
 import { queryClient } from '@/lib/queryClient';
+import { startSyncScheduler } from '@/db/syncScheduler';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -28,6 +29,11 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded]);
+
+  useEffect(() => {
+    // Offline-first (dominio Dinero): sync en foreground/reconexión/post-escritura
+    startSyncScheduler();
+  }, []);
 
   if (!fontsLoaded) return null;
 
