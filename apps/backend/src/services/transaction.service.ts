@@ -14,6 +14,7 @@ import {
   UpdateTransferInput,
 } from '../validations/transaction.validation.js';
 import { checkBudgetThreshold } from './budget-alert.service.js';
+import { recordTombstones } from './replication/tombstone.service.js';
 
 export const transactionService = {
   /**
@@ -565,6 +566,7 @@ export const transactionService = {
               id: pairedTransaction.id,
             },
           });
+          await recordTombstones(tx, userId, 'transactions', [pairedTransaction.id]);
         }
       }
 
@@ -574,6 +576,7 @@ export const transactionService = {
           id: transactionId,
         },
       });
+      await recordTombstones(tx, userId, 'transactions', [transactionId]);
     });
 
     return { success: true };

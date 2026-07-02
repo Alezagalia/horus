@@ -11,6 +11,7 @@ import { scheduleArchiveTasksJob } from './jobs/archive-tasks.job.js';
 import { scheduleMonthlyExpenseGeneration } from './jobs/generate-monthly-expenses.job.js';
 import { scheduleDailyEventNotifications } from './jobs/notify-daily-events.job.js';
 import { scheduleRetentionJob } from './jobs/retention.job.js';
+import { schedulePurgeTombstonesJob } from './jobs/purge-tombstones.job.js';
 import { initializeFirebaseAdmin } from './lib/firebase-admin.js';
 import { initSentry } from './lib/sentry.js';
 import { logInfo, logError } from './lib/logger.js';
@@ -136,6 +137,7 @@ app.listen(PORT, () => {
     scheduleMonthlyExpenseGeneration(); // US-093
     scheduleDailyEventNotifications(); // Push automáticos de eventos del día
     scheduleRetentionJob(); // S-02.4 — purga de tokens expirados + cuentas inactivas
+    schedulePurgeTombstonesJob(); // Offline-first Fase 1 — purga tombstones de replicación
     logInfo('Cron jobs scheduled successfully'); // US-115
   } catch (error) {
     logError('Failed to schedule cron jobs', error as Error); // US-115

@@ -5,9 +5,62 @@
  * Business logic for querying monthly expense instances
  */
 
-import { ExpenseStatus } from '../generated/prisma/client.js';
+import { ExpenseStatus, Prisma } from '../generated/prisma/client.js';
 import { prisma } from '../lib/prisma.js';
 import { checkBudgetThreshold } from './budget-alert.service.js';
+import { recordTombstones } from './replication/tombstone.service.js';
+
+const MONTH_NAMES = [
+  'Enero',
+  'Febrero',
+  'Marzo',
+  'Abril',
+  'Mayo',
+  'Junio',
+  'Julio',
+  'Agosto',
+  'Septiembre',
+  'Octubre',
+  'Noviembre',
+  'Diciembre',
+];
+
+/**
+ * Transacción asociada al pago de una instancia. Primero por el vínculo
+ * explícito `monthlyExpenseInstanceId` (offline-first Fase 1); fallback a la
+ * heurística por concepto para pagos anteriores a esa columna.
+ */
+async function findPaymentTransaction(
+  tx: Prisma.TransactionClient,
+  monthlyExpense: {
+    id: string;
+    userId: string;
+    accountId: string | null;
+    categoryId: string;
+    concept: string;
+    month: number;
+    year: number;
+  }
+) {
+  const byLink = await tx.transaction.findFirst({
+    where: { monthlyExpenseInstanceId: monthlyExpense.id },
+    orderBy: { createdAt: 'desc' },
+  });
+  if (byLink) return byLink;
+
+  const monthName = MONTH_NAMES[monthlyExpense.month - 1];
+  const expectedConcept = `${monthlyExpense.concept} - ${monthName} ${monthlyExpense.year}`;
+  return tx.transaction.findFirst({
+    where: {
+      userId: monthlyExpense.userId,
+      accountId: monthlyExpense.accountId!,
+      categoryId: monthlyExpense.categoryId,
+      concept: expectedConcept,
+      type: 'egreso',
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+}
 
 /**
  * Get monthly expense instances for a specific month/year
@@ -199,21 +252,7 @@ export const payMonthlyExpense = async (
     });
 
     // 7. Create transaction (egreso) for this payment
-    const monthNames = [
-      'Enero',
-      'Febrero',
-      'Marzo',
-      'Abril',
-      'Mayo',
-      'Junio',
-      'Julio',
-      'Agosto',
-      'Septiembre',
-      'Octubre',
-      'Noviembre',
-      'Diciembre',
-    ];
-    const monthName = monthNames[monthlyExpense.month - 1];
+    const monthName = MONTH_NAMES[monthlyExpense.month - 1];
     const transactionConcept = `${monthlyExpense.concept} - ${monthName} ${monthlyExpense.year}`;
 
     const transaction = await tx.transaction.create({
@@ -226,6 +265,7 @@ export const payMonthlyExpense = async (
         concept: transactionConcept,
         date: paidDate,
         notes: data.notes,
+        monthlyExpenseInstanceId: id,
       },
     });
 
@@ -316,36 +356,11 @@ export const updateMonthlyExpense = async (
         throw new Error('Cuenta no encontrada o no está activa');
       }
 
-      // 4. Find associated transaction
-      const monthNames = [
-        'Enero',
-        'Febrero',
-        'Marzo',
-        'Abril',
-        'Mayo',
-        'Junio',
-        'Julio',
-        'Agosto',
-        'Septiembre',
-        'Octubre',
-        'Noviembre',
-        'Diciembre',
-      ];
-      const monthName = monthNames[monthlyExpense.month - 1];
+      // 4. Find associated transaction (vínculo explícito, fallback por concepto)
+      const monthName = MONTH_NAMES[monthlyExpense.month - 1];
       const expectedConcept = `${monthlyExpense.concept} - ${monthName} ${monthlyExpense.year}`;
 
-      const oldTransaction = await tx.transaction.findFirst({
-        where: {
-          userId,
-          accountId: monthlyExpense.accountId!,
-          categoryId: monthlyExpense.categoryId,
-          concept: expectedConcept,
-          type: 'egreso',
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-      });
+      const oldTransaction = await findPaymentTransaction(tx, monthlyExpense);
 
       if (oldTransaction) {
         // 5. Revert old account balance
@@ -358,10 +373,11 @@ export const updateMonthlyExpense = async (
           },
         });
 
-        // 6. Delete old transaction
+        // 6. Delete old transaction (+ tombstone para la replicación offline)
         await tx.transaction.delete({
           where: { id: oldTransaction.id },
         });
+        await recordTombstones(tx, userId, 'transactions', [oldTransaction.id]);
       }
 
       // 7. Create new transaction with updated data
@@ -378,6 +394,7 @@ export const updateMonthlyExpense = async (
           concept: expectedConcept,
           date: newPaidDate,
           notes: data.notes !== undefined ? data.notes : monthlyExpense.notes,
+          monthlyExpenseInstanceId: id,
         },
       });
 
@@ -455,36 +472,8 @@ export const undoMonthlyExpensePayment = async (id: string, userId: string) => {
       throw new Error('Solo se pueden deshacer gastos que estén marcados como pagados');
     }
 
-    // 2. Find associated transaction
-    const monthNames = [
-      'Enero',
-      'Febrero',
-      'Marzo',
-      'Abril',
-      'Mayo',
-      'Junio',
-      'Julio',
-      'Agosto',
-      'Septiembre',
-      'Octubre',
-      'Noviembre',
-      'Diciembre',
-    ];
-    const monthName = monthNames[monthlyExpense.month - 1];
-    const expectedConcept = `${monthlyExpense.concept} - ${monthName} ${monthlyExpense.year}`;
-
-    const transaction = await tx.transaction.findFirst({
-      where: {
-        userId,
-        accountId: monthlyExpense.accountId!,
-        categoryId: monthlyExpense.categoryId,
-        concept: expectedConcept,
-        type: 'egreso',
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+    // 2. Find associated transaction (vínculo explícito, fallback por concepto)
+    const transaction = await findPaymentTransaction(tx, monthlyExpense);
 
     if (transaction) {
       // 3. Revert account balance
@@ -497,10 +486,11 @@ export const undoMonthlyExpensePayment = async (id: string, userId: string) => {
         },
       });
 
-      // 4. Delete transaction
+      // 4. Delete transaction (+ tombstone para la replicación offline)
       await tx.transaction.delete({
         where: { id: transaction.id },
       });
+      await recordTombstones(tx, userId, 'transactions', [transaction.id]);
     }
 
     // 5. Update monthly expense instance to pending status

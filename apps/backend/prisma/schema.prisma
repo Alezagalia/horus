@@ -241,6 +241,7 @@ model User {
   activityRecords      ActivityRecord[] @relation("UserActivityRecords")
   emailVerificationTokens EmailVerificationToken[]
   subscription         Subscription?
+  replicationTombstones ReplicationTombstone[]
 
   @@index([email])
   @@map("users")
@@ -803,6 +804,9 @@ model Transaction {
   isTransfer      Boolean         @default(false)
   targetAccountId String?
   transferPairId  String?
+  /// Offline-first Fase 1: vincula la transacción generada al pagar un gasto mensual
+  /// con su MonthlyExpenseInstance (reemplaza la heurística por concepto).
+  monthlyExpenseInstanceId String?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
@@ -811,12 +815,14 @@ model Transaction {
   category      Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   shoppingList  ShoppingList?
+  monthlyExpenseInstance MonthlyExpenseInstance? @relation(fields: [monthlyExpenseInstanceId], references: [id], onDelete: SetNull)
 
   @@index([accountId, date])
   @@index([userId, date])
   @@index([userId, type, date])
   @@index([transferPairId])
   @@index([categoryId])
+  @@index([monthlyExpenseInstanceId])
   @@map("transactions")
 }
 
@@ -875,11 +881,30 @@ model MonthlyExpenseInstance {
   user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   category         Category         @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   account          Account?         @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  transactions     Transaction[]
 
   @@unique([recurringExpenseId, month, year])
   @@index([userId, month, year, status])
   @@index([recurringExpenseId])
   @@map("monthly_expense_instances")
+}
+
+/// ReplicationTombstone: registro de hard deletes para la replicación offline-first
+/// (WatermelonDB `synchronize()`). El pull lo usa para armar `deleted[]` por tabla.
+/// Solo Transaction hace hard delete hoy; los soft deletes (isActive=false) viajan
+/// como `updated`. tableName usa el nombre de tabla Watermelon ('transactions').
+model ReplicationTombstone {
+  id        String   @id @default(uuid())
+  userId    String
+  tableName String   @db.VarChar(50)
+  rowId     String
+  deletedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tableName, rowId])
+  @@index([userId, deletedAt])
+  @@map("replication_tombstones")
 }
 
 /// PushToken: Tokens de dispositivos para notificaciones push
