@@ -1,7 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Alert } from 'react-native';
-import { budgetApi } from '@/services/api/budgetApi';
 import type { CreateBudgetDTO, UpdateBudgetDTO } from '@horus/shared';
+import { useWatermelonQuery } from './useWatermelonQuery';
+import { listBudgetsLocal, budgetsSummaryLocal } from '@/db/moneyQueries';
+import { createBudgetLocal, updateBudgetLocal, deleteBudgetLocal } from '@/db/moneyWrites';
 
 export const budgetKeys = {
   all: ['budgets'] as const,
@@ -9,26 +11,24 @@ export const budgetKeys = {
   summary: (month: number, year: number) => [...budgetKeys.all, 'summary', month, year] as const,
 };
 
+/** Offline-first: lee de WatermelonDB. */
 export function useBudgets() {
-  return useQuery({
-    queryKey: budgetKeys.lists(),
-    queryFn: () => budgetApi.list(),
-    staleTime: 5 * 60 * 1000,
-  });
+  return useWatermelonQuery(budgetKeys.lists(), listBudgetsLocal, ['budgets', 'categories']);
 }
 
+/** El gastado se computa localmente desde transactions (espejo del summary REST). */
 export function useBudgetsSummary(month: number, year: number) {
-  return useQuery({
-    queryKey: budgetKeys.summary(month, year),
-    queryFn: () => budgetApi.summary(month, year),
-    staleTime: 5 * 60 * 1000,
-  });
+  return useWatermelonQuery(
+    budgetKeys.summary(month, year),
+    () => budgetsSummaryLocal(month, year),
+    ['budgets', 'categories', 'transactions', 'accounts']
+  );
 }
 
 export function useCreateBudget() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (dto: CreateBudgetDTO) => budgetApi.create(dto),
+    mutationFn: (dto: CreateBudgetDTO) => createBudgetLocal(dto),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: budgetKeys.all });
     },
@@ -39,7 +39,7 @@ export function useCreateBudget() {
 export function useUpdateBudget() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, dto }: { id: string; dto: UpdateBudgetDTO }) => budgetApi.update(id, dto),
+    mutationFn: ({ id, dto }: { id: string; dto: UpdateBudgetDTO }) => updateBudgetLocal(id, dto),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: budgetKeys.all });
     },
@@ -50,7 +50,7 @@ export function useUpdateBudget() {
 export function useDeleteBudget() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => budgetApi.remove(id),
+    mutationFn: (id: string) => deleteBudgetLocal(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: budgetKeys.all });
     },

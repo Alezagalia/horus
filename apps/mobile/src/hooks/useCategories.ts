@@ -2,7 +2,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Alert } from 'react-native';
 import { categoryApi } from '@/services/api/categoryApi';
 import { isNetworkError } from '@/lib/apiError';
+import { requestSync } from '@/db/syncScheduler';
 import type { Scope, CreateCategoryDTO, UpdateCategoryDTO } from '@horus/shared';
+
+// NOTA offline-first: la gestión de categorías sigue siendo online (cubre TODOS
+// los scopes, no solo dinero). El requestSync() tras cada mutación hace que los
+// cambios de categorías de dinero bajen enseguida a la DB local (WatermelonDB),
+// que es de donde leen los pickers de la pantalla Dinero.
 
 export const categoryKeys = {
   all: ['categories'] as const,
@@ -41,6 +47,7 @@ export function useCreateCategory() {
     retry: false,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: categoryKeys.all });
+      requestSync();
     },
     onError: (err: unknown) => {
       queryClient.invalidateQueries({ queryKey: categoryKeys.all });
@@ -59,6 +66,7 @@ export function useUpdateCategory() {
       categoryApi.update(id, dto),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: categoryKeys.all });
+      requestSync();
     },
     onError: () => Alert.alert('Error', 'No se pudo actualizar la categoría'),
   });
@@ -70,6 +78,7 @@ export function useDeleteCategory() {
     mutationFn: (id: string) => categoryApi.remove(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: categoryKeys.all });
+      requestSync();
     },
     onError: (err: unknown) => {
       const msg =
@@ -86,6 +95,7 @@ export function useSetDefaultCategory() {
     mutationFn: (id: string) => categoryApi.setDefault(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: categoryKeys.all });
+      requestSync();
     },
     onError: () => Alert.alert('Error', 'No se pudo establecer como predeterminada'),
   });

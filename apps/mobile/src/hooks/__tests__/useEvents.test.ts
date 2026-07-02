@@ -4,11 +4,17 @@ import React from 'react';
 
 jest.mock('../../services/api/eventApi');
 jest.mock('../../services/api/categoryApi');
-jest.mock('../../services/api/recurringExpenseApi');
 
 import { eventApi } from '../../services/api/eventApi';
 import { categoryApi } from '../../services/api/categoryApi';
-import { recurringExpenseApi } from '../../services/api/recurringExpenseApi';
+// Offline-first: los gastos recurrentes van a WatermelonDB; en Jest esos
+// módulos están mapeados a jest.mocks/* (ver jest.config.js moduleNameMapper).
+import { listRecurringExpensesLocal } from '@/db/moneyQueries';
+import {
+  createRecurringExpenseLocal,
+  updateRecurringExpenseLocal,
+  deleteRecurringExpenseLocal,
+} from '@/db/moneyWrites';
 import {
   useUpcomingEvents,
   useCalendarEvents,
@@ -157,66 +163,64 @@ describe('useEventCategories', () => {
   });
 });
 
-describe('useRecurringExpenses', () => {
+describe('useRecurringExpenses (lectura local WatermelonDB)', () => {
   it('returns active recurring expenses', async () => {
-    const mockExpenses = [{ id: 're-1', name: 'Netflix', amount: 1500, currency: 'ARS' }];
-    (recurringExpenseApi.list as jest.Mock).mockResolvedValue(mockExpenses);
+    const mockExpenses = [{ id: 're-1', concept: 'Netflix', currency: 'ARS' }];
+    (listRecurringExpensesLocal as jest.Mock).mockResolvedValue(mockExpenses);
 
     const { result } = renderHook(() => useRecurringExpenses(true), { wrapper: createWrapper() });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(recurringExpenseApi.list).toHaveBeenCalledWith(true);
+    expect(listRecurringExpensesLocal).toHaveBeenCalledWith(true);
     expect(result.current.data).toEqual(mockExpenses);
   });
 
   it('returns all recurring expenses when no filter', async () => {
-    (recurringExpenseApi.list as jest.Mock).mockResolvedValue([]);
+    (listRecurringExpensesLocal as jest.Mock).mockResolvedValue([]);
 
     const { result } = renderHook(() => useRecurringExpenses(), { wrapper: createWrapper() });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(recurringExpenseApi.list).toHaveBeenCalledWith(undefined);
+    expect(listRecurringExpensesLocal).toHaveBeenCalledWith(undefined);
   });
 });
 
-describe('useCreateRecurringExpense', () => {
-  it('calls recurringExpenseApi.create with dto', async () => {
-    const dto = { name: 'Spotify', amount: 600, currency: 'ARS', dayOfMonth: 15 };
-    const created = { id: 're-new', ...dto };
-    (recurringExpenseApi.create as jest.Mock).mockResolvedValue(created);
+describe('useCreateRecurringExpense (escritura local)', () => {
+  it('calls createRecurringExpenseLocal with dto', async () => {
+    const dto = { concept: 'Spotify', categoryId: 'cat-1', currency: 'ARS', dueDay: 15 };
+    (createRecurringExpenseLocal as jest.Mock).mockResolvedValue(undefined);
 
     const { result } = renderHook(() => useCreateRecurringExpense(), { wrapper: createWrapper() });
 
     result.current.mutate(dto as any);
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(recurringExpenseApi.create).toHaveBeenCalledWith(dto);
+    expect(createRecurringExpenseLocal).toHaveBeenCalledWith(dto);
   });
 });
 
-describe('useUpdateRecurringExpense', () => {
-  it('calls recurringExpenseApi.update with id and dto', async () => {
-    const updated = { id: 're-1', amount: 700 };
-    (recurringExpenseApi.update as jest.Mock).mockResolvedValue(updated);
+describe('useUpdateRecurringExpense (escritura local)', () => {
+  it('calls updateRecurringExpenseLocal with id and dto', async () => {
+    (updateRecurringExpenseLocal as jest.Mock).mockResolvedValue(undefined);
 
     const { result } = renderHook(() => useUpdateRecurringExpense(), { wrapper: createWrapper() });
 
-    result.current.mutate({ id: 're-1', dto: { amount: 700 } as any });
+    result.current.mutate({ id: 're-1', dto: { concept: 'Netflix 4K' } as any });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(recurringExpenseApi.update).toHaveBeenCalledWith('re-1', { amount: 700 });
+    expect(updateRecurringExpenseLocal).toHaveBeenCalledWith('re-1', { concept: 'Netflix 4K' });
   });
 });
 
-describe('useDeleteRecurringExpense', () => {
-  it('calls recurringExpenseApi.remove with id', async () => {
-    (recurringExpenseApi.remove as jest.Mock).mockResolvedValue(undefined);
+describe('useDeleteRecurringExpense (escritura local)', () => {
+  it('calls deleteRecurringExpenseLocal with id', async () => {
+    (deleteRecurringExpenseLocal as jest.Mock).mockResolvedValue(undefined);
 
     const { result } = renderHook(() => useDeleteRecurringExpense(), { wrapper: createWrapper() });
 
     result.current.mutate('re-1');
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(recurringExpenseApi.remove).toHaveBeenCalledWith('re-1');
+    expect(deleteRecurringExpenseLocal).toHaveBeenCalledWith('re-1');
   });
 });

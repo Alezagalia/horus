@@ -11,6 +11,8 @@ export type AccountRaw = {
   currency: string;
   /** currentBalance del server. READ-ONLY para el cliente salvo en created (balance inicial). */
   balance: number;
+  /** Editable: cambiarlo desplaza currentBalance por la diferencia (como el PUT REST). */
+  initial_balance: number;
   color: string | null;
   icon: string | null;
   is_active: boolean;

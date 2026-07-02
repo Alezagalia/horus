@@ -2,9 +2,10 @@ import { renderHook, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 
-jest.mock('../../services/api/transactionApi');
-
-import { transactionApi } from '../../services/api/transactionApi';
+// Offline-first: los reads/writes van a WatermelonDB; en Jest esos módulos
+// están mapeados a jest.mocks/* (ver jest.config.js moduleNameMapper).
+import { listTransactionsLocal, listCategoriesLocal } from '@/db/moneyQueries';
+import { createTransactionLocal, deleteTransactionLocal } from '@/db/moneyWrites';
 import {
   useTransactions,
   useTxCategories,
@@ -47,15 +48,15 @@ const mockListResult = {
   totals: { totalIncome: 0, totalExpenses: 500, balance: -500 },
 };
 
-describe('useTransactions', () => {
+describe('useTransactions (lectura local WatermelonDB)', () => {
   it('returns loading state initially', () => {
-    (transactionApi.list as jest.Mock).mockReturnValue(new Promise(() => {}));
+    (listTransactionsLocal as jest.Mock).mockReturnValue(new Promise(() => {}));
     const { result } = renderHook(() => useTransactions(), { wrapper: createWrapper() });
     expect(result.current.isLoading).toBe(true);
   });
 
   it('returns transactions on success', async () => {
-    (transactionApi.list as jest.Mock).mockResolvedValue(mockListResult);
+    (listTransactionsLocal as jest.Mock).mockResolvedValue(mockListResult);
 
     const { result } = renderHook(() => useTransactions(), { wrapper: createWrapper() });
 
@@ -63,18 +64,18 @@ describe('useTransactions', () => {
     expect(result.current.data).toEqual(mockListResult);
   });
 
-  it('passes filters to the API', async () => {
-    (transactionApi.list as jest.Mock).mockResolvedValue(mockListResult);
+  it('passes filters to the local loader', async () => {
+    (listTransactionsLocal as jest.Mock).mockResolvedValue(mockListResult);
 
     const filters = { accountId: 'a-1', type: 'egreso' as const, limit: 10 };
     const { result } = renderHook(() => useTransactions(filters), { wrapper: createWrapper() });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(transactionApi.list).toHaveBeenCalledWith(filters);
+    expect(listTransactionsLocal).toHaveBeenCalledWith(filters);
   });
 
   it('returns error on failure', async () => {
-    (transactionApi.list as jest.Mock).mockRejectedValue(new Error('Server error'));
+    (listTransactionsLocal as jest.Mock).mockRejectedValue(new Error('db error'));
 
     const { result } = renderHook(() => useTransactions(), { wrapper: createWrapper() });
 
@@ -82,34 +83,34 @@ describe('useTransactions', () => {
   });
 });
 
-describe('useTxCategories', () => {
+describe('useTxCategories (lectura local WatermelonDB)', () => {
   it('fetches categories without scope', async () => {
     const mockCats = [
       { id: 'cat-1', name: 'Comida' },
       { id: 'cat-2', name: 'Transporte' },
     ];
-    (transactionApi.listCategories as jest.Mock).mockResolvedValue(mockCats);
+    (listCategoriesLocal as jest.Mock).mockResolvedValue(mockCats);
 
     const { result } = renderHook(() => useTxCategories(), { wrapper: createWrapper() });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(transactionApi.listCategories).toHaveBeenCalledWith(undefined);
+    expect(listCategoriesLocal).toHaveBeenCalledWith(undefined);
     expect(result.current.data).toEqual(mockCats);
   });
 
   it('fetches categories with scope', async () => {
     const mockCats = [{ id: 'cat-3', name: 'Salario' }];
-    (transactionApi.listCategories as jest.Mock).mockResolvedValue(mockCats);
+    (listCategoriesLocal as jest.Mock).mockResolvedValue(mockCats);
 
     const { result } = renderHook(() => useTxCategories('egresos'), { wrapper: createWrapper() });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(transactionApi.listCategories).toHaveBeenCalledWith('egresos');
+    expect(listCategoriesLocal).toHaveBeenCalledWith('egresos');
   });
 });
 
-describe('useCreateTransaction', () => {
-  it('calls transactionApi.create with correct dto', async () => {
+describe('useCreateTransaction (escritura local)', () => {
+  it('calls createTransactionLocal with correct dto', async () => {
     const dto = {
       accountId: 'a-1',
       categoryId: 'cat-1',
@@ -118,34 +119,26 @@ describe('useCreateTransaction', () => {
       concept: 'Nafta',
       date: '2026-06-04',
     };
-    const created = {
-      id: 'tx-new',
-      ...dto,
-      isTransfer: false,
-      createdAt: '2026-06-04T12:00:00Z',
-      account: {},
-      category: {},
-    };
-    (transactionApi.create as jest.Mock).mockResolvedValue(created);
+    (createTransactionLocal as jest.Mock).mockResolvedValue(undefined);
 
     const { result } = renderHook(() => useCreateTransaction(), { wrapper: createWrapper() });
 
     result.current.mutate(dto);
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(transactionApi.create).toHaveBeenCalledWith(dto);
+    expect(createTransactionLocal).toHaveBeenCalledWith(dto);
   });
 });
 
-describe('useDeleteTransaction', () => {
-  it('calls transactionApi.delete with id', async () => {
-    (transactionApi.delete as jest.Mock).mockResolvedValue(undefined);
+describe('useDeleteTransaction (escritura local)', () => {
+  it('calls deleteTransactionLocal with id', async () => {
+    (deleteTransactionLocal as jest.Mock).mockResolvedValue(undefined);
 
     const { result } = renderHook(() => useDeleteTransaction(), { wrapper: createWrapper() });
 
     result.current.mutate('tx-1');
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(transactionApi.delete).toHaveBeenCalledWith('tx-1');
+    expect(deleteTransactionLocal).toHaveBeenCalledWith('tx-1');
   });
 });

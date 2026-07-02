@@ -11,6 +11,7 @@ export function toRaw(a: Account): AccountRaw {
     type: a.type,
     currency: a.currency,
     balance: Number(a.currentBalance),
+    initial_balance: Number(a.initialBalance),
     color: a.color,
     icon: a.icon,
     is_active: a.isActive,
@@ -26,7 +27,7 @@ export async function applyCreated(ctx: PushContext, raws: AccountRaw[]): Promis
 
     // Cuenta creada offline: el balance del cliente es el balance inicial.
     // Las transactions del mismo push aplican sus deltas encima.
-    const balance = round2(raw.balance ?? 0);
+    const initialBalance = round2(raw.initial_balance ?? raw.balance ?? 0);
     await ctx.tx.account.create({
       data: {
         id: raw.id,
@@ -34,8 +35,8 @@ export async function applyCreated(ctx: PushContext, raws: AccountRaw[]): Promis
         name: raw.name,
         type: raw.type as AccountType,
         currency: raw.currency,
-        initialBalance: balance,
-        currentBalance: balance,
+        initialBalance,
+        currentBalance: initialBalance,
         color: raw.color ?? '#3B82F6',
         icon: raw.icon ?? '🏦',
         isActive: raw.is_active ?? true,
@@ -67,7 +68,22 @@ export async function applyUpdated(ctx: PushContext, raws: AccountRaw[]): Promis
       }
     }
 
-    // balance NUNCA se acepta en updated: es derivado y read-only desde el server
+    // balance NUNCA se acepta en updated (derivado, read-only desde el server).
+    // initial_balance SÍ es editable: como en el PUT REST, el cambio desplaza
+    // currentBalance por la diferencia.
+    let initialBalanceData:
+      | { initialBalance: number; currentBalance: { increment: number } }
+      | undefined;
+    if (raw.initial_balance != null) {
+      const diff = round2(raw.initial_balance - Number(existing.initialBalance));
+      if (diff !== 0) {
+        initialBalanceData = {
+          initialBalance: round2(raw.initial_balance),
+          currentBalance: { increment: diff },
+        };
+      }
+    }
+
     await ctx.tx.account.update({
       where: { id: raw.id },
       data: {
@@ -77,6 +93,7 @@ export async function applyUpdated(ctx: PushContext, raws: AccountRaw[]): Promis
         color: raw.color ?? existing.color,
         icon: raw.icon ?? existing.icon,
         isActive: raw.is_active,
+        ...(initialBalanceData ?? {}),
       },
     });
   }

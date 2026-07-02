@@ -291,7 +291,17 @@
       "Bash(DATABASE_URL=\"postgresql://horus:horus_local_password@localhost:5433/horus?schema=public\" pnpm prisma migrate reset --force --skip-seed)",
       "Bash(DATABASE_URL=\"postgresql://horus:horus_local_password@localhost:5433/horus?schema=public\" pnpm prisma migrate reset --force)",
       "Bash(DATABASE_URL=\"postgresql://horus:horus_local_password@localhost:5433/horus?schema=public\" PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=\"sí, dale, hacé el reset local\" pnpm prisma migrate reset --force)",
-      "Bash(DATABASE_URL=\"postgresql://horus:horus_local_password@localhost:5433/horus?schema=public\" pnpm prisma db push)"
+      "Bash(DATABASE_URL=\"postgresql://horus:horus_local_password@localhost:5433/horus?schema=public\" pnpm prisma db push)",
+      "Bash(sed -n '60,70p' src/routes/habits.test.ts)",
+      "Bash(sed -n '60,70p' src/services/habit.service.test.ts)",
+      "Bash(sed -n '108,120p' apps/backend/src/services/budget.service.ts)",
+      "Bash(sed -n '17,33p;155,170p' apps/backend/src/services/recurringExpense.service.ts)",
+      "Bash(sed -n '1885,1900p' \"apps/mobile/app/\\(tabs\\)/dinero.tsx\")",
+      "Bash(sed -n '2020,2035p;2075,2090p' \"apps/mobile/app/\\(tabs\\)/dinero.tsx\")",
+      "PowerShell(Head *)",
+      "WebFetch(domain:docs.railway.com)",
+      "WebFetch(domain:backboard.railway.app)",
+      "PowerShell($sw=[Diagnostics.Stopwatch]::StartNew\\(\\); try { $r=Invoke-WebRequest -Uri \"https://horus-production-4629.up.railway.app/api/health\" -TimeoutSec 60 -UseBasicParsing; $sw.Stop\\(\\); \"1st request: $\\($sw.ElapsedMilliseconds\\) ms — HTTP $\\($r.StatusCode\\)\" } catch { $sw.Stop\\(\\); \"1st request FAILED after $\\($sw.ElapsedMilliseconds\\) ms: $\\($_.Exception.Message\\)\" }; $sw2=[Diagnostics.Stopwatch]::StartNew\\(\\); $r2=Invoke-WebRequest -Uri \"https://horus-production-4629.up.railway.app/api/health\" -TimeoutSec 60 -UseBasicParsing; $sw2.Stop\\(\\); \"2nd request: $\\($sw2.ElapsedMilliseconds\\) ms — HTTP $\\($r2.StatusCode\\)\")"
     ],
     "deny": [],
     "ask": []

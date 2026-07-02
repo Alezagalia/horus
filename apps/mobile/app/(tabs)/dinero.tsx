@@ -40,6 +40,8 @@ import { Chip } from '@/components/ui/Chip';
 import { Colors, Spacing, Radius, Gradients, Shadows, Layout } from '@/tokens';
 import { useAccounts, useFinanceStats, accountKeys } from '@/hooks/useAccounts';
 import { useAccountUsage } from '@/hooks/useAccountUsage';
+import { SyncStatusDot } from '@/components/SyncStatusDot';
+import { syncNow } from '@/db/syncScheduler';
 import {
   useTransactions,
   useCreateTransaction,
@@ -1885,7 +1887,11 @@ export default function DineroScreen() {
   const grouped = useMemo(() => groupByDate(transactions), [transactions]);
 
   const onRefresh = useCallback(async () => {
+    // Offline-first: el pull-to-refresh fuerza un sync con el server (pull+push);
+    // los datos locales se re-leen solos vía withChangesForTables. Las
+    // invalidaciones quedan para financeStats (REST) y como red de seguridad.
     await Promise.all([
+      syncNow().catch(() => {}),
       queryClient.invalidateQueries({ queryKey: accountKeys.all }),
       queryClient.invalidateQueries({ queryKey: transactionKeys.all }),
       queryClient.invalidateQueries({ queryKey: recurringKeys.all }),
@@ -1921,7 +1927,10 @@ export default function DineroScreen() {
       >
         {/* ─── Page header ──────────────────────────────────── */}
         <View style={styles.pageHeader}>
-          <Text style={styles.pageTitle}>Dinero</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Text style={styles.pageTitle}>Dinero</Text>
+            <SyncStatusDot />
+          </View>
           <Text style={styles.pageSubtitle}>Tu situación financiera</Text>
         </View>
 

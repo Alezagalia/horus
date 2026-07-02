@@ -20,6 +20,8 @@ export const schema = appSchema({
         // currentBalance del server; el cliente lo ajusta de forma optimista y
         // el pull lo corrige (read-only en el push salvo el inicial del create)
         { name: 'balance', type: 'number' },
+        // editable: cambiarlo desplaza el balance por la diferencia (server-side)
+        { name: 'initial_balance', type: 'number' },
         { name: 'color', type: 'string', isOptional: true },
         { name: 'icon', type: 'string', isOptional: true },
         { name: 'is_active', type: 'boolean' },

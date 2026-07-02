@@ -1,24 +1,30 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Alert } from 'react-native';
-import { savingsGoalApi } from '@/services/api/savingsGoalApi';
 import type { CreateSavingsGoalDTO, UpdateSavingsGoalDTO } from '@horus/shared';
+import { useWatermelonQuery } from './useWatermelonQuery';
+import { listSavingsGoalsLocal } from '@/db/moneyQueries';
+import {
+  createSavingsGoalLocal,
+  updateSavingsGoalLocal,
+  deleteSavingsGoalLocal,
+} from '@/db/moneyWrites';
 
 export const savingsGoalKeys = {
   all: ['savings-goals'] as const,
 };
 
+/** Offline-first: lee de WatermelonDB; el progreso sale del balance local. */
 export function useSavingsGoals() {
-  return useQuery({
-    queryKey: savingsGoalKeys.all,
-    queryFn: () => savingsGoalApi.list(),
-    staleTime: 2 * 60 * 1000,
-  });
+  return useWatermelonQuery(savingsGoalKeys.all, listSavingsGoalsLocal, [
+    'savings_goals',
+    'accounts',
+  ]);
 }
 
 export function useCreateSavingsGoal() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (dto: CreateSavingsGoalDTO) => savingsGoalApi.create(dto),
+    mutationFn: (dto: CreateSavingsGoalDTO) => createSavingsGoalLocal(dto),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: savingsGoalKeys.all });
     },
@@ -30,7 +36,7 @@ export function useUpdateSavingsGoal() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateSavingsGoalDTO }) =>
-      savingsGoalApi.update(id, data),
+      updateSavingsGoalLocal(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: savingsGoalKeys.all });
     },
@@ -41,7 +47,7 @@ export function useUpdateSavingsGoal() {
 export function useDeleteSavingsGoal() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => savingsGoalApi.remove(id),
+    mutationFn: (id: string) => deleteSavingsGoalLocal(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: savingsGoalKeys.all });
     },

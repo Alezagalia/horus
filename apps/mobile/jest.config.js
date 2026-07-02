@@ -8,6 +8,11 @@ module.exports = {
   setupFiles: ['<rootDir>/jest.setup.env.js'],
   setupFilesAfterEnv: ['@testing-library/jest-native/extend-expect'],
   moduleNameMapper: {
+    // Offline-first: la DB local (SQLite/JSI) no existe en Jest → mocks
+    '^@/db$': '<rootDir>/jest.mocks/db.js',
+    '^@/db/syncScheduler$': '<rootDir>/jest.mocks/syncScheduler.js',
+    '^@/db/moneyQueries$': '<rootDir>/jest.mocks/moneyQueries.js',
+    '^@/db/moneyWrites$': '<rootDir>/jest.mocks/moneyWrites.js',
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@horus/shared$': '<rootDir>/../../packages/shared/src/index.ts',
   },

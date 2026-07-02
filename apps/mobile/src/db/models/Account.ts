@@ -9,6 +9,7 @@ export class Account extends Model {
   @field('currency') currency!: string;
   /** currentBalance sincronizado desde el server (+ ajuste optimista local). */
   @field('balance') balance!: number;
+  @field('initial_balance') initialBalance!: number;
   @field('color') color?: string;
   @field('icon') icon?: string;
   @field('is_active') isActive!: boolean;

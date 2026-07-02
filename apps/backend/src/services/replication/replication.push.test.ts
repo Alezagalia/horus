@@ -41,6 +41,7 @@ const myAccount = (id: string, currency = 'ARS') => ({
   type: 'banco',
   currency,
   currentBalance: '1000',
+  initialBalance: '1000',
   isActive: true,
   color: '#000',
   icon: '🏦',
@@ -100,7 +101,9 @@ const existingTx = (overrides: Record<string, unknown> = {}) => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
-  p.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma));
+  (p.$transaction as any).mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) =>
+    fn(prisma)
+  );
   p.account.findUnique.mockResolvedValue(myAccount('acc-1') as any);
   p.category.findUnique.mockResolvedValue(myCategory('cat-1') as any);
   p.transaction.findUnique.mockResolvedValue(null);
@@ -184,7 +187,7 @@ describe('push: transactions.updated', () => {
 
   it('cambio de cuenta → revert en la vieja, apply en la nueva', async () => {
     p.transaction.findUnique.mockResolvedValue(existingTx({ accountId: 'acc-1' }) as any);
-    p.account.findUnique.mockImplementation(
+    (p.account.findUnique as any).mockImplementation(
       async (args: any) => ({ ...myAccount(args.where.id) }) as any
     );
 
@@ -252,7 +255,7 @@ describe('push: transactions.deleted', () => {
       isTransfer: true,
       transferPairId: 'tx-e',
     });
-    p.transaction.findUnique.mockImplementation(async (args: any) => {
+    (p.transaction.findUnique as any).mockImplementation(async (args: any) => {
       if (args.where.id === 'tx-e') return egreso as any;
       if (args.where.id === 'tx-i') return ingreso as any;
       return null;
@@ -297,7 +300,7 @@ describe('push: transferencias created', () => {
   });
 
   beforeEach(() => {
-    p.account.findUnique.mockImplementation(
+    (p.account.findUnique as any).mockImplementation(
       async (args: any) => ({ ...myAccount(args.where.id) }) as any
     );
     p.category.findFirst.mockResolvedValue(myCategory('cat-transfer') as any);
@@ -322,7 +325,7 @@ describe('push: transferencias created', () => {
   });
 
   it('monedas distintas → 400', async () => {
-    p.account.findUnique.mockImplementation(
+    (p.account.findUnique as any).mockImplementation(
       async (args: any) =>
         ({ ...myAccount(args.where.id, args.where.id === 'acc-2' ? 'USD' : 'ARS') }) as any
     );
@@ -333,7 +336,7 @@ describe('push: transferencias created', () => {
   });
 
   it('retry: si una pata ya existe, no se re-aplica nada', async () => {
-    p.transaction.findUnique.mockImplementation(async (args: any) =>
+    (p.transaction.findUnique as any).mockImplementation(async (args: any) =>
       args.where.id === 'tx-e' || args.where.id === 'tx-i'
         ? (existingTx({ id: args.where.id }) as any)
         : null
@@ -436,6 +439,7 @@ describe('push: accounts', () => {
             type: 'banco',
             currency: 'ARS',
             balance: 999999,
+            initial_balance: 1000,
             color: '#000',
             icon: '🏦',
             is_active: true,
@@ -466,6 +470,7 @@ describe('push: accounts', () => {
             type: 'efectivo',
             currency: 'ARS',
             balance: 250,
+            initial_balance: 250,
             color: null,
             icon: null,
             is_active: true,

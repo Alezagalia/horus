@@ -1,9 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { eventApi } from '@/services/api/eventApi';
 import { categoryApi } from '@/services/api/categoryApi';
-import { recurringExpenseApi } from '@/services/api/recurringExpenseApi';
 import type { CreateEventDTO, UpdateEventDTO } from '@/services/api/eventApi';
 import type { CreateRecurringExpenseDTO, UpdateRecurringExpenseDTO } from '@horus/shared';
+import { useWatermelonQuery } from './useWatermelonQuery';
+import { listRecurringExpensesLocal } from '@/db/moneyQueries';
+import {
+  createRecurringExpenseLocal,
+  updateRecurringExpenseLocal,
+  deleteRecurringExpenseLocal,
+} from '@/db/moneyWrites';
 
 export const eventKeys = {
   all: ['events'] as const,
@@ -77,29 +83,29 @@ export function useEventCategories() {
   });
 }
 
+/** Offline-first: cuenta plantillas activas desde WatermelonDB. */
 export function useRecurringExpensesCount() {
-  return useQuery({
-    queryKey: recurringKeys.active(),
-    queryFn: async () => {
-      const list = await recurringExpenseApi.listActive();
-      return list.length;
-    },
-    staleTime: 1000 * 60 * 10,
-  });
+  return useWatermelonQuery(
+    recurringKeys.active(),
+    async () => (await listRecurringExpensesLocal(true)).length,
+    ['recurring_expenses']
+  );
 }
 
+/** Offline-first: lee de WatermelonDB. La instancia mensual de una plantilla
+ * creada offline la genera el server y llega en el próximo pull. */
 export function useRecurringExpenses(activeOnly?: boolean) {
-  return useQuery({
-    queryKey: [...recurringKeys.all, 'list', activeOnly] as const,
-    queryFn: () => recurringExpenseApi.list(activeOnly),
-    staleTime: 1000 * 60 * 5,
-  });
+  return useWatermelonQuery(
+    [...recurringKeys.all, 'list', activeOnly] as const,
+    () => listRecurringExpensesLocal(activeOnly),
+    ['recurring_expenses', 'categories']
+  );
 }
 
 export function useCreateRecurringExpense() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (dto: CreateRecurringExpenseDTO) => recurringExpenseApi.create(dto),
+    mutationFn: (dto: CreateRecurringExpenseDTO) => createRecurringExpenseLocal(dto),
     onSuccess: () => qc.invalidateQueries({ queryKey: recurringKeys.all }),
   });
 }
@@ -108,7 +114,7 @@ export function useUpdateRecurringExpense() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, dto }: { id: string; dto: UpdateRecurringExpenseDTO }) =>
-      recurringExpenseApi.update(id, dto),
+      updateRecurringExpenseLocal(id, dto),
     onSuccess: () => qc.invalidateQueries({ queryKey: recurringKeys.all }),
   });
 }
@@ -116,7 +122,7 @@ export function useUpdateRecurringExpense() {
 export function useDeleteRecurringExpense() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => recurringExpenseApi.remove(id),
+    mutationFn: (id: string) => deleteRecurringExpenseLocal(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: recurringKeys.all }),
   });
 }

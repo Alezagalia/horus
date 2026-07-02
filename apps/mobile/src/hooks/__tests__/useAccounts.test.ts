@@ -5,6 +5,10 @@ import React from 'react';
 jest.mock('../../services/api/accountApi');
 
 import { accountApi } from '../../services/api/accountApi';
+// Offline-first: los reads/writes van a WatermelonDB; en Jest esos módulos
+// están mapeados a jest.mocks/* (ver jest.config.js moduleNameMapper).
+import { listAccountsLocal } from '@/db/moneyQueries';
+import { createAccountLocal, updateAccountLocal, deactivateAccountLocal } from '@/db/moneyWrites';
 import {
   useAccounts,
   useFinanceStats,
@@ -28,9 +32,9 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-describe('useAccounts', () => {
+describe('useAccounts (lectura local WatermelonDB)', () => {
   it('returns loading state initially', () => {
-    (accountApi.list as jest.Mock).mockReturnValue(new Promise(() => {}));
+    (listAccountsLocal as jest.Mock).mockReturnValue(new Promise(() => {}));
     const { result } = renderHook(() => useAccounts(), { wrapper: createWrapper() });
     expect(result.current.isLoading).toBe(true);
   });
@@ -49,7 +53,7 @@ describe('useAccounts', () => {
       ],
       totalBalanceByCurrency: { ARS: 5000 },
     };
-    (accountApi.list as jest.Mock).mockResolvedValue(mockData);
+    (listAccountsLocal as jest.Mock).mockResolvedValue(mockData);
 
     const { result } = renderHook(() => useAccounts(), { wrapper: createWrapper() });
 
@@ -58,7 +62,7 @@ describe('useAccounts', () => {
   });
 
   it('returns error on failure', async () => {
-    (accountApi.list as jest.Mock).mockRejectedValue(new Error('Network error'));
+    (listAccountsLocal as jest.Mock).mockRejectedValue(new Error('db error'));
 
     const { result } = renderHook(() => useAccounts(), { wrapper: createWrapper() });
 
@@ -66,7 +70,7 @@ describe('useAccounts', () => {
   });
 });
 
-describe('useFinanceStats', () => {
+describe('useFinanceStats (sigue online/REST)', () => {
   it('fetches stats without params', async () => {
     const mockStats = {
       month: 6,
@@ -103,49 +107,47 @@ describe('useFinanceStats', () => {
   });
 });
 
-describe('useCreateAccount', () => {
-  it('calls accountApi.create with correct dto', async () => {
+describe('useCreateAccount (escritura local)', () => {
+  it('calls createAccountLocal with correct dto', async () => {
     const dto = {
       name: 'Banco Nación',
       type: 'banco' as const,
       currency: 'ARS',
       initialBalance: 10000,
     };
-    const created = { id: 'a-new', ...dto, balance: 10000, isActive: true };
-    (accountApi.create as jest.Mock).mockResolvedValue(created);
+    (createAccountLocal as jest.Mock).mockResolvedValue(undefined);
 
     const { result } = renderHook(() => useCreateAccount(), { wrapper: createWrapper() });
 
     result.current.mutate(dto);
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(accountApi.create).toHaveBeenCalledWith(dto);
+    expect(createAccountLocal).toHaveBeenCalledWith(dto);
   });
 });
 
-describe('useUpdateAccount', () => {
-  it('calls accountApi.update with id and dto', async () => {
-    const updated = { id: 'a-1', name: 'Cuenta actualizada' };
-    (accountApi.update as jest.Mock).mockResolvedValue(updated);
+describe('useUpdateAccount (escritura local)', () => {
+  it('calls updateAccountLocal with id and dto', async () => {
+    (updateAccountLocal as jest.Mock).mockResolvedValue(undefined);
 
     const { result } = renderHook(() => useUpdateAccount(), { wrapper: createWrapper() });
 
     result.current.mutate({ id: 'a-1', dto: { name: 'Cuenta actualizada' } });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(accountApi.update).toHaveBeenCalledWith('a-1', { name: 'Cuenta actualizada' });
+    expect(updateAccountLocal).toHaveBeenCalledWith('a-1', { name: 'Cuenta actualizada' });
   });
 });
 
-describe('useDeactivateAccount', () => {
-  it('calls accountApi.deactivate with id', async () => {
-    (accountApi.deactivate as jest.Mock).mockResolvedValue(undefined);
+describe('useDeactivateAccount (escritura local)', () => {
+  it('calls deactivateAccountLocal with id', async () => {
+    (deactivateAccountLocal as jest.Mock).mockResolvedValue(undefined);
 
     const { result } = renderHook(() => useDeactivateAccount(), { wrapper: createWrapper() });
 
     result.current.mutate('a-1');
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(accountApi.deactivate).toHaveBeenCalledWith('a-1');
+    expect(deactivateAccountLocal).toHaveBeenCalledWith('a-1');
   });
 });
