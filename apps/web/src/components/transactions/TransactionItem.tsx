@@ -31,6 +31,10 @@ export function TransactionItem({ transaction, onEdit, onDelete }: TransactionIt
       day: '2-digit',
       month: 'short',
       year: 'numeric',
+      // La fecha es un día-calendario serializado como medianoche UTC. Sin
+      // timeZone, Intl la formatea en la zona local (UTC-3) y retrocede un día
+      // (03/07 -> 02/07). Formateando en UTC se muestra el día correcto.
+      timeZone: 'UTC',
     }).format(date);
   };
 
