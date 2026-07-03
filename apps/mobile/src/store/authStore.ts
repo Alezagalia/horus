@@ -11,6 +11,7 @@ interface AuthState {
   register: (data: RegisterDTO) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
+  refreshUser: () => Promise<void>;
   setUser: (user: AuthUser) => void;
 }
 
@@ -58,6 +59,21 @@ export const useAuthStore = create<AuthState>((set) => ({
       await SecureStore.deleteItemAsync('accessToken');
       await SecureStore.deleteItemAsync('refreshToken');
       set({ user: null, isAuthenticated: false, isLoading: false });
+    }
+  },
+
+  // Refresca el perfil silenciosamente (sin togglear isLoading, para no
+  // mostrar el spinner de pantalla completa). Se usa al volver a foreground:
+  // así, tras verificar el email en la web, el estado emailVerifiedAt se
+  // actualiza y el banner de verificación desaparece solo.
+  refreshUser: async () => {
+    if (!useAuthStore.getState().isAuthenticated) return;
+    try {
+      const user = await authApi.getMe();
+      set({ user, isAuthenticated: true });
+    } catch {
+      // best-effort: si falla (offline / token expirado) dejamos el estado
+      // actual; checkAuth() y el interceptor de axios manejan la sesión.
     }
   },
 

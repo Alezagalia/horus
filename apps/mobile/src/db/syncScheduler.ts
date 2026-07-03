@@ -76,7 +76,13 @@ export function startSyncScheduler(): void {
   started = true;
 
   AppState.addEventListener('change', (state: AppStateStatus) => {
-    if (state === 'active') void runSync();
+    if (state === 'active') {
+      void runSync();
+      // Refresca el perfil: si el usuario verificó su email (en la web) o
+      // cambió su suscripción mientras la app estaba en background, al volver
+      // se reflejan sin necesidad de reiniciar la app.
+      void useAuthStore.getState().refreshUser();
+    }
   });
 
   NetInfo.addEventListener((state) => {
@@ -87,6 +93,17 @@ export function startSyncScheduler(): void {
     wasConnected = connected;
   });
 
-  // Sync inicial al abrir la app (si hay sesión)
+  // Sync al autenticarse (transición false → true). Cubre el login y —clave—
+  // el arranque en frío con sesión ya existente: el runSync() inicial de abajo
+  // corre ANTES de que checkAuth() confirme la sesión, así que sin esto la DB
+  // local (recién reseteada por un bump de schema) nunca se repoblaba hasta un
+  // pull-to-refresh manual.
+  useAuthStore.subscribe((state, prev) => {
+    if (state.isAuthenticated && !prev.isAuthenticated) {
+      void runSync();
+    }
+  });
+
+  // Sync inicial al abrir la app (si ya hay sesión lista en este punto)
   void runSync();
 }
