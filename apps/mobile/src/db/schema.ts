@@ -8,9 +8,10 @@ import { appSchema, tableSchema } from '@nozbe/watermelondb';
  * v2: dominio Dinero (Fase 1); reemplazó el schema del spike sin migrations.
  * v3: + habits y habit_records (Fase 2) — CON migración (migrations.ts) para
  *     preservar los datos de Dinero ya sincronizados.
+ * v4: + tasks y task_checklist_items (Fase 2b).
  */
 export const schema = appSchema({
-  version: 3,
+  version: 4,
   tables: [
     tableSchema({
       name: 'accounts',
@@ -154,6 +155,38 @@ export const schema = appSchema({
         { name: 'completed', type: 'boolean' },
         { name: 'value', type: 'number', isOptional: true },
         { name: 'notes', type: 'string', isOptional: true },
+        { name: 'created_at', type: 'number' },
+        { name: 'updated_at', type: 'number' },
+      ],
+    }),
+    tableSchema({
+      name: 'tasks',
+      columns: [
+        { name: 'category_id', type: 'string' },
+        { name: 'title', type: 'string' },
+        { name: 'description', type: 'string', isOptional: true },
+        { name: 'priority', type: 'string' }, // alta | media | baja
+        { name: 'status', type: 'string' }, // pendiente | en_progreso | completada | cancelada
+        { name: 'due_date', type: 'number', isOptional: true },
+        { name: 'completed_at', type: 'number', isOptional: true },
+        { name: 'canceled_at', type: 'number', isOptional: true },
+        // Lo setea el cron de archivado del server; el cliente solo filtra
+        { name: 'archived_at', type: 'number', isOptional: true },
+        { name: 'cancel_reason', type: 'string', isOptional: true },
+        { name: 'is_active', type: 'boolean' },
+        { name: 'order_position', type: 'number' },
+        { name: 'reschedule_count', type: 'number' },
+        { name: 'created_at', type: 'number' },
+        { name: 'updated_at', type: 'number' },
+      ],
+    }),
+    tableSchema({
+      name: 'task_checklist_items',
+      columns: [
+        { name: 'task_id', type: 'string', isIndexed: true },
+        { name: 'title', type: 'string' },
+        { name: 'completed', type: 'boolean' },
+        { name: 'position', type: 'number' },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },
       ],

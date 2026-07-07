@@ -15,6 +15,8 @@ module.exports = {
     '^@/db/moneyWrites$': '<rootDir>/jest.mocks/moneyWrites.js',
     '^@/db/habitQueries$': '<rootDir>/jest.mocks/habitQueries.js',
     '^@/db/habitWrites$': '<rootDir>/jest.mocks/habitWrites.js',
+    '^@/db/taskQueries$': '<rootDir>/jest.mocks/taskQueries.js',
+    '^@/db/taskWrites$': '<rootDir>/jest.mocks/taskWrites.js',
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@horus/shared$': '<rootDir>/../../packages/shared/src/index.ts',
   },

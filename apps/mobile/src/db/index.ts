@@ -13,6 +13,8 @@ import { Budget } from './models/Budget';
 import { SavingsGoal } from './models/SavingsGoal';
 import { Habit } from './models/Habit';
 import { HabitRecord } from './models/HabitRecord';
+import { Task } from './models/Task';
+import { TaskChecklistItem } from './models/TaskChecklistItem';
 
 // IDs locales = UUID v4: el id generado en el cliente ES el id final en
 // Postgres (el push crea con ese id, idempotente). El generador default de
@@ -43,5 +45,7 @@ export const database = new Database({
     SavingsGoal,
     Habit,
     HabitRecord,
+    Task,
+    TaskChecklistItem,
   ],
 });

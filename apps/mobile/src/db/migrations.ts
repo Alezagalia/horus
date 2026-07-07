@@ -13,6 +13,43 @@ import { schemaMigrations, createTable } from '@nozbe/watermelondb/Schema/migrat
 export const migrations = schemaMigrations({
   migrations: [
     {
+      // v4 — Fase 2b Tareas
+      toVersion: 4,
+      steps: [
+        createTable({
+          name: 'tasks',
+          columns: [
+            { name: 'category_id', type: 'string' },
+            { name: 'title', type: 'string' },
+            { name: 'description', type: 'string', isOptional: true },
+            { name: 'priority', type: 'string' },
+            { name: 'status', type: 'string' },
+            { name: 'due_date', type: 'number', isOptional: true },
+            { name: 'completed_at', type: 'number', isOptional: true },
+            { name: 'canceled_at', type: 'number', isOptional: true },
+            { name: 'archived_at', type: 'number', isOptional: true },
+            { name: 'cancel_reason', type: 'string', isOptional: true },
+            { name: 'is_active', type: 'boolean' },
+            { name: 'order_position', type: 'number' },
+            { name: 'reschedule_count', type: 'number' },
+            { name: 'created_at', type: 'number' },
+            { name: 'updated_at', type: 'number' },
+          ],
+        }),
+        createTable({
+          name: 'task_checklist_items',
+          columns: [
+            { name: 'task_id', type: 'string', isIndexed: true },
+            { name: 'title', type: 'string' },
+            { name: 'completed', type: 'boolean' },
+            { name: 'position', type: 'number' },
+            { name: 'created_at', type: 'number' },
+            { name: 'updated_at', type: 'number' },
+          ],
+        }),
+      ],
+    },
+    {
       // v3 — Fase 2 Hábitos
       toVersion: 3,
       steps: [

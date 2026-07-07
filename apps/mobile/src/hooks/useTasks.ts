@@ -1,76 +1,72 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { taskApi, type CreateTaskDTO, type UpdateTaskDTO } from '@/services/api/taskApi';
-import { categoryApi } from '@/services/api/categoryApi';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { CreateTaskDTO, UpdateTaskDTO } from '@/services/api/taskApi';
+import { listTasksLocal } from '@/db/taskQueries';
+import { listCategoriesLocal } from '@/db/moneyQueries';
+import {
+  createTaskLocal,
+  updateTaskLocal,
+  toggleTaskLocal,
+  deleteTaskLocal,
+  addChecklistItemLocal,
+  updateChecklistItemLocal,
+  deleteChecklistItemLocal,
+} from '@/db/taskWrites';
+import { useWatermelonQuery } from './useWatermelonQuery';
+
+/**
+ * Hooks de Tareas — offline-first Fase 2b: lecturas y escrituras sobre
+ * WatermelonDB (tasks, task_checklist_items, categories scope `tareas`),
+ * replicadas vía /api/replication. Misma interfaz que la versión REST.
+ */
 
 export const taskKeys = {
   all: ['tasks'] as const,
   list: (filters?: object) => [...taskKeys.all, 'list', filters] as const,
 };
 
+const TASK_TABLES = ['tasks', 'task_checklist_items', 'categories'];
+
 export function useTasks(filters?: { status?: string }) {
-  return useQuery({
-    queryKey: taskKeys.list(filters),
-    queryFn: () => taskApi.list(filters),
-    staleTime: 1000 * 60,
-  });
+  return useWatermelonQuery(taskKeys.list(filters), () => listTasksLocal(filters), TASK_TABLES);
 }
 
 export function useTaskCategories() {
-  return useQuery({
-    queryKey: ['categories', 'tareas'],
-    queryFn: () => categoryApi.listByScope('tareas'),
-    staleTime: 1000 * 60 * 10,
-  });
+  return useWatermelonQuery(['categories', 'tareas'], () => listCategoriesLocal('tareas'), [
+    'categories',
+  ]);
 }
 
+// Las mutaciones no invalidan a mano: el observable de Watermelon
+// (withChangesForTables) invalida y relee de SQLite tras cada escritura.
+
 export function useToggleTaskComplete() {
-  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (taskId: string) => taskApi.toggle(taskId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.all });
-    },
+    mutationFn: (taskId: string) => toggleTaskLocal(taskId),
   });
 }
 
 export function useCreateTask() {
-  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (dto: CreateTaskDTO) => taskApi.create(dto),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.all });
-    },
+    mutationFn: (dto: CreateTaskDTO) => createTaskLocal(dto),
   });
 }
 
 export function useUpdateTask() {
-  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, dto }: { id: string; dto: UpdateTaskDTO }) => taskApi.update(id, dto),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.all });
-    },
+    mutationFn: ({ id, dto }: { id: string; dto: UpdateTaskDTO }) => updateTaskLocal(id, dto),
   });
 }
 
 export function useDeleteTask() {
-  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (taskId: string) => taskApi.delete(taskId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.all });
-    },
+    mutationFn: (taskId: string) => deleteTaskLocal(taskId),
   });
 }
 
 export function useAddChecklistItem() {
-  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ taskId, title }: { taskId: string; title: string }) =>
-      taskApi.addChecklistItem(taskId, title),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.all });
-    },
+      addChecklistItemLocal(taskId, title),
   });
 }
 
@@ -78,27 +74,22 @@ export function useUpdateChecklistItem() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
-      taskId,
       itemId,
       dto,
     }: {
       taskId: string;
       itemId: string;
       dto: { title?: string; completed?: boolean };
-    }) => taskApi.updateChecklistItem(taskId, itemId, dto),
-    onSuccess: () => {
+    }) => updateChecklistItemLocal(itemId, dto),
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: taskKeys.all });
     },
   });
 }
 
 export function useDeleteChecklistItem() {
-  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ taskId, itemId }: { taskId: string; itemId: string }) =>
-      taskApi.deleteChecklistItem(taskId, itemId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.all });
-    },
+    mutationFn: ({ itemId }: { taskId: string; itemId: string }) =>
+      deleteChecklistItemLocal(itemId),
   });
 }

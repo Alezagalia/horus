@@ -2,11 +2,11 @@ import { renderHook, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 
-jest.mock('../../services/api/taskApi');
-jest.mock('../../services/api/categoryApi');
-
-import { taskApi } from '../../services/api/taskApi';
-import { useTasks, useToggleTaskComplete, useCreateTask } from '../useTasks';
+// Offline-first Fase 2b: los reads/writes van a WatermelonDB; en Jest esos
+// módulos están mapeados a jest.mocks/* (ver jest.config.js moduleNameMapper).
+import { listTasksLocal } from '@/db/taskQueries';
+import { createTaskLocal, toggleTaskLocal, addChecklistItemLocal } from '@/db/taskWrites';
+import { useTasks, useToggleTaskComplete, useCreateTask, useAddChecklistItem } from '../useTasks';
 
 const createWrapper = () => {
   const queryClient = new QueryClient({
@@ -23,16 +23,16 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-describe('useTasks', () => {
+describe('useTasks (lectura local WatermelonDB)', () => {
   it('returns loading state initially', () => {
-    (taskApi.list as jest.Mock).mockReturnValue(new Promise(() => {}));
+    (listTasksLocal as jest.Mock).mockReturnValue(new Promise(() => {}));
     const { result } = renderHook(() => useTasks(), { wrapper: createWrapper() });
     expect(result.current.isLoading).toBe(true);
   });
 
   it('returns tasks on success', async () => {
     const mockTasks = [{ id: 't-1', title: 'Buy groceries', status: 'pendiente' }];
-    (taskApi.list as jest.Mock).mockResolvedValue(mockTasks);
+    (listTasksLocal as jest.Mock).mockResolvedValue(mockTasks);
 
     const { result } = renderHook(() => useTasks(), { wrapper: createWrapper() });
 
@@ -40,20 +40,19 @@ describe('useTasks', () => {
     expect(result.current.data).toEqual(mockTasks);
   });
 
-  it('returns tasks filtered by status', async () => {
-    const mockTasks = [{ id: 't-1', title: 'Task', status: 'pendiente' }];
-    (taskApi.list as jest.Mock).mockResolvedValue(mockTasks);
+  it('passes the status filter to the local loader', async () => {
+    (listTasksLocal as jest.Mock).mockResolvedValue([]);
 
     const { result } = renderHook(() => useTasks({ status: 'pendiente' }), {
       wrapper: createWrapper(),
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(taskApi.list).toHaveBeenCalledWith({ status: 'pendiente' });
+    expect(listTasksLocal).toHaveBeenCalledWith({ status: 'pendiente' });
   });
 
   it('handles error state', async () => {
-    (taskApi.list as jest.Mock).mockRejectedValue(new Error('Server error'));
+    (listTasksLocal as jest.Mock).mockRejectedValue(new Error('DB error'));
 
     const { result } = renderHook(() => useTasks(), { wrapper: createWrapper() });
 
@@ -61,31 +60,44 @@ describe('useTasks', () => {
   });
 });
 
-describe('useToggleTaskComplete', () => {
-  it('calls taskApi.toggle with task id', async () => {
-    const toggled = { id: 't-1', status: 'completada' };
-    (taskApi.toggle as jest.Mock).mockResolvedValue(toggled);
+describe('useToggleTaskComplete (escritura local)', () => {
+  it('toggles via toggleTaskLocal', async () => {
+    (toggleTaskLocal as jest.Mock).mockResolvedValue(undefined);
 
     const { result } = renderHook(() => useToggleTaskComplete(), { wrapper: createWrapper() });
 
     result.current.mutate('t-1');
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(taskApi.toggle).toHaveBeenCalledWith('t-1');
+    expect(toggleTaskLocal).toHaveBeenCalledWith('t-1');
   });
 });
 
-describe('useCreateTask', () => {
-  it('calls taskApi.create with dto', async () => {
-    const dto = { title: 'New Task', categoryId: 'cat-1', priority: 'media' };
-    const created = { id: 't-new', ...dto, status: 'pendiente' };
-    (taskApi.create as jest.Mock).mockResolvedValue(created);
+describe('useCreateTask (escritura local)', () => {
+  it('creates via createTaskLocal', async () => {
+    (createTaskLocal as jest.Mock).mockResolvedValue(undefined);
+    const dto = { title: 'New Task', categoryId: 'cat-1', priority: 'media' as const };
 
     const { result } = renderHook(() => useCreateTask(), { wrapper: createWrapper() });
 
-    result.current.mutate(dto as any);
+    result.current.mutate(dto);
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(taskApi.create).toHaveBeenCalledWith(dto);
+    expect(createTaskLocal).toHaveBeenCalledWith(dto);
+  });
+});
+
+describe('useAddChecklistItem (escritura local)', () => {
+  it('adds the item and returns it for the optimistic UI', async () => {
+    const item = { id: 'i-1', title: 'Subtarea', completed: false };
+    (addChecklistItemLocal as jest.Mock).mockResolvedValue(item);
+
+    const { result } = renderHook(() => useAddChecklistItem(), { wrapper: createWrapper() });
+
+    result.current.mutate({ taskId: 't-1', title: 'Subtarea' });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(addChecklistItemLocal).toHaveBeenCalledWith('t-1', 'Subtarea');
+    expect(result.current.data).toEqual(item);
   });
 });

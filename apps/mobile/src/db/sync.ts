@@ -20,7 +20,13 @@ async function runSynchronize(): Promise<void> {
     // el pull incremental con lastPulledAt viejo no traería sus filas.
     migrationsEnabledAtVersion: 2,
     pullChanges: async ({ lastPulledAt, migration }) => {
-      const fullTables = migration?.tables?.length ? migration.tables.join(',') : undefined;
+      // `categories` va SIEMPRE en el fullTables de una migración: las fases
+      // nuevas suman scopes de categorías a la replicación (habitos, tareas) y
+      // esas filas viejas jamás vendrían en el pull incremental — la tabla no
+      // es "nueva" para Watermelon, así que migration.tables no la incluye.
+      const fullTables = migration?.tables?.length
+        ? [...migration.tables, 'categories'].join(',')
+        : undefined;
       const { data } = await axiosInstance.get('/replication/pull', {
         params: { lastPulledAt: lastPulledAt ?? 0, ...(fullTables ? { fullTables } : {}) },
       });
