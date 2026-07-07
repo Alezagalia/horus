@@ -146,6 +146,13 @@ function PayExpenseModal({
 
           {expense && <Text style={styles.modalConcept}>{expense.concept}</Text>}
 
+          {!!expense?.recurringExpense?.notes && (
+            <View style={styles.payNoteBox}>
+              <Text style={styles.payNoteLabel}>Observación de la plantilla</Text>
+              <Text style={styles.payNoteText}>{expense.recurringExpense.notes}</Text>
+            </View>
+          )}
+
           {/* 1. Cuenta con la que se paga */}
           <Text style={styles.pickerLabel}>CUENTA</Text>
           {accounts.length === 0 ? (
@@ -463,6 +470,26 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.muted,
     marginBottom: Spacing.md,
+  },
+  payNoteBox: {
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    borderRadius: Radius.lg,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 10,
+    marginBottom: Spacing.md,
+  },
+  payNoteLabel: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 11,
+    color: '#1D4ED8',
+    marginBottom: 2,
+  },
+  payNoteText: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    color: '#1E40AF',
   },
   amountInput: {
     fontFamily: 'Inter_700Bold',

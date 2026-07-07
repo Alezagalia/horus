@@ -1143,6 +1143,13 @@ function PayExpenseModal({
             </Text>
           )}
 
+          {!!expense?.recurringExpense?.notes && (
+            <View style={styles.payNoteBox}>
+              <Text style={styles.payNoteLabel}>Observación de la plantilla</Text>
+              <Text style={styles.payNoteText}>{expense.recurringExpense.notes}</Text>
+            </View>
+          )}
+
           <TextInput
             style={styles.amountInput}
             value={amount}
@@ -2933,6 +2940,26 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     borderBottomWidth: 2,
     borderBottomColor: Colors.ice,
+  },
+  payNoteBox: {
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    borderRadius: Radius.lg,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 10,
+    marginBottom: Spacing.md,
+  },
+  payNoteLabel: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 11,
+    color: '#1D4ED8',
+    marginBottom: 2,
+  },
+  payNoteText: {
+    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    color: '#1E40AF',
   },
   conceptInput: {
     fontFamily: 'Inter_400Regular',
