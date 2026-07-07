@@ -14,6 +14,7 @@ import {
   GetEventsQueryDTO,
 } from '../validations/event.validation.js';
 import { googleCalendarSyncService } from './googleCalendarSync.service.js';
+import { recordTombstones } from './replication/tombstone.service.js';
 
 export const eventService = {
   /**
@@ -355,8 +356,16 @@ export const eventService = {
       }
     }
 
-    await prisma.event.delete({
-      where: { id: eventId },
+    // Delete (CASCADE borra las instancias recurrentes) + tombstones para la
+    // replicación offline: del evento Y de sus instancias hijas, así el
+    // cliente WMDB también las borra localmente.
+    await prisma.$transaction(async (tx) => {
+      const instances = await tx.event.findMany({
+        where: { recurringEventId: eventId },
+        select: { id: true },
+      });
+      await recordTombstones(tx, userId, 'events', [eventId, ...instances.map((i) => i.id)]);
+      await tx.event.delete({ where: { id: eventId } });
     });
 
     return { message: 'Event deleted successfully' };

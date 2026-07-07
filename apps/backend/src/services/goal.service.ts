@@ -13,6 +13,7 @@ import {
   UpdateKeyResultInput,
 } from '../validations/goal.validation.js';
 import { prisma } from '../lib/prisma.js';
+import { recordTombstones } from './replication/tombstone.service.js';
 
 // ─── Progress Calculation ─────────────────────────────────────────────────────
 
@@ -348,7 +349,19 @@ export const unlinkHabit = async (goalId: string, userId: string, habitId: strin
   const goal = await prisma.goal.findFirst({ where: { id: goalId, userId, isActive: true } });
   if (!goal) throw new Error('Meta no encontrada');
 
-  await prisma.goalHabit.deleteMany({ where: { goalId, habitId } });
+  // Hard delete + tombstone para la replicación offline
+  await prisma.$transaction(async (tx) => {
+    const links = await tx.goalHabit.findMany({ where: { goalId, habitId }, select: { id: true } });
+    if (links.length > 0) {
+      await recordTombstones(
+        tx,
+        userId,
+        'goal_habits',
+        links.map((l) => l.id)
+      );
+    }
+    await tx.goalHabit.deleteMany({ where: { goalId, habitId } });
+  });
 };
 
 // ─── Link / Unlink Tasks ──────────────────────────────────────────────────────
@@ -371,5 +384,17 @@ export const unlinkTask = async (goalId: string, userId: string, taskId: string)
   const goal = await prisma.goal.findFirst({ where: { id: goalId, userId, isActive: true } });
   if (!goal) throw new Error('Meta no encontrada');
 
-  await prisma.goalTask.deleteMany({ where: { goalId, taskId } });
+  // Hard delete + tombstone para la replicación offline
+  await prisma.$transaction(async (tx) => {
+    const links = await tx.goalTask.findMany({ where: { goalId, taskId }, select: { id: true } });
+    if (links.length > 0) {
+      await recordTombstones(
+        tx,
+        userId,
+        'goal_tasks',
+        links.map((l) => l.id)
+      );
+    }
+    await tx.goalTask.deleteMany({ where: { goalId, taskId } });
+  });
 };

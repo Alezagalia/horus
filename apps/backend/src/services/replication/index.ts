@@ -2,8 +2,9 @@
  * Replicación offline-first (WatermelonDB `synchronize()`) — Fase 1: dominio
  * Dinero completo (accounts, categories [scopes de dinero], transactions,
  * recurring_expenses, monthly_expense_instances, budgets, savings_goals).
- * Fase 2: Hábitos (habits, habit_records) y Tareas (tasks,
- * task_checklist_items), más las categories de sus scopes.
+ * Fase 2: Hábitos (habits, habit_records), Tareas (tasks,
+ * task_checklist_items), Metas (goals, key_results, goal_habits, goal_tasks)
+ * y Eventos (events), más las categories de sus scopes.
  *
  * Contrato:
  *  - pull: { changes: { <tabla>: { created, updated, deleted } }, timestamp }
@@ -34,6 +35,10 @@ import * as habits from './tables/habit.replication.js';
 import * as habitRecords from './tables/habitRecord.replication.js';
 import * as tasks from './tables/task.replication.js';
 import * as taskChecklistItems from './tables/taskChecklistItem.replication.js';
+import * as goals from './tables/goal.replication.js';
+import * as keyResults from './tables/keyResult.replication.js';
+import * as goalLinks from './tables/goalLink.replication.js';
+import * as events from './tables/event.replication.js';
 
 /** Límite de sanidad por tabla en el pull: con usuarios chicos no debería
  * alcanzarse nunca; si se alcanza, hay que implementar paginación. */
@@ -97,6 +102,11 @@ export const replicationService = {
       habitRecordRows,
       taskRows,
       checklistItemRows,
+      goalRowsRepl,
+      keyResultRows,
+      goalHabitRows,
+      goalTaskRows,
+      eventRows,
       tombstones,
     ] = await Promise.all([
       prisma.account.findMany({ where: changedWhere, take: PULL_SANITY_LIMIT }),
@@ -119,6 +129,19 @@ export const replicationService = {
           : { task: { userId }, updatedAt: { gt: since } },
         take: PULL_SANITY_LIMIT,
       }),
+      prisma.goal.findMany({ where: whereFor('goals'), take: PULL_SANITY_LIMIT }),
+      // KR/links no tienen userId propio: se filtran vía su goal
+      prisma.keyResult.findMany({
+        where: fullTables.includes('key_results')
+          ? { goal: { userId } }
+          : { goal: { userId }, updatedAt: { gt: since } },
+        take: PULL_SANITY_LIMIT,
+      }),
+      // Sin updatedAt en Prisma: van COMPLETOS en cada pull (pocas filas,
+      // upsert idempotente); p.ej. un cambio de krId no bumpea nada.
+      prisma.goalHabit.findMany({ where: { goal: { userId } }, take: PULL_SANITY_LIMIT }),
+      prisma.goalTask.findMany({ where: { goal: { userId } }, take: PULL_SANITY_LIMIT }),
+      prisma.event.findMany({ where: whereFor('events'), take: PULL_SANITY_LIMIT }),
       prisma.replicationTombstone.findMany({
         where: { userId, deletedAt: { gt: since } },
         take: PULL_SANITY_LIMIT,
@@ -136,7 +159,12 @@ export const replicationService = {
       habitRows.length +
       habitRecordRows.length +
       taskRows.length +
-      checklistItemRows.length;
+      checklistItemRows.length +
+      goalRowsRepl.length +
+      keyResultRows.length +
+      goalHabitRows.length +
+      goalTaskRows.length +
+      eventRows.length;
     if (rowCount >= PULL_SANITY_LIMIT) {
       logger.warn(
         `[replication] pull de ${rowCount} filas para user ${userId}: evaluar paginación`
@@ -199,14 +227,39 @@ export const replicationService = {
           taskChecklistItems.toRaw,
           deletedFor('task_checklist_items')
         ),
+        goals: splitByCreated(goalRowsRepl, sinceMsFor('goals'), goals.toRaw, deletedFor('goals')),
+        key_results: splitByCreated(
+          keyResultRows,
+          sinceMsFor('key_results'),
+          keyResults.toRaw,
+          deletedFor('key_results')
+        ),
+        goal_habits: splitByCreated(
+          goalHabitRows,
+          lastPulledAt,
+          goalLinks.goalHabitToRaw,
+          deletedFor('goal_habits')
+        ),
+        goal_tasks: splitByCreated(
+          goalTaskRows,
+          lastPulledAt,
+          goalLinks.goalTaskToRaw,
+          deletedFor('goal_tasks')
+        ),
+        events: splitByCreated(eventRows, sinceMsFor('events'), events.toRaw, deletedFor('events')),
       },
       timestamp,
     };
   },
 
   async push(userId: string, changes: PushChanges, lastPulledAt: number = 0): Promise<void> {
+    // Side-effects externos (Google Calendar) que los handlers encolan durante
+    // el tx y se ejecutan best-effort después del commit.
+    let postCommit: Array<() => Promise<void>> = [];
+
     await prisma.$transaction(async (tx) => {
       const ctx = createPushContext(tx, userId, lastPulledAt);
+      postCommit = ctx.postCommit;
 
       // Orden por FKs: cuentas y categorías primero; deletes de transactions
       // ANTES que sus creates/updates (revertir saldos primero).
@@ -260,6 +313,30 @@ export const replicationService = {
       await taskChecklistItems.applyCreated(ctx, changes.task_checklist_items?.created ?? []);
       await taskChecklistItems.applyUpdated(ctx, changes.task_checklist_items?.updated ?? []);
 
+      // Metas: goal (FK de KRs/links) → KRs → links (FK a habit/task/kr)
+      await goals.applyCreated(ctx, changes.goals?.created ?? []);
+      await goals.applyUpdated(ctx, changes.goals?.updated ?? []);
+      goals.warnOnDeleted(changes.goals?.deleted ?? []);
+
+      await keyResults.applyCreated(ctx, changes.key_results?.created ?? []);
+      await keyResults.applyUpdated(ctx, changes.key_results?.updated ?? []);
+
+      await goalLinks.deleteGoalHabits(ctx, changes.goal_habits?.deleted ?? []);
+      await goalLinks.applyGoalHabits(ctx, [
+        ...(changes.goal_habits?.created ?? []),
+        ...(changes.goal_habits?.updated ?? []),
+      ]);
+      await goalLinks.deleteGoalTasks(ctx, changes.goal_tasks?.deleted ?? []);
+      await goalLinks.applyGoalTasks(ctx, [
+        ...(changes.goal_tasks?.created ?? []),
+        ...(changes.goal_tasks?.updated ?? []),
+      ]);
+
+      // Eventos: deletes primero (tombstone gana), luego creates/updates
+      await events.applyDeleted(ctx, changes.events?.deleted ?? []);
+      await events.applyCreated(ctx, changes.events?.created ?? []);
+      await events.applyUpdated(ctx, changes.events?.updated ?? []);
+
       // deleted de tablas soft-delete no debería llegar
       for (const table of [
         'accounts',
@@ -269,6 +346,7 @@ export const replicationService = {
         'savings_goals',
         'habits',
         'habit_records',
+        'key_results',
       ] as const) {
         const deleted = changes[table]?.deleted ?? [];
         if (deleted.length > 0) {
@@ -278,5 +356,10 @@ export const replicationService = {
         }
       }
     });
+
+    // Fuera del tx: llamadas a Google Calendar (best-effort, errores logueados)
+    for (const effect of postCommit) {
+      await effect();
+    }
   },
 };

@@ -5,13 +5,15 @@ import { CategoryRaw } from '../types.js';
 
 /** Scopes replicados: dinero (Fase 1; incluye `gastos` legacy: hay
  * transactions históricas que lo referencian con onDelete: Restrict),
- * hábitos y tareas (Fase 2). */
+ * hábitos, tareas, metas y eventos (Fase 2). */
 export const REPLICATED_SCOPES: Scope[] = [
   Scope.ingresos,
   Scope.egresos,
   Scope.gastos,
   Scope.habitos,
   Scope.tareas,
+  Scope.metas,
+  Scope.eventos,
 ];
 
 export function toRaw(c: Category): CategoryRaw {

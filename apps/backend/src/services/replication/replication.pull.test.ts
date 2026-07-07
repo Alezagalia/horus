@@ -13,6 +13,11 @@ vi.mock('../../lib/prisma.js', () => ({
     habitRecord: { findMany: vi.fn() },
     task: { findMany: vi.fn() },
     taskChecklistItem: { findMany: vi.fn() },
+    goal: { findMany: vi.fn() },
+    keyResult: { findMany: vi.fn() },
+    goalHabit: { findMany: vi.fn() },
+    goalTask: { findMany: vi.fn() },
+    event: { findMany: vi.fn() },
     replicationTombstone: { findMany: vi.fn() },
     $transaction: vi.fn(),
   },
@@ -59,6 +64,11 @@ beforeEach(() => {
   p.habitRecord.findMany.mockResolvedValue([]);
   p.task.findMany.mockResolvedValue([]);
   p.taskChecklistItem.findMany.mockResolvedValue([]);
+  p.goal.findMany.mockResolvedValue([]);
+  p.keyResult.findMany.mockResolvedValue([]);
+  p.goalHabit.findMany.mockResolvedValue([]);
+  p.goalTask.findMany.mockResolvedValue([]);
+  p.event.findMany.mockResolvedValue([]);
   p.replicationTombstone.findMany.mockResolvedValue([]);
 });
 
@@ -91,16 +101,105 @@ describe('replicationService.pull', () => {
     expect(raw.updated_at).toBe(NEW.getTime());
   });
 
-  it('filtra categories a los scopes replicados (dinero + habitos + tareas)', async () => {
+  it('filtra categories a los scopes replicados (dinero + habitos + tareas + metas + eventos)', async () => {
     await replicationService.pull(USER_ID, 0);
 
     const where = p.category.findMany.mock.calls[0][0]?.where as {
       scope: { in: string[] };
     };
     expect(where.scope.in).toEqual(
-      expect.arrayContaining(['ingresos', 'egresos', 'gastos', 'habitos', 'tareas'])
+      expect.arrayContaining([
+        'ingresos',
+        'egresos',
+        'gastos',
+        'habitos',
+        'tareas',
+        'metas',
+        'eventos',
+      ])
     );
-    expect(where.scope.in).toHaveLength(5);
+    expect(where.scope.in).toHaveLength(7);
+  });
+
+  it('incluye goals/key_results/links/events en el pull (links siempre completos)', async () => {
+    const lastPulledAt = new Date('2026-06-15T00:00:00.000Z').getTime();
+    p.goal.findMany.mockResolvedValue([
+      {
+        id: 'goal-1',
+        userId: USER_ID,
+        categoryId: null,
+        title: 'Correr 100km',
+        description: null,
+        priority: 'alta',
+        status: 'en_progreso',
+        targetDate: null,
+        completedAt: null,
+        isActive: true,
+        isFeatured: true,
+        createdAt: OLD,
+        updatedAt: NEW,
+      },
+    ] as any);
+    p.keyResult.findMany.mockResolvedValue([
+      {
+        id: 'kr-1',
+        goalId: 'goal-1',
+        title: 'Km corridos',
+        targetValue: '100',
+        currentValue: '42.5',
+        unit: 'km',
+        isActive: true,
+        createdAt: OLD,
+        updatedAt: NEW,
+      },
+    ] as any);
+    p.goalHabit.findMany.mockResolvedValue([
+      { id: 'gh-1', goalId: 'goal-1', habitId: 'hab-1', krId: 'kr-1', createdAt: OLD },
+    ] as any);
+    p.event.findMany.mockResolvedValue([
+      {
+        id: 'ev-1',
+        userId: USER_ID,
+        categoryId: 'cat-ev',
+        title: 'Turno médico',
+        description: null,
+        location: null,
+        startDateTime: NEW,
+        endDateTime: NEW,
+        isAllDay: false,
+        isRecurring: false,
+        recurringEventId: null,
+        rrule: null,
+        status: 'pendiente',
+        completedAt: null,
+        canceledAt: null,
+        archivedAt: null,
+        reminderMinutes: 30,
+        syncWithGoogle: true,
+        googleEventId: 'google-abc',
+        notificationSent: true,
+        createdAt: OLD,
+        updatedAt: NEW,
+      },
+    ] as any);
+
+    const result = (await replicationService.pull(USER_ID, lastPulledAt)) as PullResult;
+
+    const kr = result.changes.key_results.updated![0] as Record<string, unknown>;
+    expect(kr.current_value).toBe(42.5); // Decimal → number
+
+    // Links sin updatedAt: van completos en cada pull (acá como updated por createdAt viejo)
+    const link = result.changes.goal_habits.updated![0] as Record<string, unknown>;
+    expect(link.kr_id).toBe('kr-1');
+    const linkWhere = p.goalHabit.findMany.mock.calls[0][0]?.where as Record<string, unknown>;
+    expect(linkWhere.goal).toEqual({ userId: USER_ID });
+
+    // El raw de events NO expone campos de Google ni notificationSent
+    const ev = result.changes.events.updated![0] as Record<string, unknown>;
+    expect(ev.title).toBe('Turno médico');
+    expect(ev).not.toHaveProperty('google_event_id');
+    expect(ev).not.toHaveProperty('notification_sent');
+    expect(ev).not.toHaveProperty('sync_with_google');
   });
 
   it('incluye tasks y task_checklist_items en el pull (items filtrados vía su task)', async () => {

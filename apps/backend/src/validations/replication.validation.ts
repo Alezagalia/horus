@@ -35,6 +35,11 @@ export const pushEnvelopeSchema = z.object({
     habit_records: tableChangesSchema,
     tasks: tableChangesSchema,
     task_checklist_items: tableChangesSchema,
+    goals: tableChangesSchema,
+    key_results: tableChangesSchema,
+    goal_habits: tableChangesSchema,
+    goal_tasks: tableChangesSchema,
+    events: tableChangesSchema,
   }),
   lastPulledAt: z.number().int().nonnegative().nullable().optional(),
 });

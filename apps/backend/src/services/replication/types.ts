@@ -168,6 +168,76 @@ export type TaskChecklistItemRaw = {
   updated_at: number;
 };
 
+export type GoalRaw = {
+  id: string;
+  category_id: string | null;
+  title: string;
+  description: string | null;
+  priority: string;
+  status: string;
+  target_date: number | null;
+  completed_at: number | null;
+  is_active: boolean;
+  is_featured: boolean;
+  created_at: number;
+  updated_at: number;
+};
+
+export type KeyResultRaw = {
+  id: string;
+  goal_id: string;
+  title: string;
+  target_value: number;
+  /** Lo incrementan los hábitos vinculados (server-side) y también es editable
+   * a mano: LWW client-wins — una edición offline puede pisar un incremento
+   * concurrente (raro; se loguea como conflicto). */
+  current_value: number;
+  unit: string | null;
+  is_active: boolean;
+  created_at: number;
+  updated_at: number;
+};
+
+/** Sin updated_at en Prisma: se pullean COMPLETOS en cada pull (pocas filas)
+ * y los unlinks viajan como tombstones. */
+export type GoalHabitRaw = {
+  id: string;
+  goal_id: string;
+  habit_id: string;
+  kr_id: string | null;
+  created_at: number;
+};
+
+export type GoalTaskRaw = {
+  id: string;
+  goal_id: string;
+  task_id: string;
+  created_at: number;
+};
+
+/** Sin los campos de Google/notificaciones (server-only: googleEventId,
+ * syncWithGoogle, syncRetry*, notificationSent, rrule). El cliente solo crea
+ * eventos SIMPLES; los recurrentes y sus instancias llegan por pull. */
+export type EventRaw = {
+  id: string;
+  category_id: string;
+  title: string;
+  description: string | null;
+  location: string | null;
+  start_date_time: number;
+  end_date_time: number;
+  is_all_day: boolean;
+  is_recurring: boolean;
+  recurring_event_id: string | null;
+  status: string;
+  completed_at: number | null;
+  canceled_at: number | null;
+  archived_at: number | null;
+  reminder_minutes: number | null;
+  created_at: number;
+  updated_at: number;
+};
+
 export interface TableChanges<Raw> {
   created?: Raw[];
   updated?: Raw[];
@@ -187,6 +257,11 @@ export const REPLICATED_TABLES = [
   'habit_records',
   'tasks',
   'task_checklist_items',
+  'goals',
+  'key_results',
+  'goal_habits',
+  'goal_tasks',
+  'events',
 ] as const;
 
 export type ReplicatedTable = (typeof REPLICATED_TABLES)[number];
@@ -203,6 +278,11 @@ export interface PushChanges {
   habit_records?: TableChanges<HabitRecordRaw>;
   tasks?: TableChanges<TaskRaw>;
   task_checklist_items?: TableChanges<TaskChecklistItemRaw>;
+  goals?: TableChanges<GoalRaw>;
+  key_results?: TableChanges<KeyResultRaw>;
+  goal_habits?: TableChanges<GoalHabitRaw>;
+  goal_tasks?: TableChanges<GoalTaskRaw>;
+  events?: TableChanges<EventRaw>;
 }
 
 export interface PullResult {

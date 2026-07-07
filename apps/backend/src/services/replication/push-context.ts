@@ -18,6 +18,10 @@ export interface PushContext {
   /** Ids de transacciones de transferencia ya procesadas en este push
    * (evita aplicar el delta dos veces cuando llegan ambas patas). */
   processedTransferIds: Set<string>;
+  /** Side-effects a ejecutar DESPUÉS de commitear la transacción (llamadas a
+   * APIs externas como Google Calendar: no pueden ir dentro del tx de Prisma).
+   * Best-effort: los errores se loguean y no fallan el push. */
+  postCommit: Array<() => Promise<void>>;
 }
 
 export function createPushContext(
@@ -31,6 +35,7 @@ export function createPushContext(
     lastPulledAt,
     skippedInstanceIds: new Set(),
     processedTransferIds: new Set(),
+    postCommit: [],
   };
 }
 
