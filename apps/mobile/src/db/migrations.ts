@@ -13,6 +13,79 @@ import { schemaMigrations, createTable } from '@nozbe/watermelondb/Schema/migrat
 export const migrations = schemaMigrations({
   migrations: [
     {
+      // v5 — Fase 2c Metas y Eventos
+      toVersion: 5,
+      steps: [
+        createTable({
+          name: 'goals',
+          columns: [
+            { name: 'category_id', type: 'string', isOptional: true },
+            { name: 'title', type: 'string' },
+            { name: 'description', type: 'string', isOptional: true },
+            { name: 'priority', type: 'string' },
+            { name: 'status', type: 'string' },
+            { name: 'target_date', type: 'number', isOptional: true },
+            { name: 'completed_at', type: 'number', isOptional: true },
+            { name: 'is_active', type: 'boolean' },
+            { name: 'is_featured', type: 'boolean' },
+            { name: 'created_at', type: 'number' },
+            { name: 'updated_at', type: 'number' },
+          ],
+        }),
+        createTable({
+          name: 'key_results',
+          columns: [
+            { name: 'goal_id', type: 'string', isIndexed: true },
+            { name: 'title', type: 'string' },
+            { name: 'target_value', type: 'number' },
+            { name: 'current_value', type: 'number' },
+            { name: 'unit', type: 'string', isOptional: true },
+            { name: 'is_active', type: 'boolean' },
+            { name: 'created_at', type: 'number' },
+            { name: 'updated_at', type: 'number' },
+          ],
+        }),
+        createTable({
+          name: 'goal_habits',
+          columns: [
+            { name: 'goal_id', type: 'string', isIndexed: true },
+            { name: 'habit_id', type: 'string' },
+            { name: 'kr_id', type: 'string', isOptional: true },
+            { name: 'created_at', type: 'number' },
+          ],
+        }),
+        createTable({
+          name: 'goal_tasks',
+          columns: [
+            { name: 'goal_id', type: 'string', isIndexed: true },
+            { name: 'task_id', type: 'string' },
+            { name: 'created_at', type: 'number' },
+          ],
+        }),
+        createTable({
+          name: 'events',
+          columns: [
+            { name: 'category_id', type: 'string' },
+            { name: 'title', type: 'string' },
+            { name: 'description', type: 'string', isOptional: true },
+            { name: 'location', type: 'string', isOptional: true },
+            { name: 'start_date_time', type: 'number', isIndexed: true },
+            { name: 'end_date_time', type: 'number' },
+            { name: 'is_all_day', type: 'boolean' },
+            { name: 'is_recurring', type: 'boolean' },
+            { name: 'recurring_event_id', type: 'string', isOptional: true },
+            { name: 'status', type: 'string' },
+            { name: 'completed_at', type: 'number', isOptional: true },
+            { name: 'canceled_at', type: 'number', isOptional: true },
+            { name: 'archived_at', type: 'number', isOptional: true },
+            { name: 'reminder_minutes', type: 'number', isOptional: true },
+            { name: 'created_at', type: 'number' },
+            { name: 'updated_at', type: 'number' },
+          ],
+        }),
+      ],
+    },
+    {
       // v4 — Fase 2b Tareas
       toVersion: 4,
       steps: [

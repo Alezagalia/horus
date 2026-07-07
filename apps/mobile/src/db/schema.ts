@@ -9,9 +9,10 @@ import { appSchema, tableSchema } from '@nozbe/watermelondb';
  * v3: + habits y habit_records (Fase 2) — CON migración (migrations.ts) para
  *     preservar los datos de Dinero ya sincronizados.
  * v4: + tasks y task_checklist_items (Fase 2b).
+ * v5: + goals, key_results, goal_habits, goal_tasks y events (Fase 2c).
  */
 export const schema = appSchema({
-  version: 4,
+  version: 5,
   tables: [
     tableSchema({
       name: 'accounts',
@@ -187,6 +188,78 @@ export const schema = appSchema({
         { name: 'title', type: 'string' },
         { name: 'completed', type: 'boolean' },
         { name: 'position', type: 'number' },
+        { name: 'created_at', type: 'number' },
+        { name: 'updated_at', type: 'number' },
+      ],
+    }),
+    tableSchema({
+      name: 'goals',
+      columns: [
+        { name: 'category_id', type: 'string', isOptional: true },
+        { name: 'title', type: 'string' },
+        { name: 'description', type: 'string', isOptional: true },
+        { name: 'priority', type: 'string' }, // alta | media | baja
+        { name: 'status', type: 'string' }, // en_progreso | completada | cancelada
+        { name: 'target_date', type: 'number', isOptional: true },
+        { name: 'completed_at', type: 'number', isOptional: true },
+        { name: 'is_active', type: 'boolean' },
+        { name: 'is_featured', type: 'boolean' },
+        { name: 'created_at', type: 'number' },
+        { name: 'updated_at', type: 'number' },
+      ],
+    }),
+    tableSchema({
+      name: 'key_results',
+      columns: [
+        { name: 'goal_id', type: 'string', isIndexed: true },
+        { name: 'title', type: 'string' },
+        { name: 'target_value', type: 'number' },
+        // También lo incrementa el server por hábitos vinculados; el pull corrige
+        { name: 'current_value', type: 'number' },
+        { name: 'unit', type: 'string', isOptional: true },
+        { name: 'is_active', type: 'boolean' },
+        { name: 'created_at', type: 'number' },
+        { name: 'updated_at', type: 'number' },
+      ],
+    }),
+    // Vínculos meta↔hábito/tarea: solo lectura en mobile (los edita la web);
+    // se usan para el cálculo local de progreso y los contadores.
+    tableSchema({
+      name: 'goal_habits',
+      columns: [
+        { name: 'goal_id', type: 'string', isIndexed: true },
+        { name: 'habit_id', type: 'string' },
+        { name: 'kr_id', type: 'string', isOptional: true },
+        { name: 'created_at', type: 'number' },
+      ],
+    }),
+    tableSchema({
+      name: 'goal_tasks',
+      columns: [
+        { name: 'goal_id', type: 'string', isIndexed: true },
+        { name: 'task_id', type: 'string' },
+        { name: 'created_at', type: 'number' },
+      ],
+    }),
+    tableSchema({
+      name: 'events',
+      columns: [
+        { name: 'category_id', type: 'string' },
+        { name: 'title', type: 'string' },
+        { name: 'description', type: 'string', isOptional: true },
+        { name: 'location', type: 'string', isOptional: true },
+        { name: 'start_date_time', type: 'number', isIndexed: true },
+        { name: 'end_date_time', type: 'number' },
+        { name: 'is_all_day', type: 'boolean' },
+        // Solo lectura en el cliente: los recurrentes y sus instancias los
+        // genera el server (rrule); mobile crea únicamente eventos simples
+        { name: 'is_recurring', type: 'boolean' },
+        { name: 'recurring_event_id', type: 'string', isOptional: true },
+        { name: 'status', type: 'string' }, // pendiente | completado | cancelado
+        { name: 'completed_at', type: 'number', isOptional: true },
+        { name: 'canceled_at', type: 'number', isOptional: true },
+        { name: 'archived_at', type: 'number', isOptional: true },
+        { name: 'reminder_minutes', type: 'number', isOptional: true },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },
       ],

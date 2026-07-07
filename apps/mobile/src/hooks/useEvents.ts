@@ -1,15 +1,15 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { eventApi } from '@/services/api/eventApi';
-import { categoryApi } from '@/services/api/categoryApi';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { CreateEventDTO, UpdateEventDTO } from '@/services/api/eventApi';
 import type { CreateRecurringExpenseDTO, UpdateRecurringExpenseDTO } from '@horus/shared';
 import { useWatermelonQuery } from './useWatermelonQuery';
-import { listRecurringExpensesLocal } from '@/db/moneyQueries';
+import { listRecurringExpensesLocal, listCategoriesLocal } from '@/db/moneyQueries';
 import {
   createRecurringExpenseLocal,
   updateRecurringExpenseLocal,
   deleteRecurringExpenseLocal,
 } from '@/db/moneyWrites';
+import { listUpcomingEventsLocal, listCalendarEventsLocal } from '@/db/eventQueries';
+import { createEventLocal, updateEventLocal, deleteEventLocal } from '@/db/eventWrites';
 
 export const eventKeys = {
   all: ['events'] as const,
@@ -26,61 +26,47 @@ export const recurringKeys = {
   active: () => [...recurringKeys.all, 'active'] as const,
 };
 
+// Offline-first Fase 2c: los eventos se leen/escriben en WatermelonDB. Las
+// instancias recurrentes son filas que genera el server (llegan por pull);
+// el sync con Google lo resuelve el server al procesar el push.
+
 export function useUpcomingEvents(days = 3) {
-  return useQuery({
-    queryKey: eventKeys.upcoming(days),
-    queryFn: () => eventApi.listUpcoming(days),
-    staleTime: 1000 * 60 * 5,
-  });
+  return useWatermelonQuery(eventKeys.upcoming(days), () => listUpcomingEventsLocal(days), [
+    'events',
+    'categories',
+  ]);
 }
 
 export function useCalendarEvents(from: string, to: string) {
-  return useQuery({
-    queryKey: calendarEventKeys.range(from, to),
-    queryFn: () => eventApi.list(from, to),
-    staleTime: 1000 * 60 * 2,
-  });
+  return useWatermelonQuery(
+    calendarEventKeys.range(from, to),
+    () => listCalendarEventsLocal(from, to),
+    ['events', 'categories']
+  );
 }
 
 export function useCreateEvent() {
-  const qc = useQueryClient();
   return useMutation({
-    mutationFn: (dto: CreateEventDTO) => eventApi.create(dto),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: calendarEventKeys.all });
-      qc.invalidateQueries({ queryKey: eventKeys.all });
-    },
+    mutationFn: (dto: CreateEventDTO) => createEventLocal(dto),
   });
 }
 
 export function useUpdateEvent() {
-  const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, dto }: { id: string; dto: UpdateEventDTO }) => eventApi.update(id, dto),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: calendarEventKeys.all });
-      qc.invalidateQueries({ queryKey: eventKeys.all });
-    },
+    mutationFn: ({ id, dto }: { id: string; dto: UpdateEventDTO }) => updateEventLocal(id, dto),
   });
 }
 
 export function useDeleteEvent() {
-  const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => eventApi.del(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: calendarEventKeys.all });
-      qc.invalidateQueries({ queryKey: eventKeys.all });
-    },
+    mutationFn: (id: string) => deleteEventLocal(id),
   });
 }
 
 export function useEventCategories() {
-  return useQuery({
-    queryKey: ['categories', 'eventos'],
-    queryFn: () => categoryApi.listByScope('eventos'),
-    staleTime: 1000 * 60 * 10,
-  });
+  return useWatermelonQuery(['categories', 'eventos'], () => listCategoriesLocal('eventos'), [
+    'categories',
+  ]);
 }
 
 /** Offline-first: cuenta plantillas activas desde WatermelonDB. */
