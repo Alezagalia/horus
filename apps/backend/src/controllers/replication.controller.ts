@@ -10,7 +10,13 @@ export const replicationController = {
       const user = req.user;
       if (!user) throw new UnauthorizedError('User not found');
       const lastPulledAt = Number(req.query.lastPulledAt ?? 0) || 0;
-      const result = await replicationService.pull(user.id, lastPulledAt);
+      // Migración Watermelon: tablas nuevas en el schema del cliente que deben
+      // pullearse completas aunque el lastPulledAt sea viejo (CSV de nombres).
+      const fullTables =
+        typeof req.query.fullTables === 'string' && req.query.fullTables.length > 0
+          ? req.query.fullTables.split(',').filter((t) => /^[a-z_]{1,40}$/.test(t))
+          : [];
+      const result = await replicationService.pull(user.id, lastPulledAt, fullTables);
       res.status(200).json(result);
     } catch (error) {
       next(error);

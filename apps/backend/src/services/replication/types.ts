@@ -102,14 +102,51 @@ export type SavingsGoalRaw = {
   updated_at: number;
 };
 
+export type HabitRaw = {
+  id: string;
+  category_id: string;
+  name: string;
+  description: string | null;
+  type: string;
+  target_value: number | null;
+  unit: string | null;
+  periodicity: string;
+  /** JSON string de number[] (Watermelon no tiene columnas array). */
+  week_days: string;
+  time_of_day: string;
+  reminder_time: string | null;
+  color: string | null;
+  /** `order` en Prisma; renombrado porque ORDER es keyword SQL. */
+  sort_order: number;
+  is_active: boolean;
+  /** Derivados del server (recalculados desde los records). READ-ONLY en el push. */
+  current_streak: number;
+  longest_streak: number;
+  last_completed_date: number | null;
+  created_at: number;
+  updated_at: number;
+};
+
+export type HabitRecordRaw = {
+  id: string;
+  habit_id: string;
+  /** Fecha del registro normalizada a mediodía UTC (ms). */
+  date: number;
+  completed: boolean;
+  value: number | null;
+  notes: string | null;
+  created_at: number;
+  updated_at: number;
+};
+
 export interface TableChanges<Raw> {
   created?: Raw[];
   updated?: Raw[];
   deleted?: string[];
 }
 
-/** Nombres de tabla Watermelon del dominio Dinero. */
-export const MONEY_TABLES = [
+/** Nombres de tabla Watermelon replicados (Fase 1: Dinero; Fase 2: Hábitos). */
+export const REPLICATED_TABLES = [
   'accounts',
   'categories',
   'transactions',
@@ -117,9 +154,11 @@ export const MONEY_TABLES = [
   'monthly_expense_instances',
   'budgets',
   'savings_goals',
+  'habits',
+  'habit_records',
 ] as const;
 
-export type MoneyTable = (typeof MONEY_TABLES)[number];
+export type ReplicatedTable = (typeof REPLICATED_TABLES)[number];
 
 export interface PushChanges {
   accounts?: TableChanges<AccountRaw>;
@@ -129,6 +168,8 @@ export interface PushChanges {
   monthly_expense_instances?: TableChanges<MonthlyExpenseInstanceRaw>;
   budgets?: TableChanges<BudgetRaw>;
   savings_goals?: TableChanges<SavingsGoalRaw>;
+  habits?: TableChanges<HabitRaw>;
+  habit_records?: TableChanges<HabitRecordRaw>;
 }
 
 export interface PullResult {

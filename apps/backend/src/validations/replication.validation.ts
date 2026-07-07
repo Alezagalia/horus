@@ -31,6 +31,8 @@ export const pushEnvelopeSchema = z.object({
     monthly_expense_instances: tableChangesSchema,
     budgets: tableChangesSchema,
     savings_goals: tableChangesSchema,
+    habits: tableChangesSchema,
+    habit_records: tableChangesSchema,
   }),
   lastPulledAt: z.number().int().nonnegative().nullable().optional(),
 });

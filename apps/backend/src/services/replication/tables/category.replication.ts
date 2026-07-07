@@ -3,9 +3,15 @@ import { logger } from '../../../lib/logger.js';
 import { PushContext, logIfConflict } from '../push-context.js';
 import { CategoryRaw } from '../types.js';
 
-/** Scopes de dinero que replica Fase 1 (incluye `gastos` legacy: hay
- * transactions históricas que lo referencian con onDelete: Restrict). */
-export const MONEY_SCOPES: Scope[] = [Scope.ingresos, Scope.egresos, Scope.gastos];
+/** Scopes replicados: dinero (Fase 1; incluye `gastos` legacy: hay
+ * transactions históricas que lo referencian con onDelete: Restrict) y
+ * hábitos (Fase 2). */
+export const REPLICATED_SCOPES: Scope[] = [
+  Scope.ingresos,
+  Scope.egresos,
+  Scope.gastos,
+  Scope.habitos,
+];
 
 export function toRaw(c: Category): CategoryRaw {
   return {
@@ -30,8 +36,10 @@ export async function applyCreated(ctx: PushContext, raws: CategoryRaw[]): Promi
     const existing = await ctx.tx.category.findUnique({ where: { id: raw.id } });
     if (existing) continue;
 
-    if (!MONEY_SCOPES.includes(raw.scope as Scope)) {
-      logger.warn(`[replication] category ${raw.id} con scope no-dinero '${raw.scope}': ignorada`);
+    if (!REPLICATED_SCOPES.includes(raw.scope as Scope)) {
+      logger.warn(
+        `[replication] category ${raw.id} con scope no replicado '${raw.scope}': ignorada`
+      );
       continue;
     }
 

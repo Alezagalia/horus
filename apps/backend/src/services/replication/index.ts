@@ -2,6 +2,7 @@
  * Replicación offline-first (WatermelonDB `synchronize()`) — Fase 1: dominio
  * Dinero completo (accounts, categories [scopes de dinero], transactions,
  * recurring_expenses, monthly_expense_instances, budgets, savings_goals).
+ * Fase 2: Hábitos (habits, habit_records, categories scope `habitos`).
  *
  * Contrato:
  *  - pull: { changes: { <tabla>: { created, updated, deleted } }, timestamp }
@@ -28,6 +29,8 @@ import * as recurringExpenses from './tables/recurringExpense.replication.js';
 import * as monthlyExpenseInstances from './tables/monthlyExpenseInstance.replication.js';
 import * as budgets from './tables/budget.replication.js';
 import * as savingsGoals from './tables/savingsGoal.replication.js';
+import * as habits from './tables/habit.replication.js';
+import * as habitRecords from './tables/habitRecord.replication.js';
 
 /** Límite de sanidad por tabla en el pull: con usuarios chicos no debería
  * alcanzarse nunca; si se alcanza, hay que implementar paginación. */
@@ -49,7 +52,18 @@ function splitByCreated<TModel extends { createdAt: Date }, TRaw>(
 }
 
 export const replicationService = {
-  async pull(userId: string, lastPulledAt: number): Promise<PullResult | FullResyncResult> {
+  /**
+   * @param fullTables Tablas que el cliente pide COMPLETAS ignorando su
+   * lastPulledAt: es el soporte de migración de Watermelon — cuando una
+   * migración de schema agrega una tabla nueva, el cliente ya tiene un
+   * lastPulledAt viejo y el pull incremental jamás le traería las filas
+   * históricas de esa tabla.
+   */
+  async pull(
+    userId: string,
+    lastPulledAt: number,
+    fullTables: string[] = []
+  ): Promise<PullResult | FullResyncResult> {
     // Capturado ANTES de las queries: lo que se modifique mientras corre el pull
     // se re-entrega en el próximo (updated es idempotente en Watermelon).
     const timestamp = Date.now();
@@ -63,6 +77,10 @@ export const replicationService = {
 
     const since = new Date(lastPulledAt || 0);
     const changedWhere = { userId, updatedAt: { gt: since } };
+    // Para las tablas en fullTables el pull es desde 0 (todas las filas van
+    // como `created`, upsert idempotente en Watermelon).
+    const sinceMsFor = (table: string): number => (fullTables.includes(table) ? 0 : lastPulledAt);
+    const whereFor = (table: string) => (fullTables.includes(table) ? { userId } : changedWhere);
 
     const [
       accountRows,
@@ -72,11 +90,13 @@ export const replicationService = {
       instanceRows,
       budgetRows,
       goalRows,
+      habitRows,
+      habitRecordRows,
       tombstones,
     ] = await Promise.all([
       prisma.account.findMany({ where: changedWhere, take: PULL_SANITY_LIMIT }),
       prisma.category.findMany({
-        where: { ...changedWhere, scope: { in: categories.MONEY_SCOPES } },
+        where: { ...whereFor('categories'), scope: { in: categories.REPLICATED_SCOPES } },
         take: PULL_SANITY_LIMIT,
       }),
       prisma.transaction.findMany({ where: changedWhere, take: PULL_SANITY_LIMIT }),
@@ -84,6 +104,8 @@ export const replicationService = {
       prisma.monthlyExpenseInstance.findMany({ where: changedWhere, take: PULL_SANITY_LIMIT }),
       prisma.budget.findMany({ where: changedWhere, take: PULL_SANITY_LIMIT }),
       prisma.savingsGoal.findMany({ where: changedWhere, take: PULL_SANITY_LIMIT }),
+      prisma.habit.findMany({ where: whereFor('habits'), take: PULL_SANITY_LIMIT }),
+      prisma.habitRecord.findMany({ where: whereFor('habit_records'), take: PULL_SANITY_LIMIT }),
       prisma.replicationTombstone.findMany({
         where: { userId, deletedAt: { gt: since } },
         take: PULL_SANITY_LIMIT,
@@ -97,7 +119,9 @@ export const replicationService = {
       recurringRows.length +
       instanceRows.length +
       budgetRows.length +
-      goalRows.length;
+      goalRows.length +
+      habitRows.length +
+      habitRecordRows.length;
     if (rowCount >= PULL_SANITY_LIMIT) {
       logger.warn(
         `[replication] pull de ${rowCount} filas para user ${userId}: evaluar paginación`
@@ -117,7 +141,7 @@ export const replicationService = {
         accounts: splitByCreated(accountRows, lastPulledAt, accounts.toRaw, deletedFor('accounts')),
         categories: splitByCreated(
           categoryRows,
-          lastPulledAt,
+          sinceMsFor('categories'),
           categories.toRaw,
           deletedFor('categories')
         ),
@@ -145,6 +169,13 @@ export const replicationService = {
           lastPulledAt,
           savingsGoals.toRaw,
           deletedFor('savings_goals')
+        ),
+        habits: splitByCreated(habitRows, sinceMsFor('habits'), habits.toRaw, deletedFor('habits')),
+        habit_records: splitByCreated(
+          habitRecordRows,
+          sinceMsFor('habit_records'),
+          habitRecords.toRaw,
+          deletedFor('habit_records')
         ),
       },
       timestamp,
@@ -186,6 +217,17 @@ export const replicationService = {
       await transactions.applyCreated(ctx, changes.transactions?.created ?? []);
       await transactions.applyUpdated(ctx, changes.transactions?.updated ?? []);
 
+      // Hábitos: primero los habits (FK de los records), después los records;
+      // al final UN recalc de racha por hábito afectado (server autoritativo).
+      await habits.applyCreated(ctx, changes.habits?.created ?? []);
+      await habits.applyUpdated(ctx, changes.habits?.updated ?? []);
+
+      const affectedA = await habitRecords.applyCreated(ctx, changes.habit_records?.created ?? []);
+      const affectedB = await habitRecords.applyUpdated(ctx, changes.habit_records?.updated ?? []);
+      for (const habitId of new Set([...affectedA, ...affectedB])) {
+        await habitRecords.recalcStreak(ctx, habitId);
+      }
+
       // deleted de tablas soft-delete no debería llegar
       for (const table of [
         'accounts',
@@ -193,6 +235,8 @@ export const replicationService = {
         'recurring_expenses',
         'budgets',
         'savings_goals',
+        'habits',
+        'habit_records',
       ] as const) {
         const deleted = changes[table]?.deleted ?? [];
         if (deleted.length > 0) {
