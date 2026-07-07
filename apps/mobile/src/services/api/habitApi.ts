@@ -73,61 +73,11 @@ export interface HabitDetailedStats {
   last30DaysValues?: Array<{ date: string; value: number | null }>;
 }
 
-interface GeneralStatsResponse {
-  completionRateToday: number;
-  totalHabitsToday: number;
-  completedHabitsToday: number;
-  longestCurrentStreak: number;
-  habitWithLongestStreak: { id: string; name: string; streak: number } | null;
-}
-
+// Offline-first Fase 2: los hábitos se leen/escriben en WatermelonDB
+// (src/db/habitQueries|habitWrites) y se replican vía /api/replication.
+// Solo quedan acá los tipos que consume la UI y las stats detalladas
+// (heatmap/tasas del modal habit-stats), que las calcula el server.
 export const habitApi = {
-  list: async (date?: string): Promise<Habit[]> => {
-    // Con `date`, el backend incluye records:[{completed,...}] del día → permite
-    // saber el estado real (marcado/desmarcado) sin depender de lastCompletedDate.
-    const { data } = await axiosInstance.get('/habits', {
-      params: date ? { date } : undefined,
-    });
-    return data.habits ?? data;
-  },
-
-  getStats: async (): Promise<HabitStats> => {
-    const { data }: { data: GeneralStatsResponse } = await axiosInstance.get('/habits/stats');
-    return {
-      today: {
-        total: data.totalHabitsToday,
-        completed: data.completedHabitsToday,
-        percentage: data.completionRateToday / 100,
-      },
-      streaks: {
-        currentBest: data.longestCurrentStreak,
-        longestEver: data.habitWithLongestStreak?.streak ?? data.longestCurrentStreak,
-      },
-    };
-  },
-
-  toggleRecord: async (habitId: string, date: string, completed: boolean): Promise<void> => {
-    await axiosInstance.post(`/habits/${habitId}/records`, { date, completed });
-  },
-
-  create: async (dto: CreateHabitDTO): Promise<Habit> => {
-    const { data } = await axiosInstance.post('/habits', dto);
-    return data.habit ?? data;
-  },
-
-  update: async (id: string, dto: UpdateHabitDTO): Promise<Habit> => {
-    const { data } = await axiosInstance.put(`/habits/${id}`, dto);
-    return data.habit ?? data;
-  },
-
-  remove: async (id: string): Promise<void> => {
-    await axiosInstance.delete(`/habits/${id}`);
-  },
-
-  updateNumericProgress: async (habitId: string, date: string, value: number): Promise<void> => {
-    await axiosInstance.post(`/habits/${habitId}/records`, { date, completed: true, value });
-  },
-
   getDetailedStats: async (id: string): Promise<HabitDetailedStats> => {
     const { data } = await axiosInstance.get(`/habits/${id}/stats`);
     return data;

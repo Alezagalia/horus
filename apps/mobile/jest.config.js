@@ -13,6 +13,8 @@ module.exports = {
     '^@/db/syncScheduler$': '<rootDir>/jest.mocks/syncScheduler.js',
     '^@/db/moneyQueries$': '<rootDir>/jest.mocks/moneyQueries.js',
     '^@/db/moneyWrites$': '<rootDir>/jest.mocks/moneyWrites.js',
+    '^@/db/habitQueries$': '<rootDir>/jest.mocks/habitQueries.js',
+    '^@/db/habitWrites$': '<rootDir>/jest.mocks/habitWrites.js',
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@horus/shared$': '<rootDir>/../../packages/shared/src/index.ts',
   },

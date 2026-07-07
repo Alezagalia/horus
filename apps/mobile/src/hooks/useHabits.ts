@@ -1,12 +1,23 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { format } from 'date-fns';
+import { habitApi, type CreateHabitDTO, type UpdateHabitDTO } from '@/services/api/habitApi';
+import { listHabitsLocal, getHabitStatsLocal } from '@/db/habitQueries';
+import { listCategoriesLocal } from '@/db/moneyQueries';
 import {
-  habitApi,
-  type CreateHabitDTO,
-  type UpdateHabitDTO,
-  type Habit,
-} from '@/services/api/habitApi';
-import { categoryApi } from '@/services/api/categoryApi';
+  createHabitLocal,
+  updateHabitLocal,
+  deleteHabitLocal,
+  setHabitRecordLocal,
+} from '@/db/habitWrites';
+import { useWatermelonQuery } from './useWatermelonQuery';
 import { goalKeys } from './useGoals';
+
+/**
+ * Hooks de Hábitos — offline-first Fase 2: lecturas y escrituras sobre
+ * WatermelonDB (habits, habit_records, categories scope `habitos`), replicadas
+ * vía /api/replication. Solo las stats detalladas (heatmap del modal) siguen
+ * siendo REST. Misma interfaz que la versión REST: las pantallas no cambian.
+ */
 
 export const habitKeys = {
   all: ['habits'] as const,
@@ -15,24 +26,27 @@ export const habitKeys = {
   detail: (id: string) => [...habitKeys.all, 'detail', id] as const,
 };
 
+const HABIT_TABLES = ['habits', 'habit_records', 'categories'];
+
 export function useHabits(date?: string) {
-  return useQuery({
-    // El date entra en la key para refetchear por día; invalidar habitKeys.list()
-    // matchea por prefijo, así que sigue invalidando esta query.
-    queryKey: date ? [...habitKeys.list(), date] : habitKeys.list(),
-    queryFn: () => habitApi.list(date),
-    staleTime: 1000 * 60 * 3,
-  });
+  return useWatermelonQuery(
+    date ? [...habitKeys.list(), date] : habitKeys.list(),
+    () => listHabitsLocal(date),
+    HABIT_TABLES
+  );
 }
 
 export function useHabitStats() {
-  return useQuery({
-    queryKey: habitKeys.stats(),
-    queryFn: habitApi.getStats,
-    staleTime: 1000 * 60,
-  });
+  return useWatermelonQuery(
+    habitKeys.stats(),
+    // TODAY se resuelve en cada lectura (no congelar el día al montar)
+    () => getHabitStatsLocal(format(new Date(), 'yyyy-MM-dd')),
+    ['habits', 'habit_records']
+  );
 }
 
+/** Stats detalladas (heatmap 30d, tasas): siguen siendo REST — las calcula el
+ * server desde el historial completo; requieren red (pantalla de consulta). */
 export function useHabitDetailedStats(habitId: string) {
   return useQuery({
     queryKey: habitKeys.detail(habitId),
@@ -43,16 +57,16 @@ export function useHabitDetailedStats(habitId: string) {
 }
 
 export function useHabitCategories() {
-  return useQuery({
-    queryKey: ['categories', 'habitos'],
-    queryFn: () => categoryApi.listByScope('habitos'),
-    staleTime: 1000 * 60 * 10,
-  });
+  return useWatermelonQuery(['categories', 'habitos'], () => listCategoriesLocal('habitos'), [
+    'categories',
+  ]);
 }
 
 export function useToggleHabitComplete() {
   const queryClient = useQueryClient();
   return useMutation({
+    // Escritura local instantánea (sin update optimista de React Query: el
+    // observable de Watermelon invalida y relee de SQLite al toque)
     mutationFn: ({
       habitId,
       date,
@@ -61,40 +75,11 @@ export function useToggleHabitComplete() {
       habitId: string;
       date: string;
       completed: boolean;
-    }) => habitApi.toggleRecord(habitId, date, completed),
-    // Update optimista: el check cambia al instante y se revierte si falla de verdad
-    // (tras agotar los reintentos de red). Hace inmediato el toggle ante latencia.
-    onMutate: async ({ habitId, date, completed }) => {
-      const key = [...habitKeys.list(), date];
-      await queryClient.cancelQueries({ queryKey: key });
-      const previous = queryClient.getQueryData<Habit[]>(key);
-      queryClient.setQueryData<Habit[]>(key, (old) =>
-        old?.map((h) =>
-          h.id === habitId
-            ? {
-                ...h,
-                records: [
-                  {
-                    id: h.records?.[0]?.id ?? '',
-                    habitId,
-                    completed,
-                    value: h.records?.[0]?.value ?? null,
-                    notes: h.records?.[0]?.notes ?? null,
-                  },
-                ],
-              }
-            : h
-        )
-      );
-      return { previous, key };
-    },
-    onError: (_err, _vars, ctx) => {
-      if (ctx?.previous) queryClient.setQueryData(ctx.key, ctx.previous);
-    },
+    }) => setHabitRecordLocal({ habitId, date, completed }),
     onSettled: (_data, _err, variables) => {
-      queryClient.invalidateQueries({ queryKey: habitKeys.list() });
-      queryClient.invalidateQueries({ queryKey: habitKeys.stats() });
       if (variables.completed) {
+        // Los KRs vinculados los incrementa el server al procesar el push;
+        // la invalidación refresca metas cuando vuelva la respuesta REST.
         queryClient.invalidateQueries({ queryKey: goalKeys.all });
       }
     },
@@ -102,32 +87,20 @@ export function useToggleHabitComplete() {
 }
 
 export function useCreateHabit() {
-  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (dto: CreateHabitDTO) => habitApi.create(dto),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: habitKeys.all });
-    },
+    mutationFn: (dto: CreateHabitDTO) => createHabitLocal(dto),
   });
 }
 
 export function useUpdateHabit() {
-  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, dto }: { id: string; dto: UpdateHabitDTO }) => habitApi.update(id, dto),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: habitKeys.all });
-    },
+    mutationFn: ({ id, dto }: { id: string; dto: UpdateHabitDTO }) => updateHabitLocal(id, dto),
   });
 }
 
 export function useDeleteHabit() {
-  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => habitApi.remove(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: habitKeys.all });
-    },
+    mutationFn: (id: string) => deleteHabitLocal(id),
   });
 }
 
@@ -135,10 +108,8 @@ export function useNumericHabitProgress() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ habitId, date, value }: { habitId: string; date: string; value: number }) =>
-      habitApi.updateNumericProgress(habitId, date, value),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: habitKeys.list() });
-      queryClient.invalidateQueries({ queryKey: habitKeys.stats() });
+      setHabitRecordLocal({ habitId, date, completed: true, value }),
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: goalKeys.all });
     },
   });

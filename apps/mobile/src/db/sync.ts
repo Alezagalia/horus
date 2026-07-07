@@ -14,9 +14,15 @@ class FullResyncRequiredError extends Error {
 async function runSynchronize(): Promise<void> {
   await synchronize({
     database,
-    pullChanges: async ({ lastPulledAt }) => {
+    // Desde qué versión de schema el sync soporta migraciones: al migrar (p.ej.
+    // v2→v3 agrega habits/habit_records), Watermelon manda `migration.tables`
+    // con las tablas nuevas y el pull las pide COMPLETAS (fullTables), porque
+    // el pull incremental con lastPulledAt viejo no traería sus filas.
+    migrationsEnabledAtVersion: 2,
+    pullChanges: async ({ lastPulledAt, migration }) => {
+      const fullTables = migration?.tables?.length ? migration.tables.join(',') : undefined;
       const { data } = await axiosInstance.get('/replication/pull', {
-        params: { lastPulledAt: lastPulledAt ?? 0 },
+        params: { lastPulledAt: lastPulledAt ?? 0, ...(fullTables ? { fullTables } : {}) },
       });
       if (data.fullResyncRequired) throw new FullResyncRequiredError();
       return { changes: data.changes, timestamp: data.timestamp };
