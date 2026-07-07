@@ -14,7 +14,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Circle, Trash2, Pencil } from 'lucide-react-native';
+import { CheckCircle2, Circle, Trash2, Pencil, History } from 'lucide-react-native';
 import { format, isToday, isPast, isTomorrow, parseISO, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
@@ -130,6 +130,7 @@ function groupByTimeOfDay(
 function HabitRow({
   habit,
   onToggle,
+  onEnterValue,
   onEdit,
   onDelete,
   toggling,
@@ -137,6 +138,7 @@ function HabitRow({
 }: {
   habit: Habit;
   onToggle: () => void;
+  onEnterValue: () => void;
   onEdit: () => void;
   onDelete: () => void;
   toggling: boolean;
@@ -144,6 +146,19 @@ function HabitRow({
 }) {
   const done = isCompletedToday(habit);
   const icon = habit.category?.icon ?? '·';
+
+  const openStats = () =>
+    router.push({
+      pathname: '/habit-stats',
+      params: {
+        id: habit.id,
+        name: habit.name,
+        color: habit.color ?? habit.category?.color ?? '',
+        type: habit.type,
+        unit: habit.unit ?? '',
+        targetValue: habit.targetValue != null ? String(habit.targetValue) : '',
+      },
+    });
 
   return (
     <View style={[styles.habitRow, !isLast && styles.rowDivider]}>
@@ -166,19 +181,10 @@ function HabitRow({
       <TouchableOpacity
         style={styles.habitNameWrap}
         activeOpacity={0.6}
-        onPress={() =>
-          router.push({
-            pathname: '/habit-stats',
-            params: {
-              id: habit.id,
-              name: habit.name,
-              color: habit.color ?? habit.category?.color ?? '',
-              type: habit.type,
-              unit: habit.unit ?? '',
-              targetValue: habit.targetValue != null ? String(habit.targetValue) : '',
-            },
-          })
-        }
+        // NUMERIC: el tap principal es la acción frecuente (ingresar/corregir el
+        // valor del día); el historial queda en el ícono de reloj. CHECK conserva
+        // el historial en el tap del nombre.
+        onPress={habit.type === 'NUMERIC' ? onEnterValue : openStats}
       >
         <Text style={[styles.habitName, done && styles.habitNameDone]} numberOfLines={1}>
           {habit.name}
@@ -190,6 +196,9 @@ function HabitRow({
           <Text style={styles.streakNum}>{habit.currentStreak}</Text>
         </View>
       )}
+      <TouchableOpacity onPress={openStats} hitSlop={8} style={styles.habitActionBtn}>
+        <History size={14} color={Colors.muted} strokeWidth={1.5} />
+      </TouchableOpacity>
       <TouchableOpacity onPress={onEdit} hitSlop={8} style={styles.habitActionBtn}>
         <Pencil size={14} color={Colors.muted} strokeWidth={1.5} />
       </TouchableOpacity>
@@ -371,6 +380,7 @@ function HabitView({
   momentLabels,
   momentEmojis,
   onToggle,
+  onEnterValue,
   onEdit,
   onDelete,
   onNew,
@@ -382,6 +392,7 @@ function HabitView({
   momentLabels: Record<string, string>;
   momentEmojis: Record<string, string>;
   onToggle: (h: Habit) => void;
+  onEnterValue: (h: Habit) => void;
   onEdit: (h: Habit) => void;
   onDelete: (id: string) => void;
   onNew: () => void;
@@ -428,6 +439,7 @@ function HabitView({
                   key={h.id}
                   habit={h}
                   onToggle={() => onToggle(h)}
+                  onEnterValue={() => onEnterValue(h)}
                   onEdit={() => onEdit(h)}
                   onDelete={() => onDelete(h.id)}
                   toggling={toggling(h.id)}
@@ -988,6 +1000,7 @@ export default function FocoScreen() {
             momentLabels={momentLabels}
             momentEmojis={momentEmojis}
             onToggle={handleToggleHabit}
+            onEnterValue={(h) => setNumericHabit(h)}
             onEdit={handleEditHabit}
             onDelete={handleDeleteHabit}
             onNew={() => {

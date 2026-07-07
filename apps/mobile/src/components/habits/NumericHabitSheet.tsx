@@ -4,7 +4,7 @@
  * marcar un hábito numérico abra el ingreso de valor in situ (sin redirigir).
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -33,6 +33,19 @@ export function NumericHabitSheet({
   const [value, setValue] = useState('');
   const logProgress = useNumericHabitProgress();
   const TODAY = format(new Date(), 'yyyy-MM-dd');
+
+  // Valor ya registrado hoy (si lo hay): permite corregirlo en lugar de
+  // arrancar siempre de cero. El endpoint de records es un upsert, así que
+  // reenviar con otro valor lo pisa.
+  const existingValue = habit?.records?.[0]?.value ?? null;
+  const isEdit = existingValue != null;
+
+  useEffect(() => {
+    if (habit) {
+      setValue(existingValue != null ? String(existingValue).replace('.', ',') : '');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [habit?.id]);
 
   const handleSubmit = () => {
     if (!habit) return;
@@ -69,7 +82,9 @@ export function NumericHabitSheet({
       >
         <View style={styles.sheet}>
           <View style={styles.sheetHandle} />
-          <Text style={styles.sheetTitle}>Registrar — {habit?.name}</Text>
+          <Text style={styles.sheetTitle}>
+            {isEdit ? 'Editar' : 'Registrar'} — {habit?.name}
+          </Text>
           {habit?.targetValue != null && (
             <Text style={styles.numericSubtitle}>
               Objetivo: {habit.targetValue} {habit.unit ?? ''}
@@ -88,7 +103,7 @@ export function NumericHabitSheet({
             textAlign="center"
           />
           <Button
-            label="Registrar"
+            label={isEdit ? 'Guardar' : 'Registrar'}
             onPress={handleSubmit}
             loading={logProgress.isPending}
             disabled={!value || logProgress.isPending}
