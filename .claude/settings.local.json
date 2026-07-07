@@ -301,7 +301,8 @@
       "PowerShell(Head *)",
       "WebFetch(domain:docs.railway.com)",
       "WebFetch(domain:backboard.railway.app)",
-      "PowerShell($sw=[Diagnostics.Stopwatch]::StartNew\\(\\); try { $r=Invoke-WebRequest -Uri \"https://horus-production-4629.up.railway.app/api/health\" -TimeoutSec 60 -UseBasicParsing; $sw.Stop\\(\\); \"1st request: $\\($sw.ElapsedMilliseconds\\) ms — HTTP $\\($r.StatusCode\\)\" } catch { $sw.Stop\\(\\); \"1st request FAILED after $\\($sw.ElapsedMilliseconds\\) ms: $\\($_.Exception.Message\\)\" }; $sw2=[Diagnostics.Stopwatch]::StartNew\\(\\); $r2=Invoke-WebRequest -Uri \"https://horus-production-4629.up.railway.app/api/health\" -TimeoutSec 60 -UseBasicParsing; $sw2.Stop\\(\\); \"2nd request: $\\($sw2.ElapsedMilliseconds\\) ms — HTTP $\\($r2.StatusCode\\)\")"
+      "PowerShell($sw=[Diagnostics.Stopwatch]::StartNew\\(\\); try { $r=Invoke-WebRequest -Uri \"https://horus-production-4629.up.railway.app/api/health\" -TimeoutSec 60 -UseBasicParsing; $sw.Stop\\(\\); \"1st request: $\\($sw.ElapsedMilliseconds\\) ms — HTTP $\\($r.StatusCode\\)\" } catch { $sw.Stop\\(\\); \"1st request FAILED after $\\($sw.ElapsedMilliseconds\\) ms: $\\($_.Exception.Message\\)\" }; $sw2=[Diagnostics.Stopwatch]::StartNew\\(\\); $r2=Invoke-WebRequest -Uri \"https://horus-production-4629.up.railway.app/api/health\" -TimeoutSec 60 -UseBasicParsing; $sw2.Stop\\(\\); \"2nd request: $\\($sw2.ElapsedMilliseconds\\) ms — HTTP $\\($r2.StatusCode\\)\")",
+      "PowerShell(pnpm *)"
     ],
     "deny": [],
     "ask": []
