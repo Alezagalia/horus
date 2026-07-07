@@ -1,7 +1,8 @@
 /**
  * Tombstones de hard deletes para la replicación offline-first.
- * Solo Transaction hace hard delete hoy; los soft deletes (isActive=false)
- * viajan como `updated`, no generan tombstone.
+ * Hacen hard delete: Transaction, Task (cascadea sus checklist items) y
+ * TaskChecklistItem; los soft deletes (isActive=false) viajan como `updated`,
+ * no generan tombstone.
  */
 
 import { Prisma } from '../../generated/prisma/client.js';

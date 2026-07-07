@@ -139,6 +139,35 @@ export type HabitRecordRaw = {
   updated_at: number;
 };
 
+export type TaskRaw = {
+  id: string;
+  category_id: string;
+  title: string;
+  description: string | null;
+  priority: string;
+  status: string;
+  due_date: number | null;
+  completed_at: number | null;
+  canceled_at: number | null;
+  archived_at: number | null;
+  cancel_reason: string | null;
+  is_active: boolean;
+  order_position: number;
+  reschedule_count: number;
+  created_at: number;
+  updated_at: number;
+};
+
+export type TaskChecklistItemRaw = {
+  id: string;
+  task_id: string;
+  title: string;
+  completed: boolean;
+  position: number;
+  created_at: number;
+  updated_at: number;
+};
+
 export interface TableChanges<Raw> {
   created?: Raw[];
   updated?: Raw[];
@@ -156,6 +185,8 @@ export const REPLICATED_TABLES = [
   'savings_goals',
   'habits',
   'habit_records',
+  'tasks',
+  'task_checklist_items',
 ] as const;
 
 export type ReplicatedTable = (typeof REPLICATED_TABLES)[number];
@@ -170,6 +201,8 @@ export interface PushChanges {
   savings_goals?: TableChanges<SavingsGoalRaw>;
   habits?: TableChanges<HabitRaw>;
   habit_records?: TableChanges<HabitRecordRaw>;
+  tasks?: TableChanges<TaskRaw>;
+  task_checklist_items?: TableChanges<TaskChecklistItemRaw>;
 }
 
 export interface PullResult {

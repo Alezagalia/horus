@@ -5,6 +5,7 @@
 
 import { prisma } from '../lib/prisma.js';
 import { NotFoundError, BadRequestError } from '../middlewares/error.middleware.js';
+import { recordTombstones } from './replication/tombstone.service.js';
 
 export interface CreateChecklistItemData {
   title: string;
@@ -119,9 +120,12 @@ export const checklistService = {
       throw new NotFoundError('Checklist item not found');
     }
 
-    // Delete item
-    await prisma.taskChecklistItem.delete({
-      where: { id: itemId },
+    // Delete item + tombstone para la replicación offline
+    await prisma.$transaction(async (tx) => {
+      await recordTombstones(tx, userId, 'task_checklist_items', [itemId]);
+      await tx.taskChecklistItem.delete({
+        where: { id: itemId },
+      });
     });
 
     // Recalculate positions for remaining items

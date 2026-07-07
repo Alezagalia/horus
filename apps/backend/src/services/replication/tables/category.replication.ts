@@ -4,13 +4,14 @@ import { PushContext, logIfConflict } from '../push-context.js';
 import { CategoryRaw } from '../types.js';
 
 /** Scopes replicados: dinero (Fase 1; incluye `gastos` legacy: hay
- * transactions históricas que lo referencian con onDelete: Restrict) y
- * hábitos (Fase 2). */
+ * transactions históricas que lo referencian con onDelete: Restrict),
+ * hábitos y tareas (Fase 2). */
 export const REPLICATED_SCOPES: Scope[] = [
   Scope.ingresos,
   Scope.egresos,
   Scope.gastos,
   Scope.habitos,
+  Scope.tareas,
 ];
 
 export function toRaw(c: Category): CategoryRaw {

@@ -11,6 +11,8 @@ vi.mock('../../lib/prisma.js', () => ({
     savingsGoal: { findMany: vi.fn() },
     habit: { findMany: vi.fn() },
     habitRecord: { findMany: vi.fn() },
+    task: { findMany: vi.fn() },
+    taskChecklistItem: { findMany: vi.fn() },
     replicationTombstone: { findMany: vi.fn() },
     $transaction: vi.fn(),
   },
@@ -55,6 +57,8 @@ beforeEach(() => {
   p.savingsGoal.findMany.mockResolvedValue([]);
   p.habit.findMany.mockResolvedValue([]);
   p.habitRecord.findMany.mockResolvedValue([]);
+  p.task.findMany.mockResolvedValue([]);
+  p.taskChecklistItem.findMany.mockResolvedValue([]);
   p.replicationTombstone.findMany.mockResolvedValue([]);
 });
 
@@ -87,16 +91,67 @@ describe('replicationService.pull', () => {
     expect(raw.updated_at).toBe(NEW.getTime());
   });
 
-  it('filtra categories a los scopes replicados (dinero + habitos)', async () => {
+  it('filtra categories a los scopes replicados (dinero + habitos + tareas)', async () => {
     await replicationService.pull(USER_ID, 0);
 
     const where = p.category.findMany.mock.calls[0][0]?.where as {
       scope: { in: string[] };
     };
     expect(where.scope.in).toEqual(
-      expect.arrayContaining(['ingresos', 'egresos', 'gastos', 'habitos'])
+      expect.arrayContaining(['ingresos', 'egresos', 'gastos', 'habitos', 'tareas'])
     );
-    expect(where.scope.in).toHaveLength(4);
+    expect(where.scope.in).toHaveLength(5);
+  });
+
+  it('incluye tasks y task_checklist_items en el pull (items filtrados vía su task)', async () => {
+    p.task.findMany.mockResolvedValue([
+      {
+        id: 'task-1',
+        userId: USER_ID,
+        categoryId: 'cat-1',
+        title: 'Comprar filtro',
+        description: null,
+        priority: 'media',
+        status: 'pendiente',
+        dueDate: NEW,
+        completedAt: null,
+        canceledAt: null,
+        archivedAt: null,
+        cancelReason: null,
+        isActive: true,
+        orderPosition: 2,
+        rescheduleCount: 1,
+        createdAt: OLD,
+        updatedAt: NEW,
+      },
+    ] as any);
+    p.taskChecklistItem.findMany.mockResolvedValue([
+      {
+        id: 'item-1',
+        taskId: 'task-1',
+        title: 'Medir el filtro',
+        completed: false,
+        position: 0,
+        createdAt: OLD,
+        updatedAt: NEW,
+      },
+    ] as any);
+
+    const result = (await replicationService.pull(USER_ID, 0)) as PullResult;
+
+    const task = result.changes.tasks.created![0] as Record<string, unknown>;
+    expect(task.order_position).toBe(2);
+    expect(task.reschedule_count).toBe(1);
+    expect(task.due_date).toBe(NEW.getTime());
+
+    const item = result.changes.task_checklist_items.created![0] as Record<string, unknown>;
+    expect(item.task_id).toBe('task-1');
+    // Los items no tienen userId: el filtro va por la relación task
+    const itemWhere = p.taskChecklistItem.findMany.mock.calls[0][0]?.where as Record<
+      string,
+      unknown
+    >;
+    expect(itemWhere.task).toEqual({ userId: USER_ID });
   });
 
   it('mapea tombstones a deleted[] de su tabla', async () => {

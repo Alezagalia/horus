@@ -2,7 +2,8 @@
  * Replicación offline-first (WatermelonDB `synchronize()`) — Fase 1: dominio
  * Dinero completo (accounts, categories [scopes de dinero], transactions,
  * recurring_expenses, monthly_expense_instances, budgets, savings_goals).
- * Fase 2: Hábitos (habits, habit_records, categories scope `habitos`).
+ * Fase 2: Hábitos (habits, habit_records) y Tareas (tasks,
+ * task_checklist_items), más las categories de sus scopes.
  *
  * Contrato:
  *  - pull: { changes: { <tabla>: { created, updated, deleted } }, timestamp }
@@ -31,6 +32,8 @@ import * as budgets from './tables/budget.replication.js';
 import * as savingsGoals from './tables/savingsGoal.replication.js';
 import * as habits from './tables/habit.replication.js';
 import * as habitRecords from './tables/habitRecord.replication.js';
+import * as tasks from './tables/task.replication.js';
+import * as taskChecklistItems from './tables/taskChecklistItem.replication.js';
 
 /** Límite de sanidad por tabla en el pull: con usuarios chicos no debería
  * alcanzarse nunca; si se alcanza, hay que implementar paginación. */
@@ -92,6 +95,8 @@ export const replicationService = {
       goalRows,
       habitRows,
       habitRecordRows,
+      taskRows,
+      checklistItemRows,
       tombstones,
     ] = await Promise.all([
       prisma.account.findMany({ where: changedWhere, take: PULL_SANITY_LIMIT }),
@@ -106,6 +111,14 @@ export const replicationService = {
       prisma.savingsGoal.findMany({ where: changedWhere, take: PULL_SANITY_LIMIT }),
       prisma.habit.findMany({ where: whereFor('habits'), take: PULL_SANITY_LIMIT }),
       prisma.habitRecord.findMany({ where: whereFor('habit_records'), take: PULL_SANITY_LIMIT }),
+      prisma.task.findMany({ where: whereFor('tasks'), take: PULL_SANITY_LIMIT }),
+      // El item no tiene userId propio: se filtra vía su task
+      prisma.taskChecklistItem.findMany({
+        where: fullTables.includes('task_checklist_items')
+          ? { task: { userId } }
+          : { task: { userId }, updatedAt: { gt: since } },
+        take: PULL_SANITY_LIMIT,
+      }),
       prisma.replicationTombstone.findMany({
         where: { userId, deletedAt: { gt: since } },
         take: PULL_SANITY_LIMIT,
@@ -121,7 +134,9 @@ export const replicationService = {
       budgetRows.length +
       goalRows.length +
       habitRows.length +
-      habitRecordRows.length;
+      habitRecordRows.length +
+      taskRows.length +
+      checklistItemRows.length;
     if (rowCount >= PULL_SANITY_LIMIT) {
       logger.warn(
         `[replication] pull de ${rowCount} filas para user ${userId}: evaluar paginación`
@@ -177,6 +192,13 @@ export const replicationService = {
           habitRecords.toRaw,
           deletedFor('habit_records')
         ),
+        tasks: splitByCreated(taskRows, sinceMsFor('tasks'), tasks.toRaw, deletedFor('tasks')),
+        task_checklist_items: splitByCreated(
+          checklistItemRows,
+          sinceMsFor('task_checklist_items'),
+          taskChecklistItems.toRaw,
+          deletedFor('task_checklist_items')
+        ),
       },
       timestamp,
     };
@@ -227,6 +249,16 @@ export const replicationService = {
       for (const habitId of new Set([...affectedA, ...affectedB])) {
         await habitRecords.recalcStreak(ctx, habitId);
       }
+
+      // Tareas: deletes primero (tombstone gana sobre creates degradados),
+      // después la task (FK del checklist) y al final sus items.
+      await tasks.applyDeleted(ctx, changes.tasks?.deleted ?? []);
+      await tasks.applyCreated(ctx, changes.tasks?.created ?? []);
+      await tasks.applyUpdated(ctx, changes.tasks?.updated ?? []);
+
+      await taskChecklistItems.applyDeleted(ctx, changes.task_checklist_items?.deleted ?? []);
+      await taskChecklistItems.applyCreated(ctx, changes.task_checklist_items?.created ?? []);
+      await taskChecklistItems.applyUpdated(ctx, changes.task_checklist_items?.updated ?? []);
 
       // deleted de tablas soft-delete no debería llegar
       for (const table of [

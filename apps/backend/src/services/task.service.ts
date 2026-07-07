@@ -6,6 +6,7 @@
 import { prisma } from '../lib/prisma.js';
 import { Priority, TaskStatus, Scope } from '../generated/prisma/client.js';
 import { NotFoundError, BadRequestError } from '../middlewares/error.middleware.js';
+import { recordTombstones } from './replication/tombstone.service.js';
 
 export interface CreateTaskData {
   categoryId: string;
@@ -329,9 +330,24 @@ export const taskService = {
       throw new NotFoundError('Task not found');
     }
 
-    // Delete task (CASCADE will delete checklist items)
-    await prisma.task.delete({
-      where: { id },
+    // Delete task (CASCADE will delete checklist items) + tombstones para la
+    // replicación offline (del task Y de sus items cascadeados, así el cliente
+    // WMDB también los borra localmente)
+    await prisma.$transaction(async (tx) => {
+      const items = await tx.taskChecklistItem.findMany({
+        where: { taskId: id },
+        select: { id: true },
+      });
+      await recordTombstones(tx, userId, 'tasks', [id]);
+      if (items.length > 0) {
+        await recordTombstones(
+          tx,
+          userId,
+          'task_checklist_items',
+          items.map((i) => i.id)
+        );
+      }
+      await tx.task.delete({ where: { id } });
     });
 
     // Recalculate orderPosition for remaining tasks
