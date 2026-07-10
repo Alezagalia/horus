@@ -45,8 +45,14 @@ export const googleAuthService = {
   /**
    * Generates authorization URL for OAuth2 flow
    * @param isReconnect - Whether this is a reconnection (skip forcing consent)
+   * @param platform - 'mobile' viaja en el state para que la página de
+   *   callback (web SPA) sepa redirigir a la app via deep link horus://
    */
-  async generateAuthUrl(userId: string, isReconnect: boolean = false): Promise<string> {
+  async generateAuthUrl(
+    userId: string,
+    isReconnect: boolean = false,
+    platform: 'web' | 'mobile' = 'web'
+  ): Promise<string> {
     const oauth2Client = getOAuth2Client();
 
     // Check if user already has a connection
@@ -60,7 +66,9 @@ export const googleAuthService = {
     const authUrl = oauth2Client.generateAuthUrl({
       access_type: 'offline', // Request refresh token
       scope: GOOGLE_SCOPES,
-      state: userId, // Pass userId to callback
+      // userId (+ plataforma) para el callback; los ids son UUID así que ':'
+      // nunca aparece en el userId
+      state: platform === 'mobile' ? `${userId}:mobile` : userId,
       // Only force consent on first connection
       // This prevents hitting Google's 50 refresh token limit per user
       prompt: isReconnect ? 'select_account' : 'consent',
@@ -266,14 +274,20 @@ export const googleAuthService = {
       },
     });
 
-    // Mark all synced events as local only
+    // Mark all synced events as local only. googleEventId también se limpia:
+    // dejarlo colgado rompe una reconexión posterior (updateGoogleEvent
+    // intentaría actualizar un evento de un calendario ya desvinculado).
     await prisma.event.updateMany({
       where: {
         userId,
-        syncWithGoogle: true,
+        OR: [{ syncWithGoogle: true }, { googleEventId: { not: null } }],
       },
       data: {
         syncWithGoogle: false,
+        googleEventId: null,
+        syncRetryCount: 0,
+        syncNextRetryAt: null,
+        syncLastError: null,
       },
     });
 

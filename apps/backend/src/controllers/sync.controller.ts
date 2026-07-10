@@ -25,7 +25,9 @@ export const syncController = {
 
       const userId = user.id;
 
-      const authUrl = await googleAuthService.generateAuthUrl(userId);
+      // Mobile manda platform:'mobile' para que el callback redirija a la app
+      const platform = req.body?.platform === 'mobile' ? 'mobile' : 'web';
+      const authUrl = await googleAuthService.generateAuthUrl(userId, false, platform);
 
       res.status(200).json({
         success: true,
@@ -54,7 +56,8 @@ export const syncController = {
         return;
       }
 
-      const userId = state as string;
+      // El state puede venir como `userId` (web) o `userId:mobile`
+      const userId = String(state).split(':')[0];
 
       // Validate that the state corresponds to a real user — prevents userId spoofing
       const userExists = await prisma.user.findUnique({
