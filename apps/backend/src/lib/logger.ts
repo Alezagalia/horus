@@ -71,6 +71,22 @@ if (process.env.NODE_ENV !== 'production') {
       format: consoleFormat,
     })
   );
+} else {
+  // Producción: stdout SIEMPRE — en Railway los archivos rotados viven dentro
+  // del contenedor (efímeros e inaccesibles); sin esto, todo logger.info/warn
+  // (crons, [replication], [GCal ...]) era invisible en `railway logs`.
+  logger.add(
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.timestamp({ format: 'HH:mm:ss' }),
+        winston.format.printf(({ timestamp, level, message, stack }) => {
+          let log = `${timestamp} ${level}: ${message}`;
+          if (stack) log += `\n${stack}`;
+          return log;
+        })
+      ),
+    })
+  );
 }
 
 // Helper functions for structured logging
