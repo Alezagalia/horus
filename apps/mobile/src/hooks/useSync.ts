@@ -16,17 +16,27 @@ export function useSyncStatus() {
   });
 }
 
+/** El deep link al que vuelve la página de callback web (flujo mobile). */
+const OAUTH_REDIRECT = 'horus://google-callback';
+
 export function useConnectGoogleCalendar() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async (): Promise<'success' | 'error' | 'cancel'> => {
       const authUrl = await syncApi.getConnectUrl();
-      await WebBrowser.openBrowserAsync(authUrl, {
-        presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
-      });
+      // openAuthSessionAsync intercepta el redirect horus://google-callback:
+      // el navegador se cierra solo al volver (a diferencia de openBrowserAsync,
+      // que dejaba el flujo sin retorno y el usuario tenía que cerrarlo a mano)
+      const result = await WebBrowser.openAuthSessionAsync(authUrl, OAUTH_REDIRECT);
+      if (result.type !== 'success') return 'cancel';
+      // Parse simple del deep link (URL/URLSearchParams es frágil en RN/Hermes)
+      if (!result.url.includes('status=success')) {
+        throw new Error('Google rechazó la conexión');
+      }
+      return 'success';
     },
     onSettled: () => {
-      // Refetch status after browser closes (success or cancel)
+      // Refetch status after browser closes (success, error or cancel)
       queryClient.invalidateQueries({ queryKey: syncKeys.status() });
     },
   });

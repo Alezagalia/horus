@@ -987,9 +987,10 @@ function SyncModal({ visible, onClose }: { visible: boolean; onClose: () => void
   const handleConnect = () => {
     setSyncMsg(null);
     connect.mutate(undefined, {
-      onSuccess: () => {
+      // 'success' = volvió por el deep link con OK; 'cancel' = cerró el navegador
+      onSuccess: (res) => {
         refetch();
-        setSyncMsg('Verificando conexión...');
+        setSyncMsg(res === 'success' ? '✓ Cuenta conectada' : null);
       },
       onError: () => setSyncMsg('Error al conectar. Intentá de nuevo.'),
     });

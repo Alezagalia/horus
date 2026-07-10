@@ -23,7 +23,11 @@ export const syncApi = {
   },
 
   getConnectUrl: async (): Promise<string> => {
-    const { data } = await axiosInstance.post('/sync/google-calendar/connect');
+    // platform:'mobile' → el state OAuth viaja como `userId:mobile` y la
+    // página de callback web redirige de vuelta a la app (horus://)
+    const { data } = await axiosInstance.post('/sync/google-calendar/connect', {
+      platform: 'mobile',
+    });
     return data.authUrl;
   },
 

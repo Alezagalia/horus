@@ -15,6 +15,30 @@ export function GoogleCallbackPage() {
 
   useEffect(() => {
     const handleCallback = async () => {
+      // El flujo mobile viaja con state `userId:mobile`: esta misma página se
+      // abre en el navegador del teléfono (openAuthSessionAsync) y en lugar de
+      // postMessage/close, vuelve a la app por deep link horus://
+      const isMobileFlow = (searchParams.get('state') ?? '').endsWith(':mobile');
+      const returnToApp = (result: 'success' | 'error') => {
+        window.location.replace(`horus://google-callback?status=${result}`);
+      };
+
+      const notifyError = (error: string) => {
+        if (isMobileFlow) {
+          returnToApp('error');
+          return;
+        }
+        if (window.opener) {
+          window.opener.postMessage(
+            { type: 'google-calendar-error', error },
+            window.location.origin
+          );
+        }
+        setTimeout(() => {
+          window.close();
+        }, 2000);
+      };
+
       try {
         const code = searchParams.get('code');
         const state = searchParams.get('state');
@@ -28,19 +52,7 @@ export function GoogleCallbackPage() {
               ? 'Acceso denegado. No se conectó Google Calendar.'
               : 'Error en la autenticación con Google.'
           );
-
-          // Notify parent window
-          if (window.opener) {
-            window.opener.postMessage(
-              { type: 'google-calendar-error', error },
-              window.location.origin
-            );
-          }
-
-          // Close popup after delay
-          setTimeout(() => {
-            window.close();
-          }, 2000);
+          notifyError(error);
           return;
         }
 
@@ -48,17 +60,7 @@ export function GoogleCallbackPage() {
         if (!code || !state) {
           setStatus('error');
           setMessage('Parámetros de autenticación inválidos.');
-
-          if (window.opener) {
-            window.opener.postMessage(
-              { type: 'google-calendar-error', error: 'invalid_params' },
-              window.location.origin
-            );
-          }
-
-          setTimeout(() => {
-            window.close();
-          }, 2000);
+          notifyError('invalid_params');
           return;
         }
 
@@ -69,6 +71,11 @@ export function GoogleCallbackPage() {
 
         setStatus('success');
         setMessage('¡Conectado exitosamente! Cerrando...');
+
+        if (isMobileFlow) {
+          returnToApp('success');
+          return;
+        }
 
         // Notify parent window of success
         if (window.opener) {
@@ -88,17 +95,7 @@ export function GoogleCallbackPage() {
         console.error('Error handling Google Calendar callback:', error);
         setStatus('error');
         setMessage('Error al conectar con Google Calendar.');
-
-        if (window.opener) {
-          window.opener.postMessage(
-            { type: 'google-calendar-error', error: 'callback_failed' },
-            window.location.origin
-          );
-        }
-
-        setTimeout(() => {
-          window.close();
-        }, 2000);
+        notifyError('callback_failed');
       }
     };
 
