@@ -992,7 +992,12 @@ function SyncModal({ visible, onClose }: { visible: boolean; onClose: () => void
         refetch();
         setSyncMsg(res === 'success' ? '✓ Cuenta conectada' : null);
       },
-      onError: () => setSyncMsg('Error al conectar. Intentá de nuevo.'),
+      onError: (err) => {
+        // El backend manda mensajes útiles (400 credenciales sin configurar,
+        // 402 requiere Pro) — mostrarlos en vez de un genérico
+        const axiosErr = err as { response?: { data?: { message?: string } } };
+        setSyncMsg(axiosErr.response?.data?.message ?? 'Error al conectar. Intentá de nuevo.');
+      },
     });
   };
 
@@ -1115,6 +1120,8 @@ function SyncModal({ visible, onClose }: { visible: boolean; onClose: () => void
               Sincronizá tus eventos de Horus con Google Calendar para verlos en todos tus
               dispositivos.
             </Text>
+
+            {syncMsg && <Text style={syncStyles.syncMsg}>{syncMsg}</Text>}
 
             <TouchableOpacity
               style={[syncStyles.btn, syncStyles.btnPrimary]}
