@@ -15,19 +15,9 @@ export function GoogleCallbackPage() {
 
   useEffect(() => {
     const handleCallback = async () => {
-      // El flujo mobile viaja con state `userId:mobile`: esta misma página se
-      // abre en el navegador del teléfono (openAuthSessionAsync) y en lugar de
-      // postMessage/close, vuelve a la app por deep link horus://
-      const isMobileFlow = (searchParams.get('state') ?? '').endsWith(':mobile');
-      const returnToApp = (result: 'success' | 'error') => {
-        window.location.replace(`horus://google-callback?status=${result}`);
-      };
-
+      // Solo flujo web (popup). El flujo mobile ya no pasa por esta página:
+      // Google redirige directo al endpoint del API, que responde 302 → horus://
       const notifyError = (error: string) => {
-        if (isMobileFlow) {
-          returnToApp('error');
-          return;
-        }
         if (window.opener) {
           window.opener.postMessage(
             { type: 'google-calendar-error', error },
@@ -71,11 +61,6 @@ export function GoogleCallbackPage() {
 
         setStatus('success');
         setMessage('¡Conectado exitosamente! Cerrando...');
-
-        if (isMobileFlow) {
-          returnToApp('success');
-          return;
-        }
 
         // Notify parent window of success
         if (window.opener) {

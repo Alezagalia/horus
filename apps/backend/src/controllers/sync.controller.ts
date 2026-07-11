@@ -45,10 +45,24 @@ export const syncController = {
    * Exchanges code for tokens and stores them
    */
   async handleGoogleCallback(req: Request, res: Response, next: NextFunction): Promise<void> {
+    // El state puede venir como `userId` (web) o `userId:mobile`. En el flujo
+    // mobile Google redirige DIRECTO a este endpoint (no a la SPA): el backend
+    // hace el exchange y responde 302 → horus://, que cierra el navegador y
+    // vuelve a la app. Un redirect de servidor no sufre el bloqueo de Chrome a
+    // navegaciones JS hacia esquemas custom sin gesto del usuario.
+    const isMobile = String(req.query.state ?? '').endsWith(':mobile');
+    const backToApp = (status: 'success' | 'error') =>
+      res.redirect(`horus://google-callback?status=${status}`);
+
     try {
       const { code, state } = req.query;
 
       if (!code || !state) {
+        if (isMobile) {
+          // Google redirige con ?error=access_denied&state=... si el usuario cancela
+          backToApp('error');
+          return;
+        }
         res.status(400).json({
           success: false,
           message: 'Missing code or state parameter',
@@ -56,7 +70,6 @@ export const syncController = {
         return;
       }
 
-      // El state puede venir como `userId` (web) o `userId:mobile`
       const userId = String(state).split(':')[0];
 
       // Validate that the state corresponds to a real user — prevents userId spoofing
@@ -65,17 +78,34 @@ export const syncController = {
         select: { id: true },
       });
       if (!userExists) {
+        if (isMobile) {
+          backToApp('error');
+          return;
+        }
         res.status(400).json({ success: false, message: 'Invalid state parameter' });
         return;
       }
 
-      await googleAuthService.exchangeCodeForTokens(userId, code as string);
+      await googleAuthService.exchangeCodeForTokens(
+        userId,
+        code as string,
+        isMobile ? 'mobile' : 'web'
+      );
+
+      if (isMobile) {
+        backToApp('success');
+        return;
+      }
 
       res.status(200).json({
         success: true,
         message: 'Google Calendar connected successfully',
       });
     } catch (error) {
+      if (isMobile) {
+        backToApp('error');
+        return;
+      }
       next(error);
     }
   },

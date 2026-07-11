@@ -25,9 +25,21 @@ const GOOGLE_SCOPES = [
 const refreshInFlight = new Map<string, Promise<string>>();
 
 /**
+ * Redirect URI del flujo mobile: el endpoint del API que hace el exchange y
+ * responde 302 → horus://. Debe estar registrado en Google Cloud Console y
+ * coincidir entre generateAuthUrl y getToken (Google valida ambos).
+ */
+function getMobileRedirectUri(): string {
+  return (
+    env.GOOGLE_MOBILE_REDIRECT_URI ??
+    new URL('/api/sync/google-calendar/callback', env.FRONTEND_URL).toString()
+  );
+}
+
+/**
  * Creates OAuth2 client
  */
-function getOAuth2Client() {
+function getOAuth2Client(platform: 'web' | 'mobile' = 'web') {
   if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.GOOGLE_REDIRECT_URI) {
     throw new BadRequestError(
       'Google OAuth credentials not configured. Please set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REDIRECT_URI'
@@ -37,7 +49,7 @@ function getOAuth2Client() {
   return new google.auth.OAuth2(
     env.GOOGLE_CLIENT_ID,
     env.GOOGLE_CLIENT_SECRET,
-    env.GOOGLE_REDIRECT_URI
+    platform === 'mobile' ? getMobileRedirectUri() : env.GOOGLE_REDIRECT_URI
   );
 }
 
@@ -53,7 +65,7 @@ export const googleAuthService = {
     isReconnect: boolean = false,
     platform: 'web' | 'mobile' = 'web'
   ): Promise<string> {
-    const oauth2Client = getOAuth2Client();
+    const oauth2Client = getOAuth2Client(platform);
 
     // Check if user already has a connection
     if (!isReconnect) {
@@ -80,8 +92,9 @@ export const googleAuthService = {
   /**
    * Exchanges authorization code for tokens
    */
-  async exchangeCodeForTokens(userId: string, code: string) {
-    const oauth2Client = getOAuth2Client();
+  async exchangeCodeForTokens(userId: string, code: string, platform: 'web' | 'mobile' = 'web') {
+    // El redirect_uri del exchange debe ser el mismo que el del authUrl
+    const oauth2Client = getOAuth2Client(platform);
 
     try {
       const { tokens } = await oauth2Client.getToken(code);

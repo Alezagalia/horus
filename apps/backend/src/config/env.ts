@@ -18,6 +18,10 @@ const envSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GOOGLE_REDIRECT_URI: z.string().optional(),
+  // Redirect URI del flujo OAuth mobile: apunta al endpoint del API (no a la SPA)
+  // para que el backend haga el exchange y responda 302 → horus://. Si no se
+  // setea, se deriva de FRONTEND_URL (válido en prod, donde el backend sirve la web).
+  GOOGLE_MOBILE_REDIRECT_URI: z.string().optional(),
   // AES-256-GCM key for token encryption: must be exactly 64 hex chars (32 bytes).
   // Generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
   // MUST remain the same across deployments — changing it invalidates all stored tokens.
