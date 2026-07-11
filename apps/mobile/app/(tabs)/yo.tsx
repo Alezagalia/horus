@@ -34,6 +34,7 @@ import {
   BarChart2,
   Zap,
   Download,
+  Calendar,
 } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
@@ -46,6 +47,8 @@ import { apiErrorMessage } from '@/lib/apiError';
 import { makeCreateErrorHandler } from '@/lib/mutationErrors';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useProPurchase } from '@/hooks/useProPurchase';
+import { useSyncStatus } from '@/hooks/useSync';
+import { GoogleCalendarSyncModal } from '@/components/sync/GoogleCalendarSyncModal';
 import { PRO_PRODUCTS } from '@/config/billing';
 import { cleanupPushToken } from '@/hooks/usePushNotifications';
 import {
@@ -490,6 +493,14 @@ export default function YoScreen() {
   const [loggingOut, setLoggingOut] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | undefined>(undefined);
+  const [showGoogleSync, setShowGoogleSync] = useState(false);
+
+  const { data: syncStatus } = useSyncStatus();
+  const googleSyncValue = !syncStatus?.isConnected
+    ? 'No conectado'
+    : syncStatus.needsReconnect
+      ? 'Requiere reconexión'
+      : (syncStatus.googleEmail ?? 'Conectado');
 
   const { data: accountsData } = useAccounts();
   const accounts = accountsData?.accounts ?? [];
@@ -643,6 +654,17 @@ export default function YoScreen() {
           label="Tarifa por hora"
           value={formatHourlyRate(user.hourlyRate)}
           onPress={() => setEditField('hourlyRate')}
+        />
+      </Card>
+
+      {/* ─── Cuentas conectadas ───────────────────────────────────── */}
+      <SectionLabel label="CUENTAS CONECTADAS" />
+      <Card padding={0} solid>
+        <SettingRow
+          icon={<Calendar size={16} color="#4285F4" />}
+          label="Google Calendar"
+          value={googleSyncValue}
+          onPress={() => setShowGoogleSync(true)}
         />
       </Card>
 
@@ -959,6 +981,7 @@ export default function YoScreen() {
         }}
         account={editingAccount}
       />
+      <GoogleCalendarSyncModal visible={showGoogleSync} onClose={() => setShowGoogleSync(false)} />
     </ScreenContainer>
   );
 }
