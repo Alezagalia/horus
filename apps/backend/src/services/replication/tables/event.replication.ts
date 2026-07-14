@@ -153,6 +153,12 @@ export async function applyUpdated(ctx: PushContext, raws: EventRaw[]): Promise<
       categoryId = existing.categoryId;
     }
 
+    // Si se reprograma el inicio o cambia el recordatorio, el aviso debe volver
+    // a dispararse (el cron solo mira notificationSent=false)
+    const reminderRearmed =
+      new Date(raw.start_date_time).getTime() !== existing.startDateTime.getTime() ||
+      (raw.reminder_minutes ?? null) !== (existing.reminderMinutes ?? null);
+
     // is_recurring / recurring_event_id / archived_at (cron) no se aceptan
     await ctx.tx.event.update({
       where: { id: raw.id },
@@ -168,6 +174,7 @@ export async function applyUpdated(ctx: PushContext, raws: EventRaw[]): Promise<
         completedAt: msToDate(raw.completed_at),
         canceledAt: msToDate(raw.canceled_at),
         reminderMinutes: raw.reminder_minutes,
+        ...(reminderRearmed ? { notificationSent: false } : {}),
       },
     });
 

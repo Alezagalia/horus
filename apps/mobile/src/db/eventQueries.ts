@@ -78,6 +78,7 @@ export async function listCalendarEventsLocal(from: string, to: string): Promise
           }
         : undefined,
       isRecurring: e.isRecurring,
+      reminderMinutes: e.reminderMinutes ?? undefined,
       updatedAt: e.updatedAt.toISOString(),
     };
   });

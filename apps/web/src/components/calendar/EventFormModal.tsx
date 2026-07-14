@@ -20,6 +20,8 @@ const formSchema = z
     isAllDay: z.boolean(),
     categoryId: z.string().min(1, 'Categoría requerida'),
     location: z.string().optional(),
+    // Minutos antes del inicio como string del <select> ('' = sin recordatorio)
+    reminderMinutes: z.string(),
   })
   .refine(
     (data) => {
@@ -34,6 +36,15 @@ const formSchema = z
   );
 
 type FormData = z.infer<typeof formSchema>;
+
+const REMINDER_OPTIONS = [
+  { label: 'Sin recordatorio', value: '' },
+  { label: 'Al inicio del evento', value: '0' },
+  { label: '10 minutos antes', value: '10' },
+  { label: '30 minutos antes', value: '30' },
+  { label: '1 hora antes', value: '60' },
+  { label: '1 día antes', value: '1440' },
+];
 
 interface EventFormModalProps {
   isOpen: boolean;
@@ -71,6 +82,7 @@ export function EventFormModal({
       isAllDay: false,
       categoryId: '',
       location: '',
+      reminderMinutes: '',
     },
   });
 
@@ -94,6 +106,8 @@ export function EventFormModal({
         isAllDay: editingEvent.isAllDay,
         categoryId: editingEvent.categoryId || '',
         location: editingEvent.location || '',
+        reminderMinutes:
+          editingEvent.reminderMinutes != null ? String(editingEvent.reminderMinutes) : '',
       });
     } else {
       reset({
@@ -107,6 +121,7 @@ export function EventFormModal({
         isAllDay: false,
         categoryId: '',
         location: '',
+        reminderMinutes: '',
       });
     }
   }, [isOpen, editingEvent, initialDate, reset]);
@@ -150,6 +165,7 @@ export function EventFormModal({
       isAllDay: data.isAllDay,
       categoryId: data.categoryId,
       location: data.location || undefined,
+      reminderMinutes: data.reminderMinutes === '' ? null : Number(data.reminderMinutes),
     };
 
     onSubmit(submitData);
@@ -303,6 +319,27 @@ export function EventFormModal({
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 placeholder="Sala de conferencias A"
               />
+            </div>
+
+            {/* Reminder */}
+            <div>
+              <label
+                htmlFor="reminderMinutes"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Recordatorio
+              </label>
+              <select
+                id="reminderMinutes"
+                {...register('reminderMinutes')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                {REMINDER_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Actions */}

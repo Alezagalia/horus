@@ -39,6 +39,7 @@ export async function createEventLocal(dto: CreateEventDTO): Promise<void> {
       e.isAllDay = dto.isAllDay;
       e.isRecurring = false;
       e.status = 'pendiente';
+      e.reminderMinutes = dto.reminderMinutes ?? undefined;
     });
   });
   requestSync();
@@ -53,6 +54,7 @@ export async function updateEventLocal(id: string, dto: UpdateEventDTO): Promise
       if (dto.location !== undefined) e.location = dto.location;
       if (dto.categoryId !== undefined) e.categoryId = dto.categoryId;
       if (dto.isAllDay !== undefined) e.isAllDay = dto.isAllDay;
+      if (dto.reminderMinutes !== undefined) e.reminderMinutes = dto.reminderMinutes ?? undefined;
 
       let start = dto.startDateTime ? new Date(dto.startDateTime) : e.startDateTime;
       let end = dto.endDateTime ? new Date(dto.endDateTime) : e.endDateTime;

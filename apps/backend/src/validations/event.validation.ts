@@ -20,7 +20,7 @@ export const createEventSchema = z
     isAllDay: z.boolean().default(false),
     isRecurring: z.boolean().default(false),
     rrule: z.string().optional(),
-    reminderMinutes: z.number().int().min(0).max(43200).optional(), // Max 30 días
+    reminderMinutes: z.number().int().min(0).max(43200).optional().nullable(), // Max 30 días
     syncWithGoogle: z.boolean().default(true),
   })
   .refine(

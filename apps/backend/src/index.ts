@@ -13,6 +13,7 @@ import { scheduleDailyEventNotifications } from './jobs/notify-daily-events.job.
 import { scheduleRetentionJob } from './jobs/retention.job.js';
 import { schedulePurgeTombstonesJob } from './jobs/purge-tombstones.job.js';
 import { scheduleGoogleCalendarSyncJobs } from './jobs/google-calendar-sync.job.js';
+import { scheduleEventReminderNotifications } from './jobs/notify-event-reminders.job.js';
 import { initializeFirebaseAdmin } from './lib/firebase-admin.js';
 import { initSentry } from './lib/sentry.js';
 import { logInfo, logError } from './lib/logger.js';
@@ -140,6 +141,7 @@ app.listen(PORT, () => {
     scheduleRetentionJob(); // S-02.4 — purga de tokens expirados + cuentas inactivas
     schedulePurgeTombstonesJob(); // Offline-first Fase 1 — purga tombstones de replicación
     scheduleGoogleCalendarSyncJobs(); // GCal: retry de pushes fallidos + pull periódico
+    scheduleEventReminderNotifications(); // Push de recordatorio antes de cada evento
     logInfo('Cron jobs scheduled successfully'); // US-115
   } catch (error) {
     logError('Failed to schedule cron jobs', error as Error); // US-115

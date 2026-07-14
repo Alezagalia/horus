@@ -47,7 +47,7 @@ export interface CreateCalendarEventDTO {
   startDateTime: string; // ISO datetime string
   endDateTime: string; // ISO datetime string
   isAllDay: boolean;
-  reminderMinutes?: number;
+  reminderMinutes?: number | null;
   syncWithGoogle?: boolean;
 }
 

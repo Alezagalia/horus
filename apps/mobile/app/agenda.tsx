@@ -567,6 +567,16 @@ interface EventFormModalProps {
 type DatePickerMode = 'date' | 'time';
 type DatePickerField = 'startDate' | 'startTime' | 'endDate' | 'endTime';
 
+// Opciones de recordatorio (minutos antes del inicio; null = sin recordatorio)
+const REMINDER_OPTIONS: { label: string; value: number | null }[] = [
+  { label: 'Sin aviso', value: null },
+  { label: 'Al inicio', value: 0 },
+  { label: '10 min', value: 10 },
+  { label: '30 min', value: 30 },
+  { label: '1 hora', value: 60 },
+  { label: '1 día', value: 1440 },
+];
+
 function EventFormModal({ visible, initialDate, editingEvent, onClose }: EventFormModalProps) {
   const createEvent = useCreateEvent();
   const updateEvent = useUpdateEvent();
@@ -579,6 +589,7 @@ function EventFormModal({ visible, initialDate, editingEvent, onClose }: EventFo
   const [categoryId, setCategoryId] = useState('');
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
+  const [reminderMinutes, setReminderMinutes] = useState<number | null>(null);
 
   // DateTimePicker state
   const [pickerVisible, setPickerVisible] = useState(false);
@@ -595,6 +606,7 @@ function EventFormModal({ visible, initialDate, editingEvent, onClose }: EventFo
       setCategoryId(editingEvent.categoryId ?? '');
       setDescription(editingEvent.description ?? '');
       setLocation(editingEvent.location ?? '');
+      setReminderMinutes(editingEvent.reminderMinutes ?? null);
     } else {
       setTitle('');
       setIsAllDay(false);
@@ -605,6 +617,7 @@ function EventFormModal({ visible, initialDate, editingEvent, onClose }: EventFo
       setCategoryId(categories[0]?.id ?? '');
       setDescription('');
       setLocation('');
+      setReminderMinutes(null);
     }
   }, [visible, editingEvent, initialDate]);
 
@@ -668,6 +681,7 @@ function EventFormModal({ visible, initialDate, editingEvent, onClose }: EventFo
       categoryId,
       description: description.trim() || undefined,
       location: location.trim() || undefined,
+      reminderMinutes,
     };
 
     if (editingEvent) {
@@ -792,6 +806,37 @@ function EventFormModal({ visible, initialDate, editingEvent, onClose }: EventFo
                 </ScrollView>
               </>
             )}
+
+            {/* Reminder */}
+            <Text style={formStyles.sectionLabel}>Recordatorio</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={formStyles.chipScroll}
+            >
+              {REMINDER_OPTIONS.map((opt) => (
+                <TouchableOpacity
+                  key={opt.label}
+                  style={[
+                    formStyles.chip,
+                    reminderMinutes === opt.value && {
+                      backgroundColor: Colors.vivid,
+                      borderColor: Colors.vivid,
+                    },
+                  ]}
+                  onPress={() => setReminderMinutes(opt.value)}
+                >
+                  <Text
+                    style={[
+                      formStyles.chipText,
+                      reminderMinutes === opt.value && { color: '#fff' },
+                    ]}
+                  >
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
 
             {/* Description */}
             <Text style={formStyles.sectionLabel}>Descripción</Text>

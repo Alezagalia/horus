@@ -23,6 +23,7 @@ export interface CalendarEvent {
   categoryId: string;
   category?: { id: string; name: string; icon?: string; color?: string };
   isRecurring: boolean;
+  reminderMinutes?: number | null;
   updatedAt: string;
 }
 
@@ -34,6 +35,7 @@ export interface CreateEventDTO {
   categoryId: string;
   description?: string;
   location?: string;
+  reminderMinutes?: number | null;
 }
 
 export type UpdateEventDTO = Partial<CreateEventDTO> & { status?: string };

@@ -28,6 +28,9 @@ function handleNotificationTap(data: Record<string, unknown>): void {
     case 'finance':
       router.push('/(tabs)/dinero');
       break;
+    case 'events':
+      router.push('/agenda');
+      break;
     case 'workout':
     case 'routines':
       router.push('/(tabs)/cuerpo');

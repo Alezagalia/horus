@@ -295,6 +295,18 @@ export const eventService = {
       if (data.endDateTime) updateData.endDateTime = new Date(data.endDateTime);
     }
 
+    // Si se reprograma el inicio o cambia el recordatorio, el aviso debe volver
+    // a dispararse (el cron de recordatorios solo mira notificationSent=false)
+    const startChanged =
+      updateData.startDateTime &&
+      updateData.startDateTime.getTime() !== event.startDateTime.getTime();
+    const reminderChanged =
+      data.reminderMinutes !== undefined &&
+      (data.reminderMinutes ?? null) !== (event.reminderMinutes ?? null);
+    if (startChanged || reminderChanged) {
+      updateData.notificationSent = false;
+    }
+
     const updatedEvent = await prisma.event.update({
       where: { id: eventId },
       data: updateData,
