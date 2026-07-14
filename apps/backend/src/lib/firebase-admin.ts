@@ -2,18 +2,22 @@
  * Firebase Admin SDK Configuration
  * Sprint 12 - US-105
  *
- * Inicializa Firebase Admin SDK para enviar notificaciones push FCM
+ * Inicializa Firebase Admin SDK para enviar notificaciones push FCM.
+ * Usa los entry points modulares (firebase-admin/app, firebase-admin/messaging):
+ * con `import * as admin from 'firebase-admin'` (CJS) bajo ESM real,
+ * admin.credential llega undefined en runtime.
  */
 
-import * as admin from 'firebase-admin';
+import { initializeApp, cert, type App } from 'firebase-admin/app';
+import { getMessaging as getFirebaseMessaging, type Messaging } from 'firebase-admin/messaging';
 
-let firebaseApp: admin.app.App | null = null;
+let firebaseApp: App | null = null;
 
 /**
  * Inicializa Firebase Admin SDK
  * Solo se inicializa una vez (singleton pattern)
  */
-export function initializeFirebaseAdmin(): admin.app.App {
+export function initializeFirebaseAdmin(): App | null {
   if (firebaseApp) {
     return firebaseApp;
   }
@@ -29,15 +33,15 @@ export function initializeFirebaseAdmin(): admin.app.App {
 
     // Retornar null si no hay credenciales (modo development sin Firebase)
     // Las funciones que usan Firebase deben manejar este caso
-    return null as any;
+    return null;
   }
 
   try {
     // Parsear private key (viene con \n escapados en .env)
     const privateKey = FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n');
 
-    firebaseApp = admin.initializeApp({
-      credential: admin.credential.cert({
+    firebaseApp = initializeApp({
+      credential: cert({
         projectId: FIREBASE_PROJECT_ID,
         clientEmail: FIREBASE_CLIENT_EMAIL,
         privateKey,
@@ -56,7 +60,7 @@ export function initializeFirebaseAdmin(): admin.app.App {
  * Obtiene la instancia de Firebase Admin
  * Inicializa automáticamente si no existe
  */
-export function getFirebaseAdmin(): admin.app.App | null {
+export function getFirebaseAdmin(): App | null {
   if (!firebaseApp) {
     return initializeFirebaseAdmin();
   }
@@ -66,12 +70,12 @@ export function getFirebaseAdmin(): admin.app.App | null {
 /**
  * Obtiene la instancia de Firebase Cloud Messaging
  */
-export function getMessaging(): admin.messaging.Messaging | null {
+export function getMessaging(): Messaging | null {
   const app = getFirebaseAdmin();
   if (!app) {
     return null;
   }
-  return admin.messaging(app);
+  return getFirebaseMessaging(app);
 }
 
 /**
