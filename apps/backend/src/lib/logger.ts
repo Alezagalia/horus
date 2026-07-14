@@ -130,7 +130,9 @@ export const logRequest = (
   duration: number,
   userId?: string
 ) => {
-  logger.info('HTTP Request', {
+  // método/ruta/status van en el mensaje: el console transport (railway logs)
+  // solo muestra el message, no la metadata
+  logger.info(`HTTP ${method} ${path} ${statusCode} ${duration}ms`, {
     method,
     path,
     statusCode,

@@ -253,6 +253,17 @@ export const replicationService = {
   },
 
   async push(userId: string, changes: PushChanges, lastPulledAt: number = 0): Promise<void> {
+    // Resumen de lo recibido por tabla — sin esto los pushes son invisibles
+    // en prod y los descartes silenciosos (p.ej. categoría inválida) indebuggeables
+    const summary = Object.entries(changes)
+      .map(([table, c]) => {
+        const n = (c?.created?.length ?? 0) + (c?.updated?.length ?? 0) + (c?.deleted?.length ?? 0);
+        return n > 0 ? `${table}:${n}` : null;
+      })
+      .filter(Boolean)
+      .join(' ');
+    logger.info(`[replication] push user=${userId.slice(0, 8)} ${summary || '(vacío)'}`);
+
     // Side-effects externos (Google Calendar) que los handlers encolan durante
     // el tx y se ejecutan best-effort después del commit.
     let postCommit: Array<() => Promise<void>> = [];
