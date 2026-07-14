@@ -23,6 +23,7 @@
         "backgroundColor": "#1A2547"
       },
       "package": "com.horus.app",
+      "googleServicesFile": "./google-services.json",
       "intentFilters": [
         {
           "action": "VIEW",
