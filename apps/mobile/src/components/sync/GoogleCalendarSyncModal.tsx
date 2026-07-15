@@ -43,8 +43,13 @@ export function GoogleCalendarSyncModal({
       onError: (err) => {
         // El backend manda mensajes útiles (400 credenciales sin configurar,
         // 402 requiere Pro) — mostrarlos en vez de un genérico
-        const axiosErr = err as { response?: { data?: { message?: string } } };
-        setSyncMsg(axiosErr.response?.data?.message ?? 'Error al conectar. Intentá de nuevo.');
+        console.error('[GCal connect]', err);
+        const axiosErr = err as Error & { response?: { data?: { message?: string } } };
+        setSyncMsg(
+          axiosErr.response?.data?.message ??
+            axiosErr.message ??
+            'Error al conectar. Intentá de nuevo.'
+        );
       },
     });
   };
