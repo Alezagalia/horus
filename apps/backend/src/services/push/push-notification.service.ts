@@ -299,6 +299,8 @@ export async function sendScheduledHabitReminder(habitId: string, userId: string
       body: `Es hora de completar: ${habit.name}`,
       data: {
         type: 'habit_reminder',
+        // deep-link: la app abre Foco al tocar la notificación
+        screen: 'habits',
         habitId: habit.id,
         habitName: habit.name,
       },
