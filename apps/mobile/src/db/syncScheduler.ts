@@ -42,8 +42,27 @@ async function runSync(): Promise<void> {
   try {
     await syncOffline();
     useSyncStore.getState().setSyncResult({ ok: true });
+    console.log('[sync] ok');
   } catch (error) {
     const message = error instanceof Error ? error.message : 'sync failed';
+    // A logcat: los fallos silenciosos de sync son indebuggeables sin esto.
+    // Para AxiosError sumamos URL y causa nativa (p.ej. SSLHandshakeException).
+    const ax = error as {
+      config?: { url?: string; method?: string };
+      cause?: unknown;
+      code?: string;
+    };
+    console.warn(
+      '[sync] failed:',
+      message,
+      '| url:',
+      ax.config?.method,
+      ax.config?.url,
+      '| code:',
+      ax.code,
+      '| cause:',
+      String(ax.cause ?? '-')
+    );
     useSyncStore.getState().setSyncResult({ ok: false, error: message });
   } finally {
     inFlight = false;
