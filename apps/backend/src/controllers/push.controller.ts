@@ -63,11 +63,13 @@ export async function registerToken(req: Request, res: Response): Promise<void> 
  */
 export async function unregisterToken(req: Request, res: Response): Promise<void> {
   try {
+    const userId = req.user!.id;
+
     // Validar body
     const validatedData = unregisterTokenSchema.parse(req.body);
 
-    // Desactivar token
-    await pushService.unregisterToken(validatedData.token);
+    // Desactivar token (solo si pertenece al usuario autenticado)
+    await pushService.unregisterToken(userId, validatedData.token);
 
     res.status(200).json({
       message: 'Token unregistered successfully',

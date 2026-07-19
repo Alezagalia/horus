@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { prisma } from '../lib/prisma.js';
 import { env } from '../config/env.js';
 import { CURRENT_TERMS_VERSION } from '@horus/shared';
@@ -45,21 +46,44 @@ export const authService = {
   generateTokens(payload: TokenPayload): AuthTokens {
     const accessToken = jwt.sign(payload, env.JWT_SECRET, {
       expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions['expiresIn'],
+      algorithm: 'HS256',
     });
 
     const refreshToken = jwt.sign(payload, env.JWT_REFRESH_SECRET, {
       expiresIn: env.JWT_REFRESH_EXPIRES_IN as jwt.SignOptions['expiresIn'],
+      algorithm: 'HS256',
     });
 
     return { accessToken, refreshToken };
   },
 
   verifyAccessToken(token: string): TokenPayload {
-    return jwt.verify(token, env.JWT_SECRET) as TokenPayload;
+    // Fijamos el algoritmo esperado para evitar ataques de confusión de alg.
+    return jwt.verify(token, env.JWT_SECRET, { algorithms: ['HS256'] }) as TokenPayload;
   },
 
   verifyRefreshToken(token: string): TokenPayload {
-    return jwt.verify(token, env.JWT_REFRESH_SECRET) as TokenPayload;
+    return jwt.verify(token, env.JWT_REFRESH_SECRET, { algorithms: ['HS256'] }) as TokenPayload;
+  },
+
+  /**
+   * Hash de un refresh token para guardarlo en reposo. Usamos SHA-256 (no bcrypt:
+   * un JWT supera los 72 bytes que bcrypt trunca, y al ser de alta entropía no
+   * necesita salt/stretching). Así, si la DB se compromete, los tokens guardados
+   * no son reutilizables directamente.
+   */
+  hashRefreshToken(token: string): string {
+    return createHash('sha256').update(token).digest('hex');
+  },
+
+  /** Compara un refresh token presentado contra el hash guardado, en tiempo
+   * constante. Devuelve false si no hay hash guardado (sesión cerrada). */
+  refreshTokenMatches(providedToken: string, storedHash: string | null): boolean {
+    if (!storedHash) return false;
+    const provided = Buffer.from(this.hashRefreshToken(providedToken), 'hex');
+    const stored = Buffer.from(storedHash, 'hex');
+    if (provided.length !== stored.length) return false;
+    return timingSafeEqual(provided, stored);
   },
 
   async findUserByEmail(email: string) {
@@ -133,10 +157,12 @@ export const authService = {
     refreshToken: string | null,
     opts?: { touchLastLogin?: boolean }
   ): Promise<void> {
+    // Guardamos el HASH del token, nunca el token en claro (ver hashRefreshToken).
+    // `null` significa cerrar sesión (revocar).
     await prisma.user.update({
       where: { id: userId },
       data: {
-        refreshToken,
+        refreshToken: refreshToken ? this.hashRefreshToken(refreshToken) : null,
         ...(opts?.touchLastLogin && { lastLoginAt: new Date() }),
       },
     });

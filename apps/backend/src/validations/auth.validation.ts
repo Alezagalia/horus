@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { passwordSchema } from './passwordPolicy.js';
 
 export const registerSchema = z.object({
   name: z
@@ -12,10 +13,7 @@ export const registerSchema = z.object({
     .max(255, 'Email must be less than 255 characters')
     .toLowerCase()
     .trim(),
-  password: z
-    .string()
-    .min(8, 'Password must be at least 8 characters')
-    .max(100, 'Password must be less than 100 characters'),
+  password: passwordSchema,
   acceptedTerms: z.boolean().refine((v) => v === true, {
     message: 'Debés aceptar los Términos y la Política de Privacidad',
   }),
@@ -61,10 +59,7 @@ export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 
 export const resetPasswordSchema = z.object({
   token: z.string().min(1, 'Token is required').max(256),
-  password: z
-    .string()
-    .min(8, 'Password must be at least 8 characters')
-    .max(100, 'Password must be less than 100 characters'),
+  password: passwordSchema,
 });
 
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;

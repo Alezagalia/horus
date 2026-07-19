@@ -157,8 +157,9 @@ export const authController = {
         throw new UnauthorizedError('User not found');
       }
 
-      // Verify that the refresh token matches the one stored in DB
-      if (user.refreshToken !== validatedData.refreshToken) {
+      // Verify that the refresh token matches the hash stored in DB (constant-time).
+      // A null stored hash means the session was revoked (logout) → reject.
+      if (!authService.refreshTokenMatches(validatedData.refreshToken, user.refreshToken)) {
         throw new UnauthorizedError('Invalid refresh token');
       }
 

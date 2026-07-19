@@ -122,14 +122,46 @@ describe('authService.createUser', () => {
 });
 
 describe('authService.updateRefreshToken', () => {
-  it('calls prisma.user.update with new token', async () => {
-    p.user.update.mockResolvedValue({ ...mockUser, refreshToken: 'new-token' } as any);
+  it('stores the SHA-256 hash of the token, not the token itself', async () => {
+    p.user.update.mockResolvedValue({ ...mockUser } as any);
 
     await authService.updateRefreshToken(USER_ID, 'new-token');
 
     expect(p.user.update).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: USER_ID }, data: { refreshToken: 'new-token' } })
+      expect.objectContaining({
+        where: { id: USER_ID },
+        data: { refreshToken: authService.hashRefreshToken('new-token') },
+      })
     );
+    // Nunca el token en claro.
+    const stored = (p.user.update.mock.calls[0][0] as any).data.refreshToken;
+    expect(stored).not.toBe('new-token');
+  });
+
+  it('stores null when revoking (logout)', async () => {
+    p.user.update.mockResolvedValue({ ...mockUser, refreshToken: null } as any);
+
+    await authService.updateRefreshToken(USER_ID, null);
+
+    expect(p.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: USER_ID }, data: { refreshToken: null } })
+    );
+  });
+});
+
+describe('authService.refreshTokenMatches', () => {
+  it('acepta el token correcto contra su hash', () => {
+    const hash = authService.hashRefreshToken('the-token');
+    expect(authService.refreshTokenMatches('the-token', hash)).toBe(true);
+  });
+
+  it('rechaza un token distinto', () => {
+    const hash = authService.hashRefreshToken('the-token');
+    expect(authService.refreshTokenMatches('otro-token', hash)).toBe(false);
+  });
+
+  it('rechaza cuando el hash guardado es null (sesión revocada)', () => {
+    expect(authService.refreshTokenMatches('the-token', null)).toBe(false);
   });
 });
 

@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import type { Activity } from '@horus/shared';
 
 interface ActivityTimelineItemProps {
@@ -133,10 +135,9 @@ export function ActivityTimelineItem({
             <p className="text-sm text-gray-600 italic">{activity.description}</p>
           )}
           {activity.content && (
-            <div
-              className="text-sm text-gray-700 prose prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ __html: activity.content }}
-            />
+            <div className="text-sm text-gray-700 prose prose-sm max-w-none">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{activity.content}</ReactMarkdown>
+            </div>
           )}
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1.5">Notas del día</label>

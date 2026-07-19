@@ -103,10 +103,10 @@ export async function registerToken(input: RegisterTokenInput) {
 /**
  * Desactiva un token (soft delete)
  */
-export async function unregisterToken(token: string) {
+export async function unregisterToken(userId: string, token: string) {
   try {
     const pushToken = await prisma.pushToken.updateMany({
-      where: { token },
+      where: { token, userId },
       data: {
         active: false,
         updatedAt: new Date(),

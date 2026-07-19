@@ -61,7 +61,8 @@
         {
           "paymentProvider": "Play Store"
         }
-      ]
+      ],
+      "./plugins/withReleaseSigning"
     ],
     "experiments": {
       "typedRoutes": true

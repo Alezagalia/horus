@@ -27,6 +27,7 @@ module.exports = {
   testMatch: [
     '<rootDir>/src/**/__tests__/**/*.test.{ts,tsx}',
     '<rootDir>/app/**/__tests__/**/*.test.{ts,tsx}',
+    '<rootDir>/plugins/**/__tests__/**/*.test.{js,ts}',
   ],
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',

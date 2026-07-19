@@ -60,6 +60,7 @@ import bcrypt from 'bcrypt';
 import { prisma } from '../lib/prisma.js';
 import { createTestApp } from '../test/helpers/app.factory.js';
 import authRouter from './auth.routes.js';
+import { authService } from '../services/auth.service.js';
 import {
   createTestToken,
   createTestRefreshToken,
@@ -189,7 +190,11 @@ describe('POST /api/auth/register', () => {
 describe('POST /api/auth/refresh', () => {
   it('returns 200 with new tokens on valid refresh token', async () => {
     const refreshToken = createTestRefreshToken();
-    p.user.findUnique.mockResolvedValue({ ...mockUserBase, refreshToken } as any);
+    // En DB se guarda el hash, no el token en claro.
+    p.user.findUnique.mockResolvedValue({
+      ...mockUserBase,
+      refreshToken: authService.hashRefreshToken(refreshToken),
+    } as any);
     p.user.update.mockResolvedValue({} as any);
 
     const res = await request(app).post('/api/auth/refresh').send({ refreshToken });
@@ -203,6 +208,26 @@ describe('POST /api/auth/refresh', () => {
     const res = await request(app)
       .post('/api/auth/refresh')
       .send({ refreshToken: 'invalid.token' });
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 401 when a validly-signed token does not match the stored hash', async () => {
+    const refreshToken = createTestRefreshToken();
+    // Firma válida pero el hash guardado corresponde a otro token (rotado/robado).
+    p.user.findUnique.mockResolvedValue({
+      ...mockUserBase,
+      refreshToken: authService.hashRefreshToken('some-other-token'),
+    } as any);
+
+    const res = await request(app).post('/api/auth/refresh').send({ refreshToken });
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 401 when the session was revoked (stored hash is null)', async () => {
+    const refreshToken = createTestRefreshToken();
+    p.user.findUnique.mockResolvedValue({ ...mockUserBase, refreshToken: null } as any);
+
+    const res = await request(app).post('/api/auth/refresh').send({ refreshToken });
     expect(res.status).toBe(401);
   });
 });
