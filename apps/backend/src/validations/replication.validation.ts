@@ -40,6 +40,7 @@ export const pushEnvelopeSchema = z.object({
     goal_habits: tableChangesSchema,
     goal_tasks: tableChangesSchema,
     events: tableChangesSchema,
+    resources: tableChangesSchema,
   }),
   lastPulledAt: z.number().int().nonnegative().nullable().optional(),
 });

@@ -20,6 +20,7 @@ import { KeyResult } from './models/KeyResult';
 import { GoalHabit } from './models/GoalHabit';
 import { GoalTask } from './models/GoalTask';
 import { Event } from './models/Event';
+import { Resource } from './models/Resource';
 
 // IDs locales = UUID v4: el id generado en el cliente ES el id final en
 // Postgres (el push crea con ese id, idempotente). El generador default de
@@ -57,5 +58,6 @@ export const database = new Database({
     GoalHabit,
     GoalTask,
     Event,
+    Resource,
   ],
 });

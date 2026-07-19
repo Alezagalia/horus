@@ -18,6 +18,7 @@ vi.mock('../../lib/prisma.js', () => ({
     goalHabit: { findMany: vi.fn() },
     goalTask: { findMany: vi.fn() },
     event: { findMany: vi.fn() },
+    resource: { findMany: vi.fn() },
     replicationTombstone: { findMany: vi.fn() },
     $transaction: vi.fn(),
   },
@@ -69,6 +70,7 @@ beforeEach(() => {
   p.goalHabit.findMany.mockResolvedValue([]);
   p.goalTask.findMany.mockResolvedValue([]);
   p.event.findMany.mockResolvedValue([]);
+  p.resource.findMany.mockResolvedValue([]);
   p.replicationTombstone.findMany.mockResolvedValue([]);
 });
 

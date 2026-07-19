@@ -39,6 +39,7 @@ import * as goals from './tables/goal.replication.js';
 import * as keyResults from './tables/keyResult.replication.js';
 import * as goalLinks from './tables/goalLink.replication.js';
 import * as events from './tables/event.replication.js';
+import * as resources from './tables/resource.replication.js';
 
 /** Límite de sanidad por tabla en el pull: con usuarios chicos no debería
  * alcanzarse nunca; si se alcanza, hay que implementar paginación. */
@@ -107,6 +108,7 @@ export const replicationService = {
       goalHabitRows,
       goalTaskRows,
       eventRows,
+      resourceRows,
       tombstones,
     ] = await Promise.all([
       prisma.account.findMany({ where: changedWhere, take: PULL_SANITY_LIMIT }),
@@ -142,6 +144,7 @@ export const replicationService = {
       prisma.goalHabit.findMany({ where: { goal: { userId } }, take: PULL_SANITY_LIMIT }),
       prisma.goalTask.findMany({ where: { goal: { userId } }, take: PULL_SANITY_LIMIT }),
       prisma.event.findMany({ where: whereFor('events'), take: PULL_SANITY_LIMIT }),
+      prisma.resource.findMany({ where: whereFor('resources'), take: PULL_SANITY_LIMIT }),
       prisma.replicationTombstone.findMany({
         where: { userId, deletedAt: { gt: since } },
         take: PULL_SANITY_LIMIT,
@@ -164,7 +167,8 @@ export const replicationService = {
       keyResultRows.length +
       goalHabitRows.length +
       goalTaskRows.length +
-      eventRows.length;
+      eventRows.length +
+      resourceRows.length;
     if (rowCount >= PULL_SANITY_LIMIT) {
       logger.warn(
         `[replication] pull de ${rowCount} filas para user ${userId}: evaluar paginación`
@@ -247,6 +251,12 @@ export const replicationService = {
           deletedFor('goal_tasks')
         ),
         events: splitByCreated(eventRows, sinceMsFor('events'), events.toRaw, deletedFor('events')),
+        resources: splitByCreated(
+          resourceRows,
+          sinceMsFor('resources'),
+          resources.toRaw,
+          deletedFor('resources')
+        ),
       },
       timestamp,
     };
@@ -347,6 +357,10 @@ export const replicationService = {
       await events.applyDeleted(ctx, changes.events?.deleted ?? []);
       await events.applyCreated(ctx, changes.events?.created ?? []);
       await events.applyUpdated(ctx, changes.events?.updated ?? []);
+
+      await resources.applyDeleted(ctx, changes.resources?.deleted ?? []);
+      await resources.applyCreated(ctx, changes.resources?.created ?? []);
+      await resources.applyUpdated(ctx, changes.resources?.updated ?? []);
 
       // deleted de tablas soft-delete no debería llegar
       for (const table of [

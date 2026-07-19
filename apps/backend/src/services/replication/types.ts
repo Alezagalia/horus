@@ -238,6 +238,25 @@ export type EventRaw = {
   updated_at: number;
 };
 
+export type ResourceRaw = {
+  id: string;
+  category_id: string | null;
+  type: string;
+  title: string;
+  description: string | null;
+  content: string | null;
+  url: string | null;
+  language: string | null;
+  /** JSON string (Prisma Json) — passthrough, la UI mobile no lo edita */
+  metadata: string | null;
+  /** JSON string de string[] — WMDB no tiene tipo array */
+  tags: string;
+  is_pinned: boolean;
+  color: string | null;
+  created_at: number;
+  updated_at: number;
+};
+
 export interface TableChanges<Raw> {
   created?: Raw[];
   updated?: Raw[];
@@ -262,6 +281,7 @@ export const REPLICATED_TABLES = [
   'goal_habits',
   'goal_tasks',
   'events',
+  'resources',
 ] as const;
 
 export type ReplicatedTable = (typeof REPLICATED_TABLES)[number];
@@ -283,6 +303,7 @@ export interface PushChanges {
   goal_habits?: TableChanges<GoalHabitRaw>;
   goal_tasks?: TableChanges<GoalTaskRaw>;
   events?: TableChanges<EventRaw>;
+  resources?: TableChanges<ResourceRaw>;
 }
 
 export interface PullResult {

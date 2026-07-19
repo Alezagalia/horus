@@ -10,9 +10,10 @@ import { appSchema, tableSchema } from '@nozbe/watermelondb';
  *     preservar los datos de Dinero ya sincronizados.
  * v4: + tasks y task_checklist_items (Fase 2b).
  * v5: + goals, key_results, goal_habits, goal_tasks y events (Fase 2c).
+ * v6: + resources (Fase 3 — knowledge base).
  */
 export const schema = appSchema({
-  version: 5,
+  version: 6,
   tables: [
     tableSchema({
       name: 'accounts',
@@ -260,6 +261,25 @@ export const schema = appSchema({
         { name: 'canceled_at', type: 'number', isOptional: true },
         { name: 'archived_at', type: 'number', isOptional: true },
         { name: 'reminder_minutes', type: 'number', isOptional: true },
+        { name: 'created_at', type: 'number' },
+        { name: 'updated_at', type: 'number' },
+      ],
+    }),
+    tableSchema({
+      name: 'resources',
+      columns: [
+        { name: 'category_id', type: 'string', isOptional: true },
+        { name: 'type', type: 'string' }, // NOTE | SNIPPET | BOOKMARK
+        { name: 'title', type: 'string' },
+        { name: 'description', type: 'string', isOptional: true },
+        { name: 'content', type: 'string', isOptional: true },
+        { name: 'url', type: 'string', isOptional: true },
+        { name: 'language', type: 'string', isOptional: true },
+        // JSON passthrough (la UI mobile no lo edita; preserva lo creado en web)
+        { name: 'metadata', type: 'string', isOptional: true },
+        { name: 'tags', type: 'string' }, // JSON de string[]
+        { name: 'is_pinned', type: 'boolean' },
+        { name: 'color', type: 'string', isOptional: true },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },
       ],

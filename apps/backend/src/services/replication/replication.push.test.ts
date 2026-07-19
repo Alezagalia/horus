@@ -15,6 +15,7 @@ vi.mock('../../lib/prisma.js', () => {
     monthlyExpenseInstance: { findUnique: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
     budget: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
     savingsGoal: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
+    resource: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
     replicationTombstone: { findUnique: vi.fn(), upsert: vi.fn() },
     $transaction: vi.fn(),
   };
@@ -114,6 +115,10 @@ beforeEach(() => {
   p.transaction.update.mockResolvedValue({} as any);
   p.transaction.delete.mockResolvedValue({} as any);
   p.account.update.mockResolvedValue({} as any);
+  p.resource.findUnique.mockResolvedValue(null);
+  p.resource.create.mockResolvedValue({} as any);
+  p.resource.update.mockResolvedValue({} as any);
+  p.resource.delete.mockResolvedValue({} as any);
 });
 
 /** Suma de todos los increments aplicados a currentBalance de una cuenta. */
@@ -423,6 +428,207 @@ describe('push: pago de gasto mensual offline', () => {
 
     expect(p.monthlyExpenseInstance.update).not.toHaveBeenCalled();
     expect(p.monthlyExpenseInstance.updateMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('push: resources', () => {
+  const resourceRaw = (overrides: Record<string, unknown> = {}) => ({
+    id: 'res-1',
+    category_id: null,
+    type: 'NOTE',
+    title: 'Nota offline',
+    description: null,
+    content: 'contenido',
+    url: null,
+    language: null,
+    metadata: null,
+    tags: '["dev","ideas"]',
+    is_pinned: false,
+    color: null,
+    created_at: NOW.getTime(),
+    updated_at: NOW.getTime(),
+    ...overrides,
+  });
+
+  const existingResource = (overrides: Record<string, unknown> = {}) => ({
+    id: 'res-1',
+    userId: USER_ID,
+    categoryId: null,
+    type: 'NOTE',
+    title: 'Nota offline',
+    description: null,
+    content: 'contenido',
+    url: null,
+    language: null,
+    metadata: null,
+    tags: ['dev', 'ideas'],
+    isPinned: false,
+    color: null,
+    createdAt: NOW,
+    updatedAt: NOW,
+    ...overrides,
+  });
+
+  describe('created', () => {
+    it('crea el recurso con userId y tags/metadata parseados', async () => {
+      await replicationService.push(USER_ID, {
+        resources: { created: [resourceRaw({ metadata: '{"source":"web"}' })] },
+      });
+
+      expect(p.resource.create).toHaveBeenCalledOnce();
+      const data = (p.resource.create.mock.calls[0][0] as any).data;
+      expect(data.id).toBe('res-1');
+      expect(data.userId).toBe(USER_ID);
+      expect(data.tags).toEqual(['dev', 'ideas']);
+      expect(data.metadata).toEqual({ source: 'web' });
+    });
+
+    it('retry del mismo push: id existente → no re-crea', async () => {
+      p.resource.findUnique.mockResolvedValue(existingResource() as any);
+
+      await replicationService.push(USER_ID, {
+        resources: { created: [resourceRaw()] },
+      });
+
+      expect(p.resource.create).not.toHaveBeenCalled();
+    });
+
+    it('type inválido → ignorado', async () => {
+      await replicationService.push(USER_ID, {
+        resources: { created: [resourceRaw({ type: 'INVALIDO' })] },
+      });
+
+      expect(p.resource.create).not.toHaveBeenCalled();
+    });
+
+    it('fila con tombstone → no se crea (deleted gana)', async () => {
+      p.replicationTombstone.findUnique.mockResolvedValue({ rowId: 'res-1' } as any);
+
+      await replicationService.push(USER_ID, {
+        resources: { created: [resourceRaw()] },
+      });
+
+      expect(p.resource.create).not.toHaveBeenCalled();
+    });
+
+    it('categoría de scope knowledge → se conserva', async () => {
+      p.category.findUnique.mockResolvedValue(myCategory('cat-know', 'knowledge') as any);
+
+      await replicationService.push(USER_ID, {
+        resources: { created: [resourceRaw({ category_id: 'cat-know' })] },
+      });
+
+      const data = (p.resource.create.mock.calls[0][0] as any).data;
+      expect(data.categoryId).toBe('cat-know');
+    });
+
+    it('categoría ajena o de otro scope → se anula a null sin descartar el recurso', async () => {
+      p.category.findUnique.mockResolvedValue(myCategory('cat-1', 'tareas') as any);
+
+      await replicationService.push(USER_ID, {
+        resources: { created: [resourceRaw({ category_id: 'cat-1' })] },
+      });
+
+      expect(p.resource.create).toHaveBeenCalledOnce();
+      const data = (p.resource.create.mock.calls[0][0] as any).data;
+      expect(data.categoryId).toBeNull();
+    });
+
+    it('tags corrupto → se degrada a []', async () => {
+      await replicationService.push(USER_ID, {
+        resources: { created: [resourceRaw({ tags: 'no-es-json' })] },
+      });
+
+      const data = (p.resource.create.mock.calls[0][0] as any).data;
+      expect(data.tags).toEqual([]);
+    });
+  });
+
+  describe('updated', () => {
+    it('actualiza campos y preserva metadata passthrough', async () => {
+      p.resource.findUnique.mockResolvedValue(existingResource() as any);
+
+      await replicationService.push(USER_ID, {
+        resources: {
+          updated: [resourceRaw({ title: 'Renombrada', is_pinned: true, metadata: '{"a":1}' })],
+        },
+      });
+
+      expect(p.resource.update).toHaveBeenCalledOnce();
+      const call = p.resource.update.mock.calls[0][0] as any;
+      expect(call.where).toEqual({ id: 'res-1' });
+      expect(call.data.title).toBe('Renombrada');
+      expect(call.data.isPinned).toBe(true);
+      expect(call.data.metadata).toEqual({ a: 1 });
+    });
+
+    it('recurso ajeno → ignorado', async () => {
+      p.resource.findUnique.mockResolvedValue(existingResource({ userId: 'otro-user' }) as any);
+
+      await replicationService.push(USER_ID, {
+        resources: { updated: [resourceRaw()] },
+      });
+
+      expect(p.resource.update).not.toHaveBeenCalled();
+      expect(p.resource.create).not.toHaveBeenCalled();
+    });
+
+    it('fila inexistente sin tombstone → degrada a created', async () => {
+      await replicationService.push(USER_ID, {
+        resources: { updated: [resourceRaw()] },
+      });
+
+      expect(p.resource.update).not.toHaveBeenCalled();
+      expect(p.resource.create).toHaveBeenCalledOnce();
+    });
+
+    it('fila inexistente con tombstone → no resucita', async () => {
+      p.replicationTombstone.findUnique.mockResolvedValue({ rowId: 'res-1' } as any);
+
+      await replicationService.push(USER_ID, {
+        resources: { updated: [resourceRaw()] },
+      });
+
+      expect(p.resource.update).not.toHaveBeenCalled();
+      expect(p.resource.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('deleted', () => {
+    it('borra y escribe tombstone', async () => {
+      p.resource.findUnique.mockResolvedValue(existingResource() as any);
+
+      await replicationService.push(USER_ID, {
+        resources: { deleted: ['res-1'] },
+      });
+
+      expect(p.resource.delete).toHaveBeenCalledWith({ where: { id: 'res-1' } });
+      expect(p.replicationTombstone.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { tableName_rowId: { tableName: 'resources', rowId: 'res-1' } },
+        })
+      );
+    });
+
+    it('id inexistente → solo tombstone (idempotente)', async () => {
+      await replicationService.push(USER_ID, {
+        resources: { deleted: ['res-fantasma'] },
+      });
+
+      expect(p.resource.delete).not.toHaveBeenCalled();
+      expect(p.replicationTombstone.upsert).toHaveBeenCalledOnce();
+    });
+
+    it('recurso ajeno → ni borra ni escribe tombstone', async () => {
+      p.resource.findUnique.mockResolvedValue(existingResource({ userId: 'otro-user' }) as any);
+
+      await replicationService.push(USER_ID, {
+        resources: { deleted: ['res-1'] },
+      });
+
+      expect(p.resource.delete).not.toHaveBeenCalled();
+      expect(p.replicationTombstone.upsert).not.toHaveBeenCalled();
+    });
   });
 });
 

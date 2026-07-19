@@ -1,10 +1,22 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
+import { useWatermelonQuery } from './useWatermelonQuery';
+import { listResourcesLocal } from '@/db/resourceQueries';
 import {
-  resourceApi,
-  type CreateResourceDTO,
-  type UpdateResourceDTO,
-  type ResourceType,
+  createResourceLocal,
+  updateResourceLocal,
+  deleteResourceLocal,
+  togglePinResourceLocal,
+} from '@/db/resourceWrites';
+import type {
+  CreateResourceDTO,
+  UpdateResourceDTO,
+  ResourceType,
 } from '@/services/api/resourceApi';
+
+// Offline-first Fase 3: los recursos se leen/escriben en WatermelonDB
+// (db/resourceQueries|resourceWrites) y se replican vía /api/replication.
+// La reactividad viene de withChangesForTables: no hace falta invalidar
+// queries en las mutaciones.
 
 export const resourceKeys = {
   all: ['resources'] as const,
@@ -16,50 +28,32 @@ export function useResources(filters?: {
   search?: string;
   isPinned?: boolean;
 }) {
-  return useQuery({
-    queryKey: resourceKeys.list(filters),
-    queryFn: () => resourceApi.list(filters),
-    staleTime: 1000 * 60 * 2,
-  });
+  return useWatermelonQuery(resourceKeys.list(filters), () => listResourcesLocal(filters), [
+    'resources',
+  ]);
 }
 
 export function useCreateResource() {
-  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (dto: CreateResourceDTO) => resourceApi.create(dto),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: resourceKeys.all });
-    },
+    mutationFn: (dto: CreateResourceDTO) => createResourceLocal(dto),
   });
 }
 
 export function useUpdateResource() {
-  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, dto }: { id: string; dto: UpdateResourceDTO }) =>
-      resourceApi.update(id, dto),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: resourceKeys.all });
-    },
+      updateResourceLocal(id, dto),
   });
 }
 
 export function useDeleteResource() {
-  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => resourceApi.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: resourceKeys.all });
-    },
+    mutationFn: (id: string) => deleteResourceLocal(id),
   });
 }
 
 export function useTogglePinResource() {
-  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => resourceApi.togglePin(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: resourceKeys.all });
-    },
+    mutationFn: (id: string) => togglePinResourceLocal(id),
   });
 }

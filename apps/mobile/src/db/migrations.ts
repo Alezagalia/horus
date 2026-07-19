@@ -13,6 +13,30 @@ import { schemaMigrations, createTable } from '@nozbe/watermelondb/Schema/migrat
 export const migrations = schemaMigrations({
   migrations: [
     {
+      // v6 — Fase 3 Recursos (knowledge base)
+      toVersion: 6,
+      steps: [
+        createTable({
+          name: 'resources',
+          columns: [
+            { name: 'category_id', type: 'string', isOptional: true },
+            { name: 'type', type: 'string' },
+            { name: 'title', type: 'string' },
+            { name: 'description', type: 'string', isOptional: true },
+            { name: 'content', type: 'string', isOptional: true },
+            { name: 'url', type: 'string', isOptional: true },
+            { name: 'language', type: 'string', isOptional: true },
+            { name: 'metadata', type: 'string', isOptional: true },
+            { name: 'tags', type: 'string' },
+            { name: 'is_pinned', type: 'boolean' },
+            { name: 'color', type: 'string', isOptional: true },
+            { name: 'created_at', type: 'number' },
+            { name: 'updated_at', type: 'number' },
+          ],
+        }),
+      ],
+    },
+    {
       // v5 — Fase 2c Metas y Eventos
       toVersion: 5,
       steps: [
