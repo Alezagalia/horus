@@ -1,4 +1,5 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
+import { NUTRITION_FITNESS_TABLES } from './nutritionFitnessTables';
 
 /**
  * Schema local (SQLite) — offline-first. Columnas en snake_case, espejo exacto
@@ -11,9 +12,14 @@ import { appSchema, tableSchema } from '@nozbe/watermelondb';
  * v4: + tasks y task_checklist_items (Fase 2b).
  * v5: + goals, key_results, goal_habits, goal_tasks y events (Fase 2c).
  * v6: + resources (Fase 3 — knowledge base).
+ * v7: + nutrición (foods, recipes, recipe_ingredients, meal_plans,
+ *     meal_entries, meal_entry_items, nutrition_logs, nutrition_log_items,
+ *     shopping_lists, shopping_list_items) y fitness (exercises, routines,
+ *     routine_exercises, workouts, workout_exercises, workout_sets) — Fase 4,
+ *     definidas en nutritionFitnessTables.ts (compartidas con migrations.ts).
  */
 export const schema = appSchema({
-  version: 6,
+  version: 7,
   tables: [
     tableSchema({
       name: 'accounts',
@@ -284,5 +290,6 @@ export const schema = appSchema({
         { name: 'updated_at', type: 'number' },
       ],
     }),
+    ...NUTRITION_FITNESS_TABLES.map(tableSchema),
   ],
 });

@@ -1090,6 +1090,9 @@ model RoutineExercise {
   targetWeight Decimal? @db.Decimal(10, 2)
   restTime     Int?
   notes        String?  @db.Text
+  // Timestamps para replicación offline-first (pull incremental por updatedAt)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
 
   routine  Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
   exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
@@ -1129,6 +1132,8 @@ model Workout {
   endTime   DateTime?
   notes     String?   @db.Text
   createdAt DateTime  @default(now())
+  // Timestamp para replicación offline-first (pull incremental por updatedAt)
+  updatedAt DateTime  @default(now()) @updatedAt
 
   user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   routine          Routine?          @relation(fields: [routineId], references: [id], onDelete: SetNull)
@@ -1166,6 +1171,8 @@ model WorkoutExercise {
   notes      String?  @db.Text
   rpe        Int?
   createdAt  DateTime @default(now())
+  // Timestamp para replicación offline-first (pull incremental por updatedAt)
+  updatedAt  DateTime @default(now()) @updatedAt
 
   workout     Workout      @relation(fields: [workoutId], references: [id], onDelete: Cascade)
   exercise    Exercise     @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
@@ -1207,6 +1214,9 @@ model WorkoutSet {
   restTime          Int?
   notes             String?    @db.Text
   timestamp         DateTime   @default(now())
+  // Timestamps para replicación offline-first (pull incremental por updatedAt)
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @default(now()) @updatedAt
 
   workoutExercise WorkoutExercise @relation(fields: [workoutExerciseId], references: [id], onDelete: Cascade)
 
@@ -1639,6 +1649,9 @@ model RecipeIngredient {
   foodId   String
   grams    Decimal @db.Decimal(8, 2)
   notes    String? @db.VarChar(200)
+  // Timestamps para replicación offline-first (pull incremental por updatedAt)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
   recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
   food   Food   @relation(fields: [foodId], references: [id], onDelete: Restrict)
@@ -1673,6 +1686,9 @@ model MealEntry {
   day        DateTime @db.Date
   mealTime   MealTime
   notes      String?  @db.VarChar(300)
+  // Timestamps para replicación offline-first (pull incremental por updatedAt)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
 
   mealPlan MealPlan       @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
   items    MealEntryItem[]
@@ -1689,6 +1705,9 @@ model MealEntryItem {
   recipeId    String?
   grams       Decimal  @db.Decimal(8, 2)
   servings    Decimal? @db.Decimal(6, 2)
+  // Timestamps para replicación offline-first (pull incremental por updatedAt)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
 
   mealEntry MealEntry @relation(fields: [mealEntryId], references: [id], onDelete: Cascade)
   food      Food?     @relation(fields: [foodId], references: [id], onDelete: SetNull)
@@ -1724,6 +1743,9 @@ model NutritionLogItem {
   grams          Decimal  @db.Decimal(8, 2)
   servings       Decimal? @db.Decimal(6, 2)
   notes          String?  @db.VarChar(200)
+  // Timestamps para replicación offline-first (pull incremental por updatedAt)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now()) @updatedAt
 
   nutritionLog NutritionLog @relation(fields: [nutritionLogId], references: [id], onDelete: Cascade)
   food         Food?        @relation(fields: [foodId], references: [id], onDelete: SetNull)
@@ -1762,6 +1784,9 @@ model ShoppingListItem {
   unit           String  @db.VarChar(20)
   checked        Boolean @default(false)
   notes          String? @db.VarChar(200)
+  // Timestamps para replicación offline-first (pull incremental por updatedAt)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now()) @updatedAt
 
   shoppingList ShoppingList @relation(fields: [shoppingListId], references: [id], onDelete: Cascade)
   food         Food?        @relation(fields: [foodId], references: [id], onDelete: SetNull)

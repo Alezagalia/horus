@@ -1,10 +1,29 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useWatermelonQuery } from './useWatermelonQuery';
 import {
-  workoutApi,
-  type AddSetDTO,
-  type CreateRoutineDTO,
-  type UpdateRoutineDTO,
-} from '@/services/api/workoutApi';
+  listRoutinesLocal,
+  getRoutineDetailLocal,
+  listWorkoutsLocal,
+  getWorkoutDetailLocal,
+} from '@/db/fitnessQueries';
+import {
+  createRoutineLocal,
+  updateRoutineLocal,
+  deleteRoutineLocal,
+  startWorkoutLocal,
+  finishWorkoutLocal,
+  cancelWorkoutLocal,
+  addSetLocal,
+  deleteSetLocal,
+} from '@/db/fitnessWrites';
+import type { AddSetDTO } from '@/services/api/workoutApi';
+import type { CreateRoutineDTO, UpdateRoutineDTO } from '@horus/shared';
+
+/**
+ * Fitness offline-first: lecturas desde SQLite local (useWatermelonQuery) y
+ * escrituras locales que disparan el sync. Mismas keys y firmas que la
+ * versión REST: la UI no cambia.
+ */
 
 export const workoutKeys = {
   all: ['workouts'] as const,
@@ -14,85 +33,59 @@ export const workoutKeys = {
   detail: (id: string) => [...workoutKeys.all, 'detail', id] as const,
 };
 
+const ROUTINE_TABLES = ['routines', 'routine_exercises', 'exercises', 'workouts'];
+const WORKOUT_TABLES = ['workouts', 'workout_exercises', 'workout_sets', 'exercises', 'routines'];
+
 export function useRoutines() {
-  return useQuery({
-    queryKey: workoutKeys.routines(),
-    queryFn: workoutApi.listRoutines,
-    staleTime: 1000 * 60 * 5,
-  });
+  return useWatermelonQuery(workoutKeys.routines(), () => listRoutinesLocal(), ROUTINE_TABLES);
 }
 
 export function useRoutineDetail(id: string | undefined) {
-  return useQuery({
-    queryKey: workoutKeys.routineDetail(id ?? ''),
-    queryFn: () => workoutApi.getRoutineById(id!),
-    staleTime: 1000 * 60 * 2,
-    enabled: !!id,
-  });
+  return useWatermelonQuery(
+    workoutKeys.routineDetail(id ?? ''),
+    () => (id ? getRoutineDetailLocal(id) : Promise.resolve(null)),
+    ROUTINE_TABLES
+  );
 }
 
 export function useCreateRoutine() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (dto: CreateRoutineDTO) => workoutApi.createRoutine(dto),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: workoutKeys.all });
-    },
-  });
+  return useMutation({ mutationFn: (dto: CreateRoutineDTO) => createRoutineLocal(dto) });
 }
 
 export function useUpdateRoutine() {
-  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, dto }: { id: string; dto: UpdateRoutineDTO }) =>
-      workoutApi.updateRoutine(id, dto),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: workoutKeys.all });
-    },
+    mutationFn: ({ id, dto }: { id: string; dto: UpdateRoutineDTO }) => updateRoutineLocal(id, dto),
   });
 }
 
 export function useDeleteRoutine() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => workoutApi.deleteRoutine(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: workoutKeys.all });
-    },
-  });
+  return useMutation({ mutationFn: (id: string) => deleteRoutineLocal(id) });
 }
 
 export function useWorkoutDetail(id: string) {
-  return useQuery({
-    queryKey: workoutKeys.detail(id),
-    queryFn: () => workoutApi.getWorkoutById(id),
-    staleTime: 10 * 60 * 1000,
-    enabled: !!id,
-  });
+  return useWatermelonQuery(
+    workoutKeys.detail(id),
+    () => (id ? getWorkoutDetailLocal(id) : Promise.resolve(null)),
+    WORKOUT_TABLES
+  );
 }
 
 export function useWorkoutHistory(params?: { page?: number; limit?: number }) {
-  return useQuery({
-    queryKey: workoutKeys.history(params),
-    queryFn: () => workoutApi.listWorkouts(params),
-    staleTime: 1000 * 60 * 2,
-  });
+  return useWatermelonQuery(
+    workoutKeys.history(params),
+    () => listWorkoutsLocal(params),
+    WORKOUT_TABLES
+  );
 }
 
 export function useStartWorkout() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (routineId: string) => workoutApi.startWorkout(routineId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: workoutKeys.all });
-    },
-  });
+  return useMutation({ mutationFn: (routineId: string) => startWorkoutLocal(routineId) });
 }
 
 export function useFinishWorkout() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (workoutId: string) => workoutApi.finishWorkout(workoutId),
+    mutationFn: (workoutId: string) => finishWorkoutLocal(workoutId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: workoutKeys.all });
     },
@@ -100,40 +93,26 @@ export function useFinishWorkout() {
 }
 
 export function useCancelWorkout() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (workoutId: string) => workoutApi.cancelWorkout(workoutId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: workoutKeys.all });
-    },
-  });
+  return useMutation({ mutationFn: (workoutId: string) => cancelWorkoutLocal(workoutId) });
 }
 
-// Set mutations — no auto-invalidate; callers update local state from response
+// Set mutations — la pantalla activa actualiza su estado con la respuesta
 export function useAddSet() {
   return useMutation({
     mutationFn: ({
-      workoutId,
       workoutExerciseId,
       dto,
     }: {
       workoutId: string;
       workoutExerciseId: string;
       dto: AddSetDTO;
-    }) => workoutApi.addSet(workoutId, workoutExerciseId, dto),
+    }) => addSetLocal(workoutExerciseId, dto),
   });
 }
 
 export function useDeleteSet() {
   return useMutation({
-    mutationFn: ({
-      workoutId,
-      workoutExerciseId,
-      setId,
-    }: {
-      workoutId: string;
-      workoutExerciseId: string;
-      setId: string;
-    }) => workoutApi.deleteSet(workoutId, workoutExerciseId, setId),
+    mutationFn: ({ setId }: { workoutId: string; workoutExerciseId: string; setId: string }) =>
+      deleteSetLocal(setId),
   });
 }

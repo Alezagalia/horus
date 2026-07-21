@@ -1,4 +1,5 @@
 import { schemaMigrations, createTable } from '@nozbe/watermelondb/Schema/migrations';
+import { NUTRITION_FITNESS_TABLES } from './nutritionFitnessTables';
 
 /**
  * Migraciones del schema local. A partir de v2 (Fase 1 en producción) los
@@ -12,6 +13,11 @@ import { schemaMigrations, createTable } from '@nozbe/watermelondb/Schema/migrat
  */
 export const migrations = schemaMigrations({
   migrations: [
+    {
+      // v7 — Fase 4 Nutrición + Fitness (16 tablas, ver nutritionFitnessTables.ts)
+      toVersion: 7,
+      steps: NUTRITION_FITNESS_TABLES.map(createTable),
+    },
     {
       // v6 — Fase 3 Recursos (knowledge base)
       toVersion: 6,

@@ -4,7 +4,12 @@
  * recurring_expenses, monthly_expense_instances, budgets, savings_goals).
  * Fase 2: Hábitos (habits, habit_records), Tareas (tasks,
  * task_checklist_items), Metas (goals, key_results, goal_habits, goal_tasks)
- * y Eventos (events), más las categories de sus scopes.
+ * y Eventos (events), más las categories de sus scopes. Fase 3: Recursos
+ * (resources). Fase 4: Nutrición (foods, recipes, recipe_ingredients,
+ * meal_plans, meal_entries, meal_entry_items, nutrition_logs,
+ * nutrition_log_items, shopping_lists, shopping_list_items) y Fitness
+ * (exercises, routines, routine_exercises, workouts, workout_exercises,
+ * workout_sets).
  *
  * Contrato:
  *  - pull: { changes: { <tabla>: { created, updated, deleted } }, timestamp }
@@ -40,6 +45,14 @@ import * as keyResults from './tables/keyResult.replication.js';
 import * as goalLinks from './tables/goalLink.replication.js';
 import * as events from './tables/event.replication.js';
 import * as resources from './tables/resource.replication.js';
+import * as foods from './tables/food.replication.js';
+import * as recipes from './tables/recipe.replication.js';
+import * as mealPlans from './tables/mealPlan.replication.js';
+import * as nutritionLogs from './tables/nutritionLog.replication.js';
+import * as shoppingLists from './tables/shoppingList.replication.js';
+import * as exercises from './tables/exercise.replication.js';
+import * as routines from './tables/routine.replication.js';
+import * as workouts from './tables/workout.replication.js';
 
 /** Límite de sanidad por tabla en el pull: con usuarios chicos no debería
  * alcanzarse nunca; si se alcanza, hay que implementar paginación. */
@@ -109,6 +122,22 @@ export const replicationService = {
       goalTaskRows,
       eventRows,
       resourceRows,
+      foodRows,
+      recipeRows,
+      recipeIngredientRows,
+      mealPlanRows,
+      mealEntryRows,
+      mealEntryItemRows,
+      nutritionLogRows,
+      nutritionLogItemRows,
+      shoppingListRows,
+      shoppingListItemRows,
+      exerciseRows,
+      routineRows,
+      routineExerciseRows,
+      workoutRows,
+      workoutExerciseRows,
+      workoutSetRows,
       tombstones,
     ] = await Promise.all([
       prisma.account.findMany({ where: changedWhere, take: PULL_SANITY_LIMIT }),
@@ -145,6 +174,63 @@ export const replicationService = {
       prisma.goalTask.findMany({ where: { goal: { userId } }, take: PULL_SANITY_LIMIT }),
       prisma.event.findMany({ where: whereFor('events'), take: PULL_SANITY_LIMIT }),
       prisma.resource.findMany({ where: whereFor('resources'), take: PULL_SANITY_LIMIT }),
+      prisma.food.findMany({ where: whereFor('foods'), take: PULL_SANITY_LIMIT }),
+      prisma.recipe.findMany({ where: whereFor('recipes'), take: PULL_SANITY_LIMIT }),
+      // Los hijos de nutrición/fitness no tienen userId propio: se filtran vía su padre
+      prisma.recipeIngredient.findMany({
+        where: fullTables.includes('recipe_ingredients')
+          ? { recipe: { userId } }
+          : { recipe: { userId }, updatedAt: { gt: since } },
+        take: PULL_SANITY_LIMIT,
+      }),
+      prisma.mealPlan.findMany({ where: whereFor('meal_plans'), take: PULL_SANITY_LIMIT }),
+      prisma.mealEntry.findMany({
+        where: fullTables.includes('meal_entries')
+          ? { mealPlan: { userId } }
+          : { mealPlan: { userId }, updatedAt: { gt: since } },
+        take: PULL_SANITY_LIMIT,
+      }),
+      prisma.mealEntryItem.findMany({
+        where: fullTables.includes('meal_entry_items')
+          ? { mealEntry: { mealPlan: { userId } } }
+          : { mealEntry: { mealPlan: { userId } }, updatedAt: { gt: since } },
+        take: PULL_SANITY_LIMIT,
+      }),
+      prisma.nutritionLog.findMany({ where: whereFor('nutrition_logs'), take: PULL_SANITY_LIMIT }),
+      prisma.nutritionLogItem.findMany({
+        where: fullTables.includes('nutrition_log_items')
+          ? { nutritionLog: { userId } }
+          : { nutritionLog: { userId }, updatedAt: { gt: since } },
+        take: PULL_SANITY_LIMIT,
+      }),
+      prisma.shoppingList.findMany({ where: whereFor('shopping_lists'), take: PULL_SANITY_LIMIT }),
+      prisma.shoppingListItem.findMany({
+        where: fullTables.includes('shopping_list_items')
+          ? { shoppingList: { userId } }
+          : { shoppingList: { userId }, updatedAt: { gt: since } },
+        take: PULL_SANITY_LIMIT,
+      }),
+      prisma.exercise.findMany({ where: whereFor('exercises'), take: PULL_SANITY_LIMIT }),
+      prisma.routine.findMany({ where: whereFor('routines'), take: PULL_SANITY_LIMIT }),
+      prisma.routineExercise.findMany({
+        where: fullTables.includes('routine_exercises')
+          ? { routine: { userId } }
+          : { routine: { userId }, updatedAt: { gt: since } },
+        take: PULL_SANITY_LIMIT,
+      }),
+      prisma.workout.findMany({ where: whereFor('workouts'), take: PULL_SANITY_LIMIT }),
+      prisma.workoutExercise.findMany({
+        where: fullTables.includes('workout_exercises')
+          ? { workout: { userId } }
+          : { workout: { userId }, updatedAt: { gt: since } },
+        take: PULL_SANITY_LIMIT,
+      }),
+      prisma.workoutSet.findMany({
+        where: fullTables.includes('workout_sets')
+          ? { workoutExercise: { workout: { userId } } }
+          : { workoutExercise: { workout: { userId } }, updatedAt: { gt: since } },
+        take: PULL_SANITY_LIMIT,
+      }),
       prisma.replicationTombstone.findMany({
         where: { userId, deletedAt: { gt: since } },
         take: PULL_SANITY_LIMIT,
@@ -168,7 +254,23 @@ export const replicationService = {
       goalHabitRows.length +
       goalTaskRows.length +
       eventRows.length +
-      resourceRows.length;
+      resourceRows.length +
+      foodRows.length +
+      recipeRows.length +
+      recipeIngredientRows.length +
+      mealPlanRows.length +
+      mealEntryRows.length +
+      mealEntryItemRows.length +
+      nutritionLogRows.length +
+      nutritionLogItemRows.length +
+      shoppingListRows.length +
+      shoppingListItemRows.length +
+      exerciseRows.length +
+      routineRows.length +
+      routineExerciseRows.length +
+      workoutRows.length +
+      workoutExerciseRows.length +
+      workoutSetRows.length;
     if (rowCount >= PULL_SANITY_LIMIT) {
       logger.warn(
         `[replication] pull de ${rowCount} filas para user ${userId}: evaluar paginación`
@@ -256,6 +358,97 @@ export const replicationService = {
           sinceMsFor('resources'),
           resources.toRaw,
           deletedFor('resources')
+        ),
+        foods: splitByCreated(foodRows, sinceMsFor('foods'), foods.toRaw, deletedFor('foods')),
+        recipes: splitByCreated(
+          recipeRows,
+          sinceMsFor('recipes'),
+          recipes.toRaw,
+          deletedFor('recipes')
+        ),
+        recipe_ingredients: splitByCreated(
+          recipeIngredientRows,
+          sinceMsFor('recipe_ingredients'),
+          recipes.ingredientToRaw,
+          deletedFor('recipe_ingredients')
+        ),
+        meal_plans: splitByCreated(
+          mealPlanRows,
+          sinceMsFor('meal_plans'),
+          mealPlans.toRaw,
+          deletedFor('meal_plans')
+        ),
+        meal_entries: splitByCreated(
+          mealEntryRows,
+          sinceMsFor('meal_entries'),
+          mealPlans.entryToRaw,
+          deletedFor('meal_entries')
+        ),
+        meal_entry_items: splitByCreated(
+          mealEntryItemRows,
+          sinceMsFor('meal_entry_items'),
+          mealPlans.itemToRaw,
+          deletedFor('meal_entry_items')
+        ),
+        nutrition_logs: splitByCreated(
+          nutritionLogRows,
+          sinceMsFor('nutrition_logs'),
+          nutritionLogs.toRaw,
+          deletedFor('nutrition_logs')
+        ),
+        nutrition_log_items: splitByCreated(
+          nutritionLogItemRows,
+          sinceMsFor('nutrition_log_items'),
+          nutritionLogs.itemToRaw,
+          deletedFor('nutrition_log_items')
+        ),
+        shopping_lists: splitByCreated(
+          shoppingListRows,
+          sinceMsFor('shopping_lists'),
+          shoppingLists.toRaw,
+          deletedFor('shopping_lists')
+        ),
+        shopping_list_items: splitByCreated(
+          shoppingListItemRows,
+          sinceMsFor('shopping_list_items'),
+          shoppingLists.itemToRaw,
+          deletedFor('shopping_list_items')
+        ),
+        exercises: splitByCreated(
+          exerciseRows,
+          sinceMsFor('exercises'),
+          exercises.toRaw,
+          deletedFor('exercises')
+        ),
+        routines: splitByCreated(
+          routineRows,
+          sinceMsFor('routines'),
+          routines.toRaw,
+          deletedFor('routines')
+        ),
+        routine_exercises: splitByCreated(
+          routineExerciseRows,
+          sinceMsFor('routine_exercises'),
+          routines.exerciseToRaw,
+          deletedFor('routine_exercises')
+        ),
+        workouts: splitByCreated(
+          workoutRows,
+          sinceMsFor('workouts'),
+          workouts.toRaw,
+          deletedFor('workouts')
+        ),
+        workout_exercises: splitByCreated(
+          workoutExerciseRows,
+          sinceMsFor('workout_exercises'),
+          workouts.exerciseToRaw,
+          deletedFor('workout_exercises')
+        ),
+        workout_sets: splitByCreated(
+          workoutSetRows,
+          sinceMsFor('workout_sets'),
+          workouts.setToRaw,
+          deletedFor('workout_sets')
         ),
       },
       timestamp,
@@ -362,6 +555,117 @@ export const replicationService = {
       await resources.applyCreated(ctx, changes.resources?.created ?? []);
       await resources.applyUpdated(ctx, changes.resources?.updated ?? []);
 
+      // Nutrición: foods primero (FK de ingredientes/items). Los creates que
+      // colisionan por clave única (nombre, semana, fecha) se fusionan y el
+      // remap corrige las referencias de los hijos de este mismo push.
+      const foodRemap = await foods.applyCreated(ctx, changes.foods?.created ?? []);
+      await foods.applyUpdated(ctx, changes.foods?.updated ?? []);
+
+      await recipes.applyCreated(ctx, changes.recipes?.created ?? []);
+      await recipes.applyUpdated(ctx, changes.recipes?.updated ?? []);
+      await recipes.deleteIngredients(ctx, changes.recipe_ingredients?.deleted ?? []);
+      await recipes.applyIngredients(
+        ctx,
+        [
+          ...(changes.recipe_ingredients?.created ?? []),
+          ...(changes.recipe_ingredients?.updated ?? []),
+        ],
+        foodRemap
+      );
+
+      // Planes de comida: deletes primero (tombstone gana), plan → entries → items
+      await mealPlans.applyDeleted(ctx, changes.meal_plans?.deleted ?? []);
+      const planRemap = await mealPlans.applyCreated(ctx, changes.meal_plans?.created ?? []);
+      await mealPlans.applyUpdated(ctx, changes.meal_plans?.updated ?? []);
+
+      await mealPlans.deleteEntries(ctx, changes.meal_entries?.deleted ?? []);
+      await mealPlans.applyEntries(
+        ctx,
+        [...(changes.meal_entries?.created ?? []), ...(changes.meal_entries?.updated ?? [])],
+        planRemap
+      );
+      await mealPlans.deleteEntryItems(ctx, changes.meal_entry_items?.deleted ?? []);
+      await mealPlans.applyEntryItems(
+        ctx,
+        [
+          ...(changes.meal_entry_items?.created ?? []),
+          ...(changes.meal_entry_items?.updated ?? []),
+        ],
+        foodRemap
+      );
+
+      await nutritionLogs.applyDeleted(ctx, changes.nutrition_logs?.deleted ?? []);
+      const logRemap = await nutritionLogs.applyCreated(ctx, changes.nutrition_logs?.created ?? []);
+      await nutritionLogs.applyUpdated(ctx, changes.nutrition_logs?.updated ?? []);
+
+      await nutritionLogs.deleteItems(ctx, changes.nutrition_log_items?.deleted ?? []);
+      await nutritionLogs.applyItems(
+        ctx,
+        [
+          ...(changes.nutrition_log_items?.created ?? []),
+          ...(changes.nutrition_log_items?.updated ?? []),
+        ],
+        logRemap,
+        foodRemap
+      );
+
+      // Listas de compras después de transactions (transaction_id) y meal plans
+      await shoppingLists.applyDeleted(ctx, changes.shopping_lists?.deleted ?? []);
+      await shoppingLists.applyCreated(ctx, changes.shopping_lists?.created ?? [], planRemap);
+      await shoppingLists.applyUpdated(ctx, changes.shopping_lists?.updated ?? [], planRemap);
+
+      await shoppingLists.deleteItems(ctx, changes.shopping_list_items?.deleted ?? []);
+      await shoppingLists.applyItems(
+        ctx,
+        [
+          ...(changes.shopping_list_items?.created ?? []),
+          ...(changes.shopping_list_items?.updated ?? []),
+        ],
+        foodRemap
+      );
+
+      // Fitness: exercises primero (FK de rutinas/workouts); sus deletes al
+      // FINAL (los deletes de rutinas/workouts pueden liberar referencias).
+      const exerciseRemap = await exercises.applyCreated(ctx, changes.exercises?.created ?? []);
+      await exercises.applyUpdated(ctx, changes.exercises?.updated ?? []);
+
+      await routines.applyDeleted(ctx, changes.routines?.deleted ?? []);
+      await routines.applyCreated(ctx, changes.routines?.created ?? []);
+      await routines.applyUpdated(ctx, changes.routines?.updated ?? []);
+
+      await routines.deleteExercises(ctx, changes.routine_exercises?.deleted ?? []);
+      await routines.applyExercises(
+        ctx,
+        [
+          ...(changes.routine_exercises?.created ?? []),
+          ...(changes.routine_exercises?.updated ?? []),
+        ],
+        exerciseRemap
+      );
+
+      // Workouts: workout → workout_exercises → sets, deletes primero en cada nivel
+      await workouts.applyDeleted(ctx, changes.workouts?.deleted ?? []);
+      await workouts.applyCreated(ctx, changes.workouts?.created ?? []);
+      await workouts.applyUpdated(ctx, changes.workouts?.updated ?? []);
+
+      await workouts.deleteExercises(ctx, changes.workout_exercises?.deleted ?? []);
+      await workouts.applyExercises(
+        ctx,
+        [
+          ...(changes.workout_exercises?.created ?? []),
+          ...(changes.workout_exercises?.updated ?? []),
+        ],
+        exerciseRemap
+      );
+
+      await workouts.deleteSets(ctx, changes.workout_sets?.deleted ?? []);
+      await workouts.applySets(ctx, [
+        ...(changes.workout_sets?.created ?? []),
+        ...(changes.workout_sets?.updated ?? []),
+      ]);
+
+      await exercises.applyDeleted(ctx, changes.exercises?.deleted ?? []);
+
       // deleted de tablas soft-delete no debería llegar
       for (const table of [
         'accounts',
@@ -372,6 +676,8 @@ export const replicationService = {
         'habits',
         'habit_records',
         'key_results',
+        'foods',
+        'recipes',
       ] as const) {
         const deleted = changes[table]?.deleted ?? [];
         if (deleted.length > 0) {

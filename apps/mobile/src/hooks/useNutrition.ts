@@ -1,5 +1,34 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { nutritionApi } from '@/services/api/nutritionApi';
+import { useMutation } from '@tanstack/react-query';
+import { useWatermelonQuery } from './useWatermelonQuery';
+import {
+  listFoodsLocal,
+  getNutritionLogLocal,
+  listRecipesLocal,
+  getMealPlanByWeekLocal,
+  getMealPlanMacrosLocal,
+  listShoppingListsLocal,
+} from '@/db/nutritionQueries';
+import {
+  createFoodLocal,
+  updateFoodLocal,
+  deleteFoodLocal,
+  addLogItemLocal,
+  removeLogItemLocal,
+  createRecipeLocal,
+  updateRecipeLocal,
+  deleteRecipeLocal,
+  addIngredientLocal,
+  removeIngredientLocal,
+  createMealPlanLocal,
+  addMealEntryLocal,
+  removeMealEntryLocal,
+  generateShoppingListLocal,
+  syncShoppingListLocal,
+  createShoppingListLocal,
+  deleteShoppingListLocal,
+  checkShoppingItemLocal,
+  linkTransactionLocal,
+} from '@/db/nutritionWrites';
 import type {
   FoodFilters,
   CreateFoodDTO,
@@ -13,6 +42,12 @@ import type {
   CreateShoppingListDTO,
 } from '@horus/shared';
 
+/**
+ * Nutrición offline-first: lecturas desde SQLite local (useWatermelonQuery,
+ * reactividad por withChangesForTables) y escrituras locales que disparan el
+ * sync. Mismas keys y firmas que la versión REST: la UI no cambia.
+ */
+
 export const nutritionKeys = {
   all: ['nutrition'] as const,
   foods: (filters?: FoodFilters) => [...nutritionKeys.all, 'foods', filters] as const,
@@ -23,238 +58,164 @@ export const nutritionKeys = {
   shoppingLists: () => [...nutritionKeys.all, 'shoppingLists'] as const,
 };
 
+const RECIPE_TABLES = ['recipes', 'recipe_ingredients', 'foods'];
+const PLAN_TABLES = ['meal_plans', 'meal_entries', 'meal_entry_items', ...RECIPE_TABLES];
+
 // ─── Foods ────────────────────────────────────────────────────────────────────
 
 export function useFoods(filters?: FoodFilters) {
-  return useQuery({
-    queryKey: nutritionKeys.foods(filters),
-    queryFn: () => nutritionApi.listFoods(filters),
-    staleTime: 1000 * 60 * 10,
-  });
+  return useWatermelonQuery(nutritionKeys.foods(filters), () => listFoodsLocal(filters), ['foods']);
 }
 
 export function useCreateFood() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (dto: CreateFoodDTO) => nutritionApi.createFood(dto),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [...nutritionKeys.all, 'foods'] }),
-  });
+  return useMutation({ mutationFn: (dto: CreateFoodDTO) => createFoodLocal(dto) });
 }
 
 export function useUpdateFood() {
-  const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, dto }: { id: string; dto: UpdateFoodDTO }) =>
-      nutritionApi.updateFood(id, dto),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [...nutritionKeys.all, 'foods'] }),
+    mutationFn: ({ id, dto }: { id: string; dto: UpdateFoodDTO }) => updateFoodLocal(id, dto),
   });
 }
 
 export function useDeleteFood() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => nutritionApi.deleteFood(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [...nutritionKeys.all, 'foods'] }),
-  });
+  return useMutation({ mutationFn: (id: string) => deleteFoodLocal(id) });
 }
 
 // ─── Nutrition Log ────────────────────────────────────────────────────────────
 
 export function useNutritionLog(date: string) {
-  return useQuery({
-    queryKey: nutritionKeys.log(date),
-    queryFn: () => nutritionApi.getLog(date),
-    staleTime: 1000 * 60 * 2,
-  });
+  return useWatermelonQuery(nutritionKeys.log(date), () => getNutritionLogLocal(date), [
+    'nutrition_logs',
+    'nutrition_log_items',
+    'foods',
+  ]);
 }
 
 export function useAddLogItem() {
-  const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ date, item }: { date: string; item: AddNutritionLogItemDTO }) =>
-      nutritionApi.addLogItem(date, item),
-    onSuccess: (log) => qc.invalidateQueries({ queryKey: nutritionKeys.log(log.date) }),
+      addLogItemLocal(date, item),
   });
 }
 
 export function useRemoveLogItem() {
-  const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ date, itemId }: { date: string; itemId: string }) =>
-      nutritionApi.removeLogItem(date, itemId),
-    onSuccess: (log) => qc.invalidateQueries({ queryKey: nutritionKeys.log(log.date) }),
+    mutationFn: ({ itemId }: { date: string; itemId: string }) => removeLogItemLocal(itemId),
   });
 }
 
 // ─── Recipes ──────────────────────────────────────────────────────────────────
 
 export function useRecipes() {
-  return useQuery({
-    queryKey: nutritionKeys.recipes(),
-    queryFn: () => nutritionApi.listRecipes(),
-    staleTime: 1000 * 60 * 5,
-  });
+  return useWatermelonQuery(nutritionKeys.recipes(), () => listRecipesLocal(), RECIPE_TABLES);
 }
 
 export function useCreateRecipe() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (dto: CreateRecipeDTO) => nutritionApi.createRecipe(dto),
-    onSuccess: () => qc.invalidateQueries({ queryKey: nutritionKeys.recipes() }),
-  });
+  return useMutation({ mutationFn: (dto: CreateRecipeDTO) => createRecipeLocal(dto) });
 }
 
 export function useUpdateRecipe() {
-  const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, dto }: { id: string; dto: UpdateRecipeDTO }) =>
-      nutritionApi.updateRecipe(id, dto),
-    onSuccess: () => qc.invalidateQueries({ queryKey: nutritionKeys.recipes() }),
+    mutationFn: ({ id, dto }: { id: string; dto: UpdateRecipeDTO }) => updateRecipeLocal(id, dto),
   });
 }
 
 export function useDeleteRecipe() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => nutritionApi.deleteRecipe(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: nutritionKeys.recipes() }),
-  });
+  return useMutation({ mutationFn: (id: string) => deleteRecipeLocal(id) });
 }
 
 export function useAddIngredient() {
-  const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ recipeId, dto }: { recipeId: string; dto: RecipeIngredientDTO }) =>
-      nutritionApi.addIngredient(recipeId, dto),
-    onSuccess: () => qc.invalidateQueries({ queryKey: nutritionKeys.recipes() }),
+      addIngredientLocal(recipeId, dto),
   });
 }
 
 export function useRemoveIngredient() {
-  const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ recipeId, ingredientId }: { recipeId: string; ingredientId: string }) =>
-      nutritionApi.removeIngredient(recipeId, ingredientId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: nutritionKeys.recipes() }),
+    mutationFn: ({ ingredientId }: { recipeId: string; ingredientId: string }) =>
+      removeIngredientLocal(ingredientId),
   });
 }
 
 // ─── Meal Plans ───────────────────────────────────────────────────────────────
 
 export function useMealPlanByWeek(weekStart: string) {
-  return useQuery({
-    queryKey: nutritionKeys.mealPlanWeek(weekStart),
-    queryFn: () => nutritionApi.getMealPlanByWeek(weekStart),
-    staleTime: 1000 * 60 * 2,
-  });
+  return useWatermelonQuery(
+    nutritionKeys.mealPlanWeek(weekStart),
+    () => getMealPlanByWeekLocal(weekStart),
+    PLAN_TABLES
+  );
 }
 
 export function useMealPlanMacros(mealPlanId: string | undefined) {
-  return useQuery({
-    queryKey: nutritionKeys.mealPlanMacros(mealPlanId ?? ''),
-    queryFn: () => nutritionApi.getMealPlanMacros(mealPlanId!),
-    enabled: !!mealPlanId,
-    staleTime: 1000 * 60 * 2,
-  });
+  return useWatermelonQuery(
+    nutritionKeys.mealPlanMacros(mealPlanId ?? ''),
+    () => (mealPlanId ? getMealPlanMacrosLocal(mealPlanId) : Promise.resolve([])),
+    PLAN_TABLES
+  );
 }
 
 export function useCreateMealPlan() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (dto: CreateMealPlanDTO) => nutritionApi.createMealPlan(dto),
-    onSuccess: () => qc.invalidateQueries({ queryKey: nutritionKeys.all }),
-  });
+  return useMutation({ mutationFn: (dto: CreateMealPlanDTO) => createMealPlanLocal(dto) });
 }
 
 export function useAddMealEntry() {
-  const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ mealPlanId, dto }: { mealPlanId: string; dto: AddMealEntryDTO }) =>
-      nutritionApi.addMealEntry(mealPlanId, dto),
-    onSuccess: async (_data, { mealPlanId }) => {
-      // Sincroniza la lista de compras vinculada (igual que la web)
-      try {
-        await nutritionApi.syncShoppingList(mealPlanId);
-      } catch {
-        // sin lista vinculada aún: se ignora
-      }
-      qc.invalidateQueries({ queryKey: nutritionKeys.all });
+    mutationFn: async ({ mealPlanId, dto }: { mealPlanId: string; dto: AddMealEntryDTO }) => {
+      await addMealEntryLocal(mealPlanId, dto);
+      // Regenera la lista de compras vinculada si existe (igual que la web)
+      await syncShoppingListLocal(mealPlanId);
     },
   });
 }
 
 export function useRemoveMealEntry() {
-  const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ mealPlanId, entryId }: { mealPlanId: string; entryId: string }) =>
-      nutritionApi.removeMealEntry(mealPlanId, entryId),
-    onSuccess: async (_data, { mealPlanId }) => {
-      try {
-        await nutritionApi.syncShoppingList(mealPlanId);
-      } catch {
-        // sin lista vinculada
-      }
-      qc.invalidateQueries({ queryKey: nutritionKeys.all });
+    mutationFn: async ({ mealPlanId, entryId }: { mealPlanId: string; entryId: string }) => {
+      await removeMealEntryLocal(entryId);
+      await syncShoppingListLocal(mealPlanId);
     },
   });
 }
 
 export function useGenerateShoppingList() {
-  const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ mealPlanId, name }: { mealPlanId: string; name: string }) =>
-      nutritionApi.generateShoppingList(mealPlanId, name),
-    onSuccess: () => qc.invalidateQueries({ queryKey: nutritionKeys.shoppingLists() }),
+      generateShoppingListLocal(mealPlanId, name),
   });
 }
 
-// ─── Shopping Lists ─────────────────────────────────────────────────────────────
+// ─── Shopping Lists ───────────────────────────────────────────────────────────
 
 export function useShoppingLists() {
-  return useQuery({
-    queryKey: nutritionKeys.shoppingLists(),
-    queryFn: () => nutritionApi.listShoppingLists(),
-    staleTime: 1000 * 60 * 2,
-  });
+  return useWatermelonQuery(nutritionKeys.shoppingLists(), () => listShoppingListsLocal(), [
+    'shopping_lists',
+    'shopping_list_items',
+    'foods',
+  ]);
 }
 
 export function useCreateShoppingList() {
-  const qc = useQueryClient();
   return useMutation({
-    mutationFn: (dto: CreateShoppingListDTO) => nutritionApi.createShoppingList(dto),
-    onSuccess: () => qc.invalidateQueries({ queryKey: nutritionKeys.shoppingLists() }),
+    mutationFn: (dto: CreateShoppingListDTO) => createShoppingListLocal(dto),
   });
 }
 
 export function useDeleteShoppingList() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => nutritionApi.deleteShoppingList(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: nutritionKeys.shoppingLists() }),
-  });
+  return useMutation({ mutationFn: (id: string) => deleteShoppingListLocal(id) });
 }
 
 export function useCheckShoppingItem() {
-  const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      listId,
-      itemId,
-      checked,
-    }: {
-      listId: string;
-      itemId: string;
-      checked: boolean;
-    }) => nutritionApi.checkShoppingItem(listId, itemId, checked),
-    onSuccess: () => qc.invalidateQueries({ queryKey: nutritionKeys.shoppingLists() }),
+    mutationFn: ({ itemId, checked }: { listId: string; itemId: string; checked: boolean }) =>
+      checkShoppingItemLocal(itemId, checked),
   });
 }
 
 export function useLinkTransaction() {
-  const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ listId, transactionId }: { listId: string; transactionId: string }) =>
-      nutritionApi.linkTransaction(listId, transactionId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: nutritionKeys.shoppingLists() }),
+      linkTransactionLocal(listId, transactionId),
   });
 }

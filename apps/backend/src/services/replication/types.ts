@@ -257,6 +257,194 @@ export type ResourceRaw = {
   updated_at: number;
 };
 
+/** Macros como number (Prisma Decimal → Number()). Soft delete via is_active. */
+export type FoodRaw = {
+  id: string;
+  name: string;
+  brand: string | null;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  fiber: number | null;
+  unit: string;
+  is_active: boolean;
+  created_at: number;
+  updated_at: number;
+};
+
+export type RecipeRaw = {
+  id: string;
+  name: string;
+  description: string | null;
+  servings: number;
+  is_active: boolean;
+  created_at: number;
+  updated_at: number;
+};
+
+/** Sin userId propio: ownership vía su recipe. Hard delete con tombstones. */
+export type RecipeIngredientRaw = {
+  id: string;
+  recipe_id: string;
+  food_id: string;
+  grams: number;
+  notes: string | null;
+  created_at: number;
+  updated_at: number;
+};
+
+/** Upsert por (userId, weekStart) — colisión de ids se fusiona (ver handler). */
+export type MealPlanRaw = {
+  id: string;
+  /** Medianoche UTC del lunes de la semana (ms). */
+  week_start: number;
+  notes: string | null;
+  created_at: number;
+  updated_at: number;
+};
+
+export type MealEntryRaw = {
+  id: string;
+  meal_plan_id: string;
+  /** Fecha del día (ms, medianoche UTC). */
+  day: number;
+  meal_time: string;
+  notes: string | null;
+  created_at: number;
+  updated_at: number;
+};
+
+export type MealEntryItemRaw = {
+  id: string;
+  meal_entry_id: string;
+  food_id: string | null;
+  recipe_id: string | null;
+  grams: number;
+  servings: number | null;
+  created_at: number;
+  updated_at: number;
+};
+
+/** Upsert por (userId, date) — colisión de ids se fusiona (ver handler). */
+export type NutritionLogRaw = {
+  id: string;
+  /** Fecha del día (ms, medianoche UTC). */
+  date: number;
+  notes: string | null;
+  created_at: number;
+  updated_at: number;
+};
+
+export type NutritionLogItemRaw = {
+  id: string;
+  nutrition_log_id: string;
+  food_id: string | null;
+  meal_time: string;
+  grams: number;
+  servings: number | null;
+  notes: string | null;
+  created_at: number;
+  updated_at: number;
+};
+
+/** Hard delete con tombstones (sin isActive en Prisma). */
+export type ShoppingListRaw = {
+  id: string;
+  meal_plan_id: string | null;
+  name: string;
+  transaction_id: string | null;
+  generated_at: number | null;
+  created_at: number;
+  updated_at: number;
+};
+
+export type ShoppingListItemRaw = {
+  id: string;
+  shopping_list_id: string;
+  food_id: string | null;
+  name: string;
+  quantity: number;
+  unit: string;
+  checked: boolean;
+  notes: string | null;
+  created_at: number;
+  updated_at: number;
+};
+
+/** Hard delete con tombstones; el delete se salta si el ejercicio está
+ * referenciado por rutinas/workouts (FK Restrict, igual que el REST). */
+export type ExerciseRaw = {
+  id: string;
+  name: string;
+  muscle_group: string | null;
+  notes: string | null;
+  created_at: number;
+  updated_at: number;
+};
+
+export type RoutineRaw = {
+  id: string;
+  name: string;
+  description: string | null;
+  created_at: number;
+  updated_at: number;
+};
+
+export type RoutineExerciseRaw = {
+  id: string;
+  routine_id: string;
+  exercise_id: string;
+  /** `order` en Prisma; renombrado porque ORDER es keyword SQL. */
+  sort_order: number;
+  target_sets: number | null;
+  target_reps: number | null;
+  target_weight: number | null;
+  rest_time: number | null;
+  notes: string | null;
+  created_at: number;
+  updated_at: number;
+};
+
+export type WorkoutRaw = {
+  id: string;
+  routine_id: string | null;
+  start_time: number;
+  /** null = entrenamiento en progreso. */
+  end_time: number | null;
+  notes: string | null;
+  created_at: number;
+  updated_at: number;
+};
+
+export type WorkoutExerciseRaw = {
+  id: string;
+  workout_id: string;
+  exercise_id: string;
+  /** `order` en Prisma; renombrado porque ORDER es keyword SQL. */
+  sort_order: number;
+  notes: string | null;
+  rpe: number | null;
+  created_at: number;
+  updated_at: number;
+};
+
+export type WorkoutSetRaw = {
+  id: string;
+  workout_exercise_id: string;
+  set_number: number;
+  reps: number;
+  weight: number;
+  weight_unit: string;
+  completed: boolean;
+  rest_time: number | null;
+  notes: string | null;
+  /** Momento en que se completó la serie (ms). */
+  timestamp: number;
+  created_at: number;
+  updated_at: number;
+};
+
 export interface TableChanges<Raw> {
   created?: Raw[];
   updated?: Raw[];
@@ -282,6 +470,22 @@ export const REPLICATED_TABLES = [
   'goal_tasks',
   'events',
   'resources',
+  'foods',
+  'recipes',
+  'recipe_ingredients',
+  'meal_plans',
+  'meal_entries',
+  'meal_entry_items',
+  'nutrition_logs',
+  'nutrition_log_items',
+  'shopping_lists',
+  'shopping_list_items',
+  'exercises',
+  'routines',
+  'routine_exercises',
+  'workouts',
+  'workout_exercises',
+  'workout_sets',
 ] as const;
 
 export type ReplicatedTable = (typeof REPLICATED_TABLES)[number];
@@ -304,6 +508,22 @@ export interface PushChanges {
   goal_tasks?: TableChanges<GoalTaskRaw>;
   events?: TableChanges<EventRaw>;
   resources?: TableChanges<ResourceRaw>;
+  foods?: TableChanges<FoodRaw>;
+  recipes?: TableChanges<RecipeRaw>;
+  recipe_ingredients?: TableChanges<RecipeIngredientRaw>;
+  meal_plans?: TableChanges<MealPlanRaw>;
+  meal_entries?: TableChanges<MealEntryRaw>;
+  meal_entry_items?: TableChanges<MealEntryItemRaw>;
+  nutrition_logs?: TableChanges<NutritionLogRaw>;
+  nutrition_log_items?: TableChanges<NutritionLogItemRaw>;
+  shopping_lists?: TableChanges<ShoppingListRaw>;
+  shopping_list_items?: TableChanges<ShoppingListItemRaw>;
+  exercises?: TableChanges<ExerciseRaw>;
+  routines?: TableChanges<RoutineRaw>;
+  routine_exercises?: TableChanges<RoutineExerciseRaw>;
+  workouts?: TableChanges<WorkoutRaw>;
+  workout_exercises?: TableChanges<WorkoutExerciseRaw>;
+  workout_sets?: TableChanges<WorkoutSetRaw>;
 }
 
 export interface PullResult {

@@ -19,6 +19,22 @@ vi.mock('../../lib/prisma.js', () => ({
     goalTask: { findMany: vi.fn() },
     event: { findMany: vi.fn() },
     resource: { findMany: vi.fn() },
+    food: { findMany: vi.fn() },
+    recipe: { findMany: vi.fn() },
+    recipeIngredient: { findMany: vi.fn() },
+    mealPlan: { findMany: vi.fn() },
+    mealEntry: { findMany: vi.fn() },
+    mealEntryItem: { findMany: vi.fn() },
+    nutritionLog: { findMany: vi.fn() },
+    nutritionLogItem: { findMany: vi.fn() },
+    shoppingList: { findMany: vi.fn() },
+    shoppingListItem: { findMany: vi.fn() },
+    exercise: { findMany: vi.fn() },
+    routine: { findMany: vi.fn() },
+    routineExercise: { findMany: vi.fn() },
+    workout: { findMany: vi.fn() },
+    workoutExercise: { findMany: vi.fn() },
+    workoutSet: { findMany: vi.fn() },
     replicationTombstone: { findMany: vi.fn() },
     $transaction: vi.fn(),
   },
@@ -71,6 +87,22 @@ beforeEach(() => {
   p.goalTask.findMany.mockResolvedValue([]);
   p.event.findMany.mockResolvedValue([]);
   p.resource.findMany.mockResolvedValue([]);
+  p.food.findMany.mockResolvedValue([]);
+  p.recipe.findMany.mockResolvedValue([]);
+  p.recipeIngredient.findMany.mockResolvedValue([]);
+  p.mealPlan.findMany.mockResolvedValue([]);
+  p.mealEntry.findMany.mockResolvedValue([]);
+  p.mealEntryItem.findMany.mockResolvedValue([]);
+  p.nutritionLog.findMany.mockResolvedValue([]);
+  p.nutritionLogItem.findMany.mockResolvedValue([]);
+  p.shoppingList.findMany.mockResolvedValue([]);
+  p.shoppingListItem.findMany.mockResolvedValue([]);
+  p.exercise.findMany.mockResolvedValue([]);
+  p.routine.findMany.mockResolvedValue([]);
+  p.routineExercise.findMany.mockResolvedValue([]);
+  p.workout.findMany.mockResolvedValue([]);
+  p.workoutExercise.findMany.mockResolvedValue([]);
+  p.workoutSet.findMany.mockResolvedValue([]);
   p.replicationTombstone.findMany.mockResolvedValue([]);
 });
 

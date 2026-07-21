@@ -21,6 +21,22 @@ import { GoalHabit } from './models/GoalHabit';
 import { GoalTask } from './models/GoalTask';
 import { Event } from './models/Event';
 import { Resource } from './models/Resource';
+import { Food } from './models/Food';
+import { Recipe } from './models/Recipe';
+import { RecipeIngredient } from './models/RecipeIngredient';
+import { MealPlan } from './models/MealPlan';
+import { MealEntry } from './models/MealEntry';
+import { MealEntryItem } from './models/MealEntryItem';
+import { NutritionLog } from './models/NutritionLog';
+import { NutritionLogItem } from './models/NutritionLogItem';
+import { ShoppingList } from './models/ShoppingList';
+import { ShoppingListItem } from './models/ShoppingListItem';
+import { Exercise } from './models/Exercise';
+import { Routine } from './models/Routine';
+import { RoutineExercise } from './models/RoutineExercise';
+import { Workout } from './models/Workout';
+import { WorkoutExercise } from './models/WorkoutExercise';
+import { WorkoutSet } from './models/WorkoutSet';
 
 // IDs locales = UUID v4: el id generado en el cliente ES el id final en
 // Postgres (el push crea con ese id, idempotente). El generador default de
@@ -59,5 +75,21 @@ export const database = new Database({
     GoalTask,
     Event,
     Resource,
+    Food,
+    Recipe,
+    RecipeIngredient,
+    MealPlan,
+    MealEntry,
+    MealEntryItem,
+    NutritionLog,
+    NutritionLogItem,
+    ShoppingList,
+    ShoppingListItem,
+    Exercise,
+    Routine,
+    RoutineExercise,
+    Workout,
+    WorkoutExercise,
+    WorkoutSet,
   ],
 });
