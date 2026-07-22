@@ -13,6 +13,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
+import { apiErrorMessage } from '@/lib/apiError';
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import { Colors, Typography, Spacing, Radius, Shadows, Gradients } from '@/tokens';
 
@@ -32,11 +33,8 @@ export default function LoginScreen() {
       await login({ email: email.trim().toLowerCase(), password });
       // Sin navegación explícita: el guard de (auth)/_layout decide si va al
       // wizard de onboarding o directo a tabs.
-    } catch (err: any) {
-      Alert.alert(
-        'Error al iniciar sesión',
-        err?.response?.data?.message ?? 'Verificá tus credenciales.'
-      );
+    } catch (err) {
+      Alert.alert('Error al iniciar sesión', apiErrorMessage(err, 'Verificá tus credenciales.'));
     } finally {
       setLoading(false);
     }

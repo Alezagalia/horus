@@ -7,6 +7,7 @@ import { AxiosError } from 'axios';
 export function apiErrorMessage(error: unknown, fallback = 'Ocurrió un error'): string {
   const e = error as AxiosError<{
     message?: string;
+    error?: string;
     details?: Array<{ field?: string; message?: string }>;
   }>;
   const data = e?.response?.data;
@@ -16,7 +17,8 @@ export function apiErrorMessage(error: unknown, fallback = 'Ocurrió un error'):
       .filter(Boolean)
       .join('\n');
   }
-  return data?.message ?? e?.message ?? fallback;
+  // El rate limiter responde { error: "Too many..." } sin `message`.
+  return data?.message ?? data?.error ?? e?.message ?? fallback;
 }
 
 /**

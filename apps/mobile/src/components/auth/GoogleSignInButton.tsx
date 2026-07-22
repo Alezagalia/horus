@@ -10,6 +10,7 @@ import {
   Linking,
 } from 'react-native';
 import { useAuthStore } from '@/store/authStore';
+import { apiErrorMessage } from '@/lib/apiError';
 import { signInWithGoogle } from '@/services/googleSignIn';
 import { Colors, Spacing, Radius } from '@/tokens';
 
@@ -45,7 +46,7 @@ export function GoogleSignInButton({ acceptedTerms }: Props) {
       }
       Alert.alert(
         'Error con Google',
-        err?.response?.data?.message ?? 'No pudimos iniciar sesión con Google. Probá de nuevo.'
+        apiErrorMessage(err, 'No pudimos iniciar sesión con Google. Probá de nuevo.')
       );
     }
   };

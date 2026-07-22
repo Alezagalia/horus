@@ -15,6 +15,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
+import { apiErrorMessage } from '@/lib/apiError';
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import { Colors, Typography, Spacing, Radius, Shadows, Gradients } from '@/tokens';
 
@@ -56,8 +57,8 @@ export default function RegisterScreen() {
         acceptedTerms,
       });
       // Sin navegación explícita: el guard de (auth)/_layout manda al wizard.
-    } catch (err: any) {
-      Alert.alert('Error al registrarse', err?.response?.data?.message ?? 'Intentá nuevamente.');
+    } catch (err) {
+      Alert.alert('Error al registrarse', apiErrorMessage(err, 'Intentá nuevamente.'));
     } finally {
       setLoading(false);
     }
