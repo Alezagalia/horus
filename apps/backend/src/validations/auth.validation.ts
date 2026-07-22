@@ -36,6 +36,8 @@ export type LoginInput = z.infer<typeof loginSchema>;
 export const updateProfileSchema = z.object({
   name: z.string().min(1).max(100).trim().optional(),
   hourlyRate: z.number().positive().max(100000).nullable().optional(),
+  // Solo se puede marcar como completado, nunca revertir.
+  onboardingCompleted: z.literal(true).optional(),
 });
 
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
@@ -80,6 +82,14 @@ export const resendVerificationSchema = z.object({
 });
 
 export type ResendVerificationInput = z.infer<typeof resendVerificationSchema>;
+
+export const googleAuthSchema = z.object({
+  idToken: z.string().min(1, 'idToken is required').max(4096),
+  // Requerido solo cuando el email no existe aún (creación de cuenta).
+  acceptedTerms: z.boolean().optional(),
+});
+
+export type GoogleAuthInput = z.infer<typeof googleAuthSchema>;
 
 export const deleteAccountSchema = z.object({
   // Re-authentication: the user must confirm their current password to delete.

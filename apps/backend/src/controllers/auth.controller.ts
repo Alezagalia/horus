@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { authService } from '../services/auth.service.js';
+import { googleSignInService, GoogleSignInError } from '../services/googleSignIn.service.js';
 import { categoryService } from '../services/category.service.js';
 import { passwordResetService, PasswordResetError } from '../services/passwordReset.service.js';
 import {
@@ -18,11 +19,13 @@ import {
   verifyEmailSchema,
   resendVerificationSchema,
   deleteAccountSchema,
+  googleAuthSchema,
 } from '../validations/auth.validation.js';
 import {
   BadRequestError,
   UnauthorizedError,
   TooManyRequestsError,
+  ConflictError,
 } from '../middlewares/error.middleware.js';
 import { prisma } from '../lib/prisma.js';
 import { logger } from '../lib/logger.js';
@@ -91,6 +94,14 @@ export const authController = {
         );
       }
 
+      // Cuentas creadas con Google no tienen contraseña: guiar al flujo correcto
+      // (bcrypt.compare contra null lanzaría error).
+      if (!user.password) {
+        throw new UnauthorizedError(
+          'Esta cuenta usa Google. Iniciá sesión con Google o creá una contraseña desde "¿Olvidaste tu contraseña?".'
+        );
+      }
+
       // Compare password
       const isPasswordValid = await authService.comparePassword(
         validatedData.password,
@@ -123,6 +134,49 @@ export const authController = {
         refreshToken: tokens.refreshToken,
       });
     } catch (error) {
+      next(error);
+    }
+  },
+
+  /**
+   * POST /api/auth/google
+   * Login/registro con Google. El body trae el id_token emitido por Google
+   * (audience = Web client ID). Si el email no existe y no vino acceptedTerms,
+   * responde 409 con meta.code TERMS_ACCEPTANCE_REQUIRED para que el cliente
+   * muestre el consentimiento y reintente.
+   */
+  async googleAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { idToken, acceptedTerms } = googleAuthSchema.parse(req.body);
+
+      const identity = await googleSignInService.verifyIdToken(idToken);
+      const user = await googleSignInService.signInWithGoogle(identity, acceptedTerms);
+
+      const tokens = authService.generateTokens({ userId: user.id, email: user.email });
+      await authService.updateRefreshToken(user.id, tokens.refreshToken, { touchLastLogin: true });
+
+      res.status(200).json({
+        user: authService.excludePassword(user),
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      });
+    } catch (error) {
+      if (error instanceof GoogleSignInError) {
+        if (error.reason === 'terms_required') {
+          next(
+            new ConflictError('Debés aceptar los Términos y la Política de Privacidad', {
+              code: 'TERMS_ACCEPTANCE_REQUIRED',
+            })
+          );
+          return;
+        }
+        if (error.reason === 'not_configured') {
+          next(new BadRequestError('Google Sign-In no está disponible'));
+          return;
+        }
+        next(new UnauthorizedError('No pudimos validar tu cuenta de Google. Probá de nuevo.'));
+        return;
+      }
       next(error);
     }
   },
@@ -361,6 +415,12 @@ export const authController = {
       // Re-authenticate: load the full row (with password) and verify.
       const fullUser = await authService.findUserByEmail(sessionUser.email);
       if (!fullUser) throw new UnauthorizedError('User not found');
+
+      if (!fullUser.password) {
+        throw new BadRequestError(
+          'Tu cuenta usa Google y no tiene contraseña. Creá una desde "¿Olvidaste tu contraseña?" y volvé a intentarlo.'
+        );
+      }
 
       const passwordOk = await authService.comparePassword(password, fullUser.password);
       if (!passwordOk) {

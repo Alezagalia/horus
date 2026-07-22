@@ -22,6 +22,10 @@ const envSchema = z.object({
   // para que el backend haga el exchange y responda 302 → horus://. Si no se
   // setea, se deriva de FRONTEND_URL (válido en prod, donde el backend sirve la web).
   GOOGLE_MOBILE_REDIRECT_URI: z.string().optional(),
+  // Google Sign-In (login social): client IDs aceptados como audience del
+  // id_token, separados por coma (Web client ID + extras). Si falta, se usa
+  // GOOGLE_CLIENT_ID como fallback.
+  GOOGLE_SIGNIN_CLIENT_IDS: z.string().optional(),
   // AES-256-GCM key for token encryption: must be exactly 64 hex chars (32 bytes).
   // Generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
   // MUST remain the same across deployments — changing it invalidates all stored tokens.

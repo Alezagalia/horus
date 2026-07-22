@@ -41,6 +41,8 @@ export const authMiddleware = async (
         name: true,
         role: true,
         emailVerifiedAt: true,
+        onboardingCompletedAt: true,
+        googleId: true,
         hourlyRate: true,
         failedLoginAttempts: true,
         lockedUntil: true,

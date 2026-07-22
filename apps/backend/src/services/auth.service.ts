@@ -30,6 +30,8 @@ export interface UserWithoutPassword {
   email: string;
   name: string;
   hourlyRate?: unknown;
+  emailVerifiedAt?: Date | null;
+  onboardingCompletedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -112,6 +114,8 @@ export const authService = {
         id: true,
         email: true,
         name: true,
+        emailVerifiedAt: true,
+        onboardingCompletedAt: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -136,16 +140,22 @@ export const authService = {
 
   async updateProfile(
     userId: string,
-    data: { name?: string; hourlyRate?: number | null }
+    data: { name?: string; hourlyRate?: number | null; onboardingCompleted?: true }
   ): Promise<UserWithoutPassword> {
+    const { onboardingCompleted, ...rest } = data;
     return prisma.user.update({
       where: { id: userId },
-      data,
+      data: {
+        ...rest,
+        ...(onboardingCompleted && { onboardingCompletedAt: new Date() }),
+      },
       select: {
         id: true,
         email: true,
         name: true,
         hourlyRate: true,
+        emailVerifiedAt: true,
+        onboardingCompletedAt: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -218,7 +228,7 @@ export const authService = {
     });
   },
 
-  excludePassword<T extends { password?: string }>(user: T): Omit<T, 'password'> {
+  excludePassword<T extends { password?: string | null }>(user: T): Omit<T, 'password'> {
     const { password: _, ...userWithoutPassword } = user;
     return userWithoutPassword;
   },

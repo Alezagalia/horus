@@ -12,6 +12,7 @@ const router: IRouter = Router();
 // Auth endpoints with strict rate limiting to prevent brute force attacks
 router.post('/register', authLimiter, authController.register);
 router.post('/login', authLimiter, authController.login);
+router.post('/google', authLimiter, authController.googleAuth);
 router.post('/refresh', authLimiter, authController.refresh);
 // Email-sending / token-consuming endpoints get the stricter limiter (3/hour)
 // to curb abuse (email bombing, token brute force).
