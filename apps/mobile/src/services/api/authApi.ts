@@ -23,6 +23,7 @@ export interface AuthUser {
   email: string;
   hourlyRate: number | null;
   emailVerifiedAt?: string | null;
+  onboardingCompletedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -39,6 +40,11 @@ export const authApi = {
 
   register: async (dto: RegisterDTO): Promise<AuthResponse> => {
     const { data } = await axiosInstance.post('/auth/register', dto);
+    return data;
+  },
+
+  googleLogin: async (dto: { idToken: string; acceptedTerms?: boolean }): Promise<AuthResponse> => {
+    const { data } = await axiosInstance.post('/auth/google', dto);
     return data;
   },
 
@@ -68,7 +74,11 @@ export const authApi = {
     await axiosInstance.delete('/auth/me', { data: { password } });
   },
 
-  updateProfile: async (data: { name?: string; hourlyRate?: number }): Promise<AuthUser> => {
+  updateProfile: async (data: {
+    name?: string;
+    hourlyRate?: number;
+    onboardingCompleted?: true;
+  }): Promise<AuthUser> => {
     const { data: res } = await axiosInstance.patch('/auth/me', data);
     return res.user ?? res;
   },

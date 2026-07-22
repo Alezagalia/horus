@@ -13,6 +13,7 @@ import {
 import * as SplashScreen from 'expo-splash-screen';
 import { queryClient } from '@/lib/queryClient';
 import { startSyncScheduler } from '@/db/syncScheduler';
+import { useOnboardingStore } from '@/store/onboardingStore';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -33,6 +34,8 @@ export default function RootLayout() {
   useEffect(() => {
     // Offline-first (dominio Dinero): sync en foreground/reconexión/post-escritura
     startSyncScheduler();
+    // Flag local de onboarding: debe hidratarse antes de que los guards decidan
+    void useOnboardingStore.getState().hydrate();
   }, []);
 
   if (!fontsLoaded) return null;
@@ -43,6 +46,7 @@ export default function RootLayout() {
         <StatusBar style="dark" />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(onboarding)" />
           <Stack.Screen name="(tabs)" />
           <Stack.Screen
             name="recursos"

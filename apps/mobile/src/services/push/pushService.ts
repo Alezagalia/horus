@@ -49,6 +49,16 @@ export async function requestPermissions(): Promise<boolean> {
   return status === 'granted';
 }
 
+/**
+ * Check the current permission status WITHOUT triggering the system dialog.
+ * Lets callers register tokens for users who already granted, while the
+ * prompt itself only fires from the onboarding context screen.
+ */
+export async function hasPermissions(): Promise<boolean> {
+  const { status } = await Notifications.getPermissionsAsync();
+  return status === 'granted';
+}
+
 // ─── Android notification channel ─────────────────────────────────────────────
 
 /**

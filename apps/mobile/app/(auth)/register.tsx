@@ -15,6 +15,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import { Colors, Typography, Spacing, Radius, Shadows, Gradients } from '@/tokens';
 
 const WEB_URL = (process.env.EXPO_PUBLIC_API_URL ?? 'http://10.0.2.2:3000/api').replace(
@@ -54,7 +55,7 @@ export default function RegisterScreen() {
         password,
         acceptedTerms,
       });
-      router.replace('/(tabs)');
+      // Sin navegación explícita: el guard de (auth)/_layout manda al wizard.
     } catch (err: any) {
       Alert.alert('Error al registrarse', err?.response?.data?.message ?? 'Intentá nuevamente.');
     } finally {
@@ -138,6 +139,8 @@ export default function RegisterScreen() {
                 <Text style={styles.ctaText}>Crear cuenta</Text>
               )}
             </TouchableOpacity>
+
+            <GoogleSignInButton acceptedTerms={acceptedTerms} />
 
             <View style={styles.loginRow}>
               <Text style={[{ color: Colors.muted }, Typography.body]}>¿Ya tenés cuenta? </Text>

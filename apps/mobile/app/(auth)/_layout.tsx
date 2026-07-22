@@ -1,19 +1,21 @@
 import { useEffect } from 'react';
 import { Stack, router } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
+import { useNeedsOnboarding } from '@/hooks/useNeedsOnboarding';
 
 export default function AuthLayout() {
-  const { isAuthenticated, isLoading, checkAuth } = useAuthStore();
+  const { isAuthenticated, checkAuth } = useAuthStore();
+  const { needsOnboarding, ready } = useNeedsOnboarding();
 
   useEffect(() => {
     checkAuth();
   }, []);
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-      router.replace('/(tabs)');
+    if (ready && isAuthenticated) {
+      router.replace(needsOnboarding ? '/(onboarding)/intereses' : '/(tabs)');
     }
-  }, [isAuthenticated, isLoading]);
+  }, [isAuthenticated, ready, needsOnboarding]);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>

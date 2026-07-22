@@ -3,7 +3,7 @@ import * as Notifications from 'expo-notifications';
 import * as SecureStore from 'expo-secure-store';
 import { router } from 'expo-router';
 import {
-  requestPermissions,
+  hasPermissions,
   getNativeToken,
   registerTokenWithBackend,
   unregisterTokenFromBackend,
@@ -43,6 +43,43 @@ function handleNotificationTap(data: Record<string, unknown>): void {
   }
 }
 
+// ─── token registration ───────────────────────────────────────────────────────
+
+/**
+ * Registers the device token with the backend IF the user already granted
+ * notification permission. Never shows the native permission prompt — that
+ * only happens from the onboarding context screen (via requestPermissions).
+ */
+export async function registerPushToken(): Promise<void> {
+  try {
+    await setupAndroidChannel();
+
+    const granted = await hasPermissions();
+    if (!granted) {
+      console.log('[Push] Permission not granted');
+      return;
+    }
+
+    const token = await getNativeToken();
+    if (!token) {
+      // Expected on simulators or when FCM is not configured yet
+      console.log('[Push] No native token available (simulator or missing Firebase config)');
+      return;
+    }
+
+    // Only call the backend when the token changes
+    const stored = await SecureStore.getItemAsync(STORED_TOKEN_KEY);
+    if (token !== stored) {
+      await registerTokenWithBackend(token);
+      await SecureStore.setItemAsync(STORED_TOKEN_KEY, token);
+      console.log('[Push] Token registered with backend');
+    }
+  } catch (err) {
+    // Non-blocking — push failure should never crash the app
+    console.warn('[Push] Registration error:', err);
+  }
+}
+
 // ─── hook ─────────────────────────────────────────────────────────────────────
 
 /**
@@ -55,37 +92,9 @@ export function usePushNotifications(enabled: boolean): void {
   useEffect(() => {
     if (!enabled) return;
 
-    // 1. Android channel (no-op on iOS)
-    setupAndroidChannel().catch((e) => console.warn('[Push] Channel setup failed:', e));
-
-    // 2. Request permissions and register token
-    (async () => {
-      try {
-        const granted = await requestPermissions();
-        if (!granted) {
-          console.log('[Push] Permission not granted');
-          return;
-        }
-
-        const token = await getNativeToken();
-        if (!token) {
-          // Expected on simulators or when FCM is not configured yet
-          console.log('[Push] No native token available (simulator or missing Firebase config)');
-          return;
-        }
-
-        // Only call the backend when the token changes
-        const stored = await SecureStore.getItemAsync(STORED_TOKEN_KEY);
-        if (token !== stored) {
-          await registerTokenWithBackend(token);
-          await SecureStore.setItemAsync(STORED_TOKEN_KEY, token);
-          console.log('[Push] Token registered with backend');
-        }
-      } catch (err) {
-        // Non-blocking — push failure should never crash the app
-        console.warn('[Push] Registration error:', err);
-      }
-    })();
+    // 1-2. Register token (only if permission was already granted — the native
+    // prompt lives in the onboarding context screen).
+    void registerPushToken();
 
     // 3. Handle taps on notifications (foreground or background)
     responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {

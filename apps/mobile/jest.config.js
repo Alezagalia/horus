@@ -25,6 +25,8 @@ module.exports = {
     '^@/db/nutritionWrites$': '<rootDir>/jest.mocks/nutritionWrites.js',
     '^@/db/fitnessQueries$': '<rootDir>/jest.mocks/fitnessQueries.js',
     '^@/db/fitnessWrites$': '<rootDir>/jest.mocks/fitnessWrites.js',
+    // Google Sign-In: módulo nativo sin implementación JS en Jest
+    '^@react-native-google-signin/google-signin$': '<rootDir>/jest.mocks/googleSignin.js',
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@horus/shared$': '<rootDir>/../../packages/shared/src/index.ts',
   },

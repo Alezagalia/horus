@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import { authApi, type AuthUser, type LoginDTO, type RegisterDTO } from '../services/api/authApi';
+import { signOutFromGoogle } from '../services/googleSignIn';
 
 interface AuthState {
   user: AuthUser | null;
@@ -8,6 +9,7 @@ interface AuthState {
   isLoading: boolean;
 
   login: (credentials: LoginDTO) => Promise<void>;
+  loginWithGoogle: (idToken: string, acceptedTerms?: boolean) => Promise<void>;
   register: (data: RegisterDTO) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
@@ -22,6 +24,13 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   login: async (credentials) => {
     const res = await authApi.login(credentials);
+    await SecureStore.setItemAsync('accessToken', res.accessToken);
+    await SecureStore.setItemAsync('refreshToken', res.refreshToken);
+    set({ user: res.user, isAuthenticated: true });
+  },
+
+  loginWithGoogle: async (idToken, acceptedTerms) => {
+    const res = await authApi.googleLogin({ idToken, acceptedTerms });
     await SecureStore.setItemAsync('accessToken', res.accessToken);
     await SecureStore.setItemAsync('refreshToken', res.refreshToken);
     set({ user: res.user, isAuthenticated: true });
@@ -42,6 +51,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
     await SecureStore.deleteItemAsync('accessToken');
     await SecureStore.deleteItemAsync('refreshToken');
+    await signOutFromGoogle();
     set({ user: null, isAuthenticated: false });
   },
 

@@ -13,6 +13,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import { Colors, Typography, Spacing, Radius, Shadows, Gradients } from '@/tokens';
 
 export default function LoginScreen() {
@@ -29,7 +30,8 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await login({ email: email.trim().toLowerCase(), password });
-      router.replace('/(tabs)');
+      // Sin navegación explícita: el guard de (auth)/_layout decide si va al
+      // wizard de onboarding o directo a tabs.
     } catch (err: any) {
       Alert.alert(
         'Error al iniciar sesión',
@@ -103,6 +105,8 @@ export default function LoginScreen() {
               <Text style={styles.ctaText}>Iniciar sesión</Text>
             )}
           </TouchableOpacity>
+
+          <GoogleSignInButton />
 
           <View style={styles.registerRow}>
             <Text style={[{ color: Colors.muted }, Typography.body]}>¿No tenés cuenta? </Text>

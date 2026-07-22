@@ -5,12 +5,14 @@ import { useAuthStore } from '@/store/authStore';
 import { BottomTabBar } from '@/components/layout/BottomTabBar';
 import { Colors } from '@/tokens';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { useNeedsOnboarding } from '@/hooks/useNeedsOnboarding';
 
 const TAB_ROUTES = ['/', '/foco', '/dinero', '/cuerpo', '/yo'];
 
 export default function TabsLayout() {
   const { isAuthenticated, isLoading, checkAuth } = useAuthStore();
   const pathname = usePathname();
+  const { needsOnboarding, ready } = useNeedsOnboarding();
   usePushNotifications(isAuthenticated);
 
   useEffect(() => {
@@ -20,8 +22,12 @@ export default function TabsLayout() {
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.replace('/(auth)/login');
+      return;
     }
-  }, [isAuthenticated, isLoading]);
+    if (ready && isAuthenticated && needsOnboarding) {
+      router.replace('/(onboarding)/intereses');
+    }
+  }, [isAuthenticated, isLoading, ready, needsOnboarding]);
 
   if (isLoading) {
     return (
