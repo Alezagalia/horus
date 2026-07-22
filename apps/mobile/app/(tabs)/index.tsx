@@ -12,7 +12,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { format, startOfDay, endOfDay, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Bell } from 'lucide-react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Card } from '@/components/ui/Card';
@@ -118,17 +117,18 @@ function PageHeader() {
         <Text style={styles.headerGreeting}>Hola, {firstName}</Text>
       </View>
       <View style={styles.headerRight}>
-        <TouchableOpacity style={styles.bellBtn} activeOpacity={0.7}>
-          <Bell size={18} color={Colors.ink} strokeWidth={1.5} />
-        </TouchableOpacity>
+        {/* La campana vuelve cuando exista el centro de notificaciones in-app */}
         <TouchableOpacity
-          style={styles.avatar}
+          style={styles.avatarBtn}
           activeOpacity={0.7}
           onPress={() => router.push('/(tabs)/yo')}
           accessibilityRole="button"
           accessibilityLabel="Abrir mi perfil"
         >
-          <Text style={styles.avatarText}>{initials}</Text>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{initials}</Text>
+          </View>
+          <Text style={styles.avatarLabel}>Perfil</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -448,21 +448,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm,
   },
-  bellBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: Colors.line,
-    backgroundColor: 'rgba(255,255,255,0.8)',
+  avatarBtn: {
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 2,
   },
   avatar: {
     width: 36,
     height: 36,
     borderRadius: 18,
     backgroundColor: Colors.black,
+    borderWidth: 2,
+    borderColor: Colors.vivid,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -470,6 +466,11 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_700Bold',
     fontSize: 13,
     color: '#fff',
+  },
+  avatarLabel: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 9,
+    color: Colors.muted,
   },
 
   // Hero

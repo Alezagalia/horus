@@ -20,6 +20,7 @@ import { es } from 'date-fns/locale';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/Button';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { HabitFormModal } from '@/components/habits/HabitFormModal';
@@ -424,9 +425,12 @@ function HabitView({
       </View>
 
       {groups.length === 0 ? (
-        <Card solid style={styles.emptyCard}>
-          <Text style={styles.emptyText}>No hay hábitos para hoy 🎉</Text>
-        </Card>
+        <EmptyState
+          title="No hay hábitos para hoy 🎉"
+          subtitle="Los hábitos chicos y repetidos son los que cambian tu semana."
+          ctaLabel="+ Nuevo hábito"
+          onCta={onNew}
+        />
       ) : (
         groups.map((group) => (
           <View key={group.key} style={styles.group}>
@@ -755,7 +759,7 @@ function TaskFormModal({
 type Tab = 'tareas' | 'habitos' | 'metas';
 
 export default function FocoScreen() {
-  const { tab } = useLocalSearchParams<{ tab?: Tab }>();
+  const { tab, action } = useLocalSearchParams<{ tab?: Tab; action?: string }>();
   const [activeTab, setActiveTab] = useState<Tab>('tareas');
 
   useEffect(() => {
@@ -763,6 +767,16 @@ export default function FocoScreen() {
       setActiveTab(tab);
     }
   }, [tab]);
+
+  // Acción rápida del FAB: abre el formulario directo. Se limpia el param al
+  // consumirlo para que volver a la pantalla no re-abra el modal.
+  useEffect(() => {
+    if (action === 'new-task') {
+      setActiveTab('tareas');
+      setShowCreateTask(true);
+      router.setParams({ action: undefined });
+    }
+  }, [action]);
   const [taskStatusFilter, setTaskStatusFilter] = useState<
     'pendiente' | 'en_progreso' | 'completada' | 'todas'
   >('pendiente');
@@ -958,9 +972,12 @@ export default function FocoScreen() {
 
             {/* Grouped by category */}
             {filteredTasks.length === 0 ? (
-              <Card solid style={styles.emptyCard}>
-                <Text style={styles.emptyText}>Sin tareas 🎯</Text>
-              </Card>
+              <EmptyState
+                title="Sin tareas 🎯"
+                subtitle="Anotá tu primera tarea y sacátela de la cabeza."
+                ctaLabel="+ Nueva tarea"
+                onCta={() => setShowCreateTask(true)}
+              />
             ) : (
               categoryEntries.map(([key, group]) => (
                 <View key={key} style={styles.categorySection}>
@@ -1025,9 +1042,12 @@ export default function FocoScreen() {
               </TouchableOpacity>
             </View>
             {goals.length === 0 ? (
-              <Card solid style={styles.emptyCard}>
-                <Text style={styles.emptyText}>No hay metas activas</Text>
-              </Card>
+              <EmptyState
+                title="No hay metas activas"
+                subtitle="Una meta agrupa hábitos y tareas detrás de un objetivo grande."
+                ctaLabel="+ Nueva meta"
+                onCta={() => setShowGoalModal(true)}
+              />
             ) : (
               <View style={styles.taskList}>
                 {goals.map((g) => (

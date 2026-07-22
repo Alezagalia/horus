@@ -32,6 +32,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Colors, Spacing, Radius, Gradients, Shadows, Typography, Layout } from '@/tokens';
 import {
   useRoutines,
@@ -290,11 +291,11 @@ function RoutinesView({
 
   if (routines.length === 0) {
     return (
-      <Card solid style={styles.emptyCard}>
-        <Dumbbell size={32} color={Colors.ceilLight} strokeWidth={1} />
-        <Text style={styles.emptyTitle}>Sin rutinas</Text>
-        <Text style={styles.emptySub}>Creá tu primera rutina con "+ Nueva" arriba</Text>
-      </Card>
+      <EmptyState
+        icon={<Dumbbell size={32} color={Colors.ceilLight} strokeWidth={1} />}
+        title="Sin rutinas"
+        subtitle='Una rutina es tu plan de ejercicios listo para repetir. Creála con "+ Nueva" arriba.'
+      />
     );
   }
 
@@ -333,11 +334,11 @@ function HistorialView() {
       <SectionHeader title="Entrenamientos recientes" count={workouts.length} />
 
       {workouts.length === 0 ? (
-        <Card solid style={styles.emptyCard}>
-          <Trophy size={32} color={Colors.ceilLight} strokeWidth={1} />
-          <Text style={styles.emptyTitle}>Sin entrenamientos</Text>
-          <Text style={styles.emptySub}>Completá tu primer entrenamiento para verlo aquí</Text>
-        </Card>
+        <EmptyState
+          icon={<Trophy size={32} color={Colors.ceilLight} strokeWidth={1} />}
+          title="Sin entrenamientos"
+          subtitle="Completá tu primer entrenamiento para verlo aquí"
+        />
       ) : (
         <Card padding={0} solid>
           {workouts.map((w, i) => (
@@ -690,17 +691,15 @@ function ExercisesView({ onEdit }: { onEdit: (ex: ExerciseWithStats) => void }) 
       {isLoading ? (
         <ActivityIndicator color={Colors.vivid} style={{ marginVertical: 24 }} />
       ) : exercises.length === 0 ? (
-        <Card>
-          <View style={styles.emptyCard}>
-            <Dumbbell size={32} color={Colors.muted} />
-            <Text style={styles.emptyTitle}>Sin ejercicios</Text>
-            <Text style={styles.emptySub}>
-              {muscleFilter
-                ? 'No hay ejercicios en este grupo muscular'
-                : 'Creá tu primer ejercicio con "+ Nuevo" arriba'}
-            </Text>
-          </View>
-        </Card>
+        <EmptyState
+          icon={<Dumbbell size={32} color={Colors.muted} />}
+          title="Sin ejercicios"
+          subtitle={
+            muscleFilter
+              ? 'No hay ejercicios en este grupo muscular'
+              : 'Creá tu primer ejercicio con "+ Nuevo" arriba'
+          }
+        />
       ) : (
         <Card padding={0} solid>
           {exercises.map((ex, i) => (
@@ -1198,13 +1197,11 @@ function StatsView() {
           )}
 
           {stats.workouts.completed === 0 && (
-            <Card solid style={styles.emptyCard}>
-              <BarChart2 size={32} color={Colors.ceilLight} strokeWidth={1} />
-              <Text style={styles.emptyTitle}>Sin datos</Text>
-              <Text style={styles.emptySub}>
-                Completa tu primer entrenamiento para ver estadísticas
-              </Text>
-            </Card>
+            <EmptyState
+              icon={<BarChart2 size={32} color={Colors.ceilLight} strokeWidth={1} />}
+              title="Sin datos"
+              subtitle="Completá tu primer entrenamiento para ver estadísticas"
+            />
           )}
         </>
       ) : null}

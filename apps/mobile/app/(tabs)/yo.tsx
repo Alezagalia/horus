@@ -39,6 +39,7 @@ import {
 import { router } from 'expo-router';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Card } from '@/components/ui/Card';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/Button';
 import { Colors, Spacing, Radius, Gradients, Shadows } from '@/tokens';
 import { useAuthStore } from '@/store/authStore';
@@ -682,9 +683,15 @@ export default function YoScreen() {
         </TouchableOpacity>
       </View>
       {accounts.length === 0 ? (
-        <Card solid>
-          <Text style={styles.emptyText}>Sin cuentas registradas</Text>
-        </Card>
+        <EmptyState
+          title="Sin cuentas registradas"
+          subtitle="Creá una cuenta (efectivo, banco o billetera) para registrar tus movimientos."
+          ctaLabel="+ Nueva cuenta"
+          onCta={() => {
+            setEditingAccount(undefined);
+            setShowAccountModal(true);
+          }}
+        />
       ) : (
         <>
           {accountGroups.map((group) => (

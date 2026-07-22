@@ -32,7 +32,7 @@ import {
 } from 'lucide-react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { makeCreateErrorHandler } from '@/lib/mutationErrors';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { ScreenContainer } from '@/components/layout/ScreenContainer';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -1759,7 +1759,7 @@ type DineroTab = 'movimientos' | 'fijos' | 'mensuales' | 'presupuestos' | 'ahorr
 
 export default function DineroScreen() {
   const now = new Date();
-  const { tab } = useLocalSearchParams<{ tab?: DineroTab }>();
+  const { tab, action } = useLocalSearchParams<{ tab?: DineroTab; action?: string }>();
   const [activeTab, setActiveTab] = useState<DineroTab>('movimientos');
 
   // Permite abrir Dinero directamente en una pestaña (ej: "Ver todos" de Gastos
@@ -1775,6 +1775,16 @@ export default function DineroScreen() {
       setActiveTab(tab);
     }
   }, [tab]);
+
+  // Acción rápida del FAB: abre el form de movimiento directo (param one-shot).
+  useEffect(() => {
+    if (action === 'new-transaction') {
+      setActiveTab('movimientos');
+      setEditingTx(null);
+      setShowModal(true);
+      router.setParams({ action: undefined });
+    }
+  }, [action]);
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);

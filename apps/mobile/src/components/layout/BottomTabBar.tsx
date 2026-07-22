@@ -14,11 +14,13 @@ const TABS = [
   { name: 'Cuerpo', route: '/(tabs)/cuerpo', Icon: Dumbbell },
 ] as const;
 
+// El param `action` lo consume la pantalla destino: abre el formulario
+// directamente (captura rápida real, no solo navegación a la tab).
 const FAB_ACTIONS = [
-  { label: 'Nueva tarea', emoji: '✅', route: '/(tabs)/foco' },
-  { label: 'Marcar hábito', emoji: '🎯', route: '/(tabs)/foco' },
-  { label: 'Registrar movimiento', emoji: '💸', route: '/(tabs)/dinero' },
-  { label: 'Nota rápida', emoji: '📝', route: '/recursos' },
+  { label: 'Nueva tarea', emoji: '✅', route: '/(tabs)/foco?action=new-task' },
+  { label: 'Marcar hábito', emoji: '🎯', route: '/(tabs)/foco?tab=habitos' },
+  { label: 'Registrar movimiento', emoji: '💸', route: '/(tabs)/dinero?action=new-transaction' },
+  { label: 'Nota rápida', emoji: '📝', route: '/recursos?create=1' },
   { label: 'Iniciar entrenamiento', emoji: '💪', route: '/(tabs)/cuerpo' },
 ] as const;
 

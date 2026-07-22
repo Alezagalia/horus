@@ -49,7 +49,10 @@ function addReleaseSigningConfig(contents) {
   // 2) En buildTypes.release, apuntar al signingConfig de release si hay keystore.
   next = next.replace(
     /(buildTypes\s*\{[\s\S]*?release\s*\{[\s\S]*?)signingConfig signingConfigs\.debug/,
-    `$1signingConfig (rootProject.file('keystore.properties').exists() || System.getenv('RELEASE_STORE_FILE') != null) ? signingConfigs.release : signingConfigs.debug`
+    // Ternario COMPLETO entre paréntesis como único argumento: Groovy parsea
+    // `signingConfig (bool) ? a : b` como `(signingConfig(bool)) ? a : b` y
+    // castea el Boolean a SigningConfig → build roto.
+    `$1signingConfig((rootProject.file('keystore.properties').exists() || System.getenv('RELEASE_STORE_FILE') != null) ? signingConfigs.release : signingConfigs.debug)`
   );
 
   return next;
