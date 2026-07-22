@@ -23,9 +23,11 @@ export const queryClient = new QueryClient({
   },
 });
 
+export const QUERY_CACHE_STORAGE_KEY = 'horus-query-cache';
+
 const persister = createAsyncStoragePersister({
   storage: AsyncStorage,
-  key: 'horus-query-cache',
+  key: QUERY_CACHE_STORAGE_KEY,
 });
 
 persistQueryClient({

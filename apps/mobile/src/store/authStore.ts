@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import { authApi, type AuthUser, type LoginDTO, type RegisterDTO } from '../services/api/authApi';
 import { signOutFromGoogle } from '../services/googleSignIn';
+import { claimLocalDataForUser, releaseLocalData } from '../db/localReset';
 
 interface AuthState {
   user: AuthUser | null;
@@ -26,6 +27,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     const res = await authApi.login(credentials);
     await SecureStore.setItemAsync('accessToken', res.accessToken);
     await SecureStore.setItemAsync('refreshToken', res.refreshToken);
+    // Antes de activar la sesión: si la DB local es de OTRO usuario, se
+    // resetea (acá nada observa WMDB todavía — ver localReset.ts).
+    await claimLocalDataForUser(res.user.id);
     set({ user: res.user, isAuthenticated: true });
   },
 
@@ -33,6 +37,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     const res = await authApi.googleLogin({ idToken, acceptedTerms });
     await SecureStore.setItemAsync('accessToken', res.accessToken);
     await SecureStore.setItemAsync('refreshToken', res.refreshToken);
+    await claimLocalDataForUser(res.user.id);
     set({ user: res.user, isAuthenticated: true });
   },
 
@@ -40,6 +45,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     const res = await authApi.register(data);
     await SecureStore.setItemAsync('accessToken', res.accessToken);
     await SecureStore.setItemAsync('refreshToken', res.refreshToken);
+    await claimLocalDataForUser(res.user.id);
     set({ user: res.user, isAuthenticated: true });
   },
 
@@ -53,6 +59,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     await SecureStore.deleteItemAsync('refreshToken');
     await signOutFromGoogle();
     set({ user: null, isAuthenticated: false });
+    // Con la sesión ya cerrada (las tabs se desmontan), limpiamos los datos
+    // locales: en un dispositivo compartido el próximo usuario no debe ver
+    // NADA del anterior.
+    await releaseLocalData();
   },
 
   checkAuth: async () => {
@@ -64,6 +74,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         return;
       }
       const user = await authApi.getMe();
+      await claimLocalDataForUser(user.id);
       set({ user, isAuthenticated: true, isLoading: false });
     } catch {
       await SecureStore.deleteItemAsync('accessToken');

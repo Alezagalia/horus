@@ -6,6 +6,7 @@ module.exports = {
       subscribe: () => ({ unsubscribe: () => {} }),
     }),
     write: async (fn) => fn(),
+    unsafeResetDatabase: async () => {},
     get: () => {
       throw new Error('database.get no disponible en tests: mockear moneyQueries/moneyWrites');
     },
