@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { authService } from '../services/auth.service.js';
 import { googleSignInService, GoogleSignInError } from '../services/googleSignIn.service.js';
-import { categoryService } from '../services/category.service.js';
 import { passwordResetService, PasswordResetError } from '../services/passwordReset.service.js';
 import {
   emailVerificationService,
@@ -54,8 +53,9 @@ export const authController = {
       // Store refresh token
       await authService.updateRefreshToken(user.id, tokens.refreshToken);
 
-      // Create default categories for new user
-      await categoryService.createDefaultCategories(user.id);
+      // Las categorías default las siembra authService.createUser — llamarlas
+      // de nuevo acá violaba el unique [userId, name, scope] y el registro
+      // respondía 400 con el usuario ya creado.
 
       // Send verification email (non-blocking: fire-and-forget so registration
       // isn't slowed or failed by email delivery).

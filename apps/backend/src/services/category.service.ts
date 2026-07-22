@@ -193,6 +193,8 @@ export const categoryService = {
         seenScopes.add(cat.scope);
         return { ...cat, userId, isDefault };
       }),
+      // Idempotente: un retry (o una doble llamada) no debe romper el registro.
+      skipDuplicates: true,
     });
 
     return categories;
